@@ -513,6 +513,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
             }
         }
         if FileManager.default.fileExists(atPath: saved.path) {
+            try? FileManager.default.createDirectory(at: res, withIntermediateDirectories: true)
             try? FileManager.default.copyItem(at: saved, to: icns)
             if let img = NSImage(contentsOf: saved) { NSApp.applicationIconImage = img }
             let now = Date()

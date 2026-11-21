@@ -77,7 +77,7 @@ if [ -x "$G/Contents/MacOS/Gmail" ]; then
     [ -z "$ic" ] && [ -d "$GOLD" ] && ic=$(find "$GOLD/Contents/Resources" -maxdepth 1 -name '*.icns' 2>/dev/null | head -1)
     if [ -n "$ic" ]; then
       [ "$ic" != "$D/gmail-icon.icns" ] && cp "$ic" "$D/gmail-icon.icns"
-      cp "$ic" "$GA/Contents/Resources/AppIcon.icns" && touch "$GA" && log "Gmail のアイコンを設定"
+      mkdir -p "$GA/Contents/Resources" && cp "$ic" "$GA/Contents/Resources/AppIcon.icns" && touch "$GA" && log "Gmail のアイコンを設定"
     fi
   fi
 fi
