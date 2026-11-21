@@ -10,10 +10,11 @@ for arch in arm64 x86_64; do
   swiftc -O -swift-version 5 -target "$arch-apple-macos13.0" src/main.swift -o "build/Gmail-$arch" \
     -framework Cocoa -framework WebKit -framework UserNotifications
 done
-lipo -create build/Gmail-arm64 build/Gmail-x86_64 -output "$APP/Contents/MacOS/Gmail"
+lipo -create build/Gmail-arm64 build/Gmail-x86_64 -output build/Gmail
+# 実行ファイルだけに署名する（アイコンは Mac 側で後から入るため、中身全体は封じない）
+codesign --force -s - --identifier jp.yuito.gmail build/Gmail
+cp build/Gmail "$APP/Contents/MacOS/Gmail"
 sed "s/__BUILD__/$BUILD/g" Info.plist > "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
-# 実行ファイルだけに署名する（アイコンは Mac 側で後から入るため、中身全体は封じない）
-codesign --force -s - --identifier jp.yuito.gmail "$APP/Contents/MacOS/Gmail"
 rm -rf build
 echo "作成: ${APP}（版 1.${BUILD}）"

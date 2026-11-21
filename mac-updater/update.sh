@@ -69,6 +69,7 @@ if [ -x "$G/Contents/MacOS/Gmail" ]; then
   else
     sync "$G" "$GA"
   fi
+  [ -d "$G/Contents/_CodeSignature" ] || rm -rf "$GA/Contents/_CodeSignature"
   # アイコン（以前の Gmail のものを使う）
   if [ -d "$GA" ] && [ ! -f "$GA/Contents/Resources/AppIcon.icns" ]; then
     ic=""
