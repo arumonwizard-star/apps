@@ -1,0 +1,29 @@
+name: Gmail を作成
+on:
+  push:
+    branches: [main]
+    paths: ['gmail/src/**', 'gmail/Info.plist', 'gmail/build.sh', '.github/workflows/gmail.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: gmail-build
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: 作成
+        run: bash gmail/build.sh "${{ github.run_number }}"
+      - name: 確認
+        run: |
+          file gmail/Gmail.app/Contents/MacOS/Gmail
+          plutil -lint gmail/Gmail.app/Contents/Info.plist
+          codesign -dv gmail/Gmail.app/Contents/MacOS/Gmail
+      - name: リポジトリに送信
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f gmail/Gmail.app
+          git commit -m "Gmail.app 版 1.${{ github.run_number }} [skip ci]" || exit 0
+          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && exit 0; sleep 5; done
+          exit 1

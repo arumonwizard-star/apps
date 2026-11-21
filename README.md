@@ -9,6 +9,7 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
 | ch-cut | CH Cut | Mac：~/Applications/CHCut |
 | ara-safety | ARA安全装置 | Mac：~/Applications/ARA安全装置.app |
 | xfile-sync | X-FILE 同期 | Mac：~/Applications/X-FILE 同期.app |
+| gmail | Gmail（閉じても受信・Dockに未読数・バナー通知） | Mac：~/Applications/Gmail.app |
 | x-file | X-FILE | Cloudflare Workers（未移行） |
 
 別のリポジトリにあるもの：dramatic-simulator、aigis-script、uketsuke-keikaku、serifu-take。Alien Lab は Claude 上のページ。
@@ -20,5 +21,7 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
   supervisor.sh・鍵・CH Cut のプリセットは自動では入れ替えない。記録は ~/Applications/.apps-updater/update.log。
 - Light Operator のサーバーは、server.js / server.py が変わると自動で入れ替わる。画面（public）は次に開いたときから。
 - CH Cut・ARA安全装置・X-FILE 同期は、次に開いたときから新しい版。
+- Gmail：gmail/src を main に送信すると GitHub Actions（Mac）が Gmail.app を作ってリポジトリに入れる。
+  Mac には上の仕組みで入り、アプリが画面を閉じている間に自分で新しい版に入れ替わる。
 
 作り方の決まりごとは my-app-style スキルに従う。
