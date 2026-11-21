@@ -16,4 +16,4 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 # 実行ファイルだけに署名する（アイコンは Mac 側で後から入るため、中身全体は封じない）
 codesign --force -s - --identifier jp.yuito.gmail "$APP/Contents/MacOS/Gmail"
 rm -rf build
-echo "作成: $APP（版 1.$BUILD）"
+echo "作成: ${APP}（版 1.${BUILD}）"
