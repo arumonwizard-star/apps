@@ -1,0 +1,8 @@
+{
+ "bias": {},
+ "samples": {
+  "block_first": 9,
+  "speaker_change": 26,
+  "same_speaker": 21
+ }
+}

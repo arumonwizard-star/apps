@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Light Operator">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.json">
+<title>Light Operator</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#888;font-family:system-ui,-apple-system,"Hiragino Sans",sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overflow:hidden;touch-action:none}
+  html{background:#000}
+  #light{position:fixed;inset:-50px;background:#fff;opacity:0;pointer-events:none;z-index:1;
+    transition:opacity var(--fade,0.5s) ease}
+  html.on #light{opacity:1}
+  #lightOld{position:fixed;inset:-50px;z-index:2;pointer-events:none;opacity:0;background:#000}
+  #light.strobing{transition:none}
+  html.on #light.blink{opacity:0}
+  #light.off{visibility:hidden}
+  #hud,#err{z-index:3}
+  /* スマホ側には文字を一切出さない（状態はオペレーター画面で確認） */
+  #hud,#err{display:none !important}
+  /* 目立たない接続マーク（光っている間は光の下に隠れる） */
+  #cdot{position:fixed;right:calc(10px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));
+    width:12px;height:12px;border-radius:50%;background:#ff2a2a;opacity:.85;z-index:0;pointer-events:none}
+  #cdot.ok{background:#1e6bff}
+  #guide{position:fixed;inset:0;z-index:15;background:#000;display:flex;align-items:center;justify-content:center;gap:9vmin;transition:opacity .6s}
+  #guide.hide{opacity:0;pointer-events:none}
+  #gver{position:fixed;right:calc(30px + env(safe-area-inset-right));bottom:calc(6px + env(safe-area-inset-bottom));color:#444;font-size:11px;font-family:system-ui,sans-serif;z-index:0;pointer-events:none}
+  #guide .card{display:flex;flex-direction:column;align-items:center;gap:3vmin}
+  #guide svg.pic{width:30vmin;max-width:200px;height:auto}
+  #guide .chk{width:15vmin;height:15vmin;max-width:84px;max-height:84px;border-radius:50%;border:4px solid #666;display:flex;align-items:center;justify-content:center}
+  #guide .chk svg{width:62%;height:62%;opacity:0}
+  #guide .card.on .chk{border-color:#1e6bff;background:#1e6bff}
+  #guide .card.on .chk svg{opacity:1}
+  #nameBox{position:fixed;inset:0;z-index:20;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  #nameBox.show{display:flex}
+  #nameBox p{margin:0;color:#888;font-size:14px}
+  #nameIn{font-size:18px;padding:12px 14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;width:240px;text-align:center;-webkit-user-select:text;user-select:text}
+  #nameOk{font-size:16px;font-weight:700;padding:12px 40px;border-radius:999px;border:0;background:#fff;color:#000}
+  body.on #hud{opacity:0}
+  #hud.fade{opacity:0}
+  #a2hs{display:none;margin:0;padding:12px 14px;border-radius:10px;background:#1a1a1a;color:#ddd;font-size:13px;line-height:1.7;max-width:320px;text-align:left}
+  #a2hs b{color:#fff}
+  #start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:#000;z-index:10}
+  #start h1{color:#fff;font-size:22px;margin:0;letter-spacing:.1em}
+  #start p{margin:0;font-size:13px;line-height:1.7;text-align:center;max-width:320px}
+  #name{font-size:16px;padding:12px 14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;width:220px;text-align:center}
+  #join{font-size:20px;font-weight:700;padding:18px 48px;border-radius:999px;border:0;background:#fff;color:#000}
+  #hud{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));text-align:center;font-size:12px;transition:opacity .15s;line-height:1.6}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px;vertical-align:middle}
+  .dot.ok{background:#2ecc71}
+  #start.hidden,#hud.hidden{display:none}
+  video{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none}
+</style>
+<script>
+// どんなブラウザでも動く書き方で、エラーを画面に表示する（原因調査用）
+window.onerror = function (msg, src, line) {
+  var e = document.getElementById('err');
+  if (e) { e.style.display = 'block'; e.textContent = 'エラー: ' + msg + ' (行' + line + ')'; }
+  else alert('エラー: ' + msg);
+};
+</script>
+</head>
+<body>
+<div id="start" class="hidden"></div>
+</div>
+<div id="cdot"></div>
+<div id="gver"></div>
+<div id="guide">
+  <!-- 画面の明るさを最大に：太陽＋バーが一番上 -->
+  <div class="card" data-c="1"><svg class="pic" viewBox="0 0 120 200" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round">
+    <circle cx="60" cy="38" r="13" fill="#fff"/>
+    <g><line x1="60" y1="8" x2="60" y2="16"/><line x1="60" y1="60" x2="60" y2="68"/><line x1="30" y1="38" x2="38" y2="38"/><line x1="82" y1="38" x2="90" y2="38"/>
+      <line x1="39" y1="17" x2="44" y2="22"/><line x1="76" y1="54" x2="81" y2="59"/><line x1="39" y1="59" x2="44" y2="54"/><line x1="76" y1="22" x2="81" y2="17"/></g>
+    <rect x="42" y="84" width="36" height="104" rx="18"/>
+    <rect x="47" y="89" width="26" height="94" rx="13" fill="#fff" stroke="none"/>
+    <path d="M100 150 L100 100 M92 110 L100 100 L108 110" stroke="#1e6bff" stroke-width="6"/>
+  </svg><div class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>
+  <!-- ライトの明るさを最弱に：懐中電灯＋バーが一番下 -->
+  <div class="card" data-c="2"><svg class="pic" viewBox="0 0 120 200" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 14 H76 V26 L68 40 V66 H52 V40 L44 26 Z"/>
+    <line x1="60" y1="46" x2="60" y2="54"/>
+    <rect x="42" y="84" width="36" height="104" rx="18"/>
+    <rect x="47" y="168" width="26" height="15" rx="7" fill="#fff" stroke="none"/>
+    <path d="M100 100 L100 150 M92 140 L100 150 L108 140" stroke="#1e6bff" stroke-width="6"/>
+  </svg><div class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>
+</div>
+<div id="nameBox"><p>この端末の名前（最初の1回だけ）</p><input id="nameIn" maxlength="20" placeholder="例：ゆい" autocomplete="off"><button id="nameOk">決定</button></div>
+<div id="light" class="off" style="background:#000"></div>
+<div id="lightOld"></div>
+<div id="hud"><div style="font-size:10px;color:#333">v12</div><span class="dot" id="dot"></span><span id="msg">接続中…</span><div id="torchMsg"></div></div>
+ <div id="err" style="display:none;position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;padding:10px 12px;border-radius:10px;background:#3a1d1d;color:#ffb3b3;font-size:12px;line-height:1.6;z-index:20"></div>
+<video id="v" playsinline muted></video>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const store = { get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}} };
+let id = store.get('pl-id'); if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); store.set('pl-id', id); }
+
+let track = null, torchOK = null, wakeLock = null, es = null, wantOn = false, useTorch = true, joined = false, myName = '';
+// 演出の設定（オペレーターから届く）
+let opts = { mode:'white', strobe:false, hz:8, fade:0.5, target:'torch' };
+let ended = false;
+let slot = 0, total = 1, myNum = null, manualOn = false;  // 自分の番号・キーで個別に点灯中か
+myName = store.get('pl-name') || '';
+function askName() {
+  const box = $('nameBox'); box.classList.add('show');
+  const done = () => {
+    const v = ($('nameIn').value || '').trim(); if (!v) { $('nameIn').focus(); return; }
+    myName = v; store.set('pl-name', v); report({ name: v });
+    box.classList.remove('show'); $('nameIn').blur();
+  };
+  $('nameOk').onclick = done;
+  $('nameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') done(); });
+}
+if (!myName) setTimeout(askName, 0);
+// 開くたびに図解を出し、2つともチェックするまでキューを受け付けない
+const REQUIRE_CHECK = false;  // true にすると開くたびに図解＋チェックを求める
+let ready = !REQUIRE_CHECK, pendingState = null;
+if (!REQUIRE_CHECK) $('guide').classList.add('hide');
+function hideGuide() {}
+document.querySelectorAll('#guide .card').forEach(card => card.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); if (ready) return;
+  card.classList.toggle('on');
+  if (document.querySelectorAll('#guide .card.on').length === 2) {
+    ready = true; $('guide').classList.add('hide'); report({ ready:true });
+    if (pendingState) { const m = pendingState; pendingState = null; applyState(m); }
+  }
+}));  // この端末の順番と台数（虹色をずらすため）
+
+// ---- 接続先のサーバー ----
+// ホーム画面アプリは古いアドレスのまま開くことがあるので、固定の入口（ntfy）から今のサーバーを探す
+let API = '';  // '' = このページと同じサーバー
+const PAGE_VER = 'v28';
+$('gver').textContent = PAGE_VER;
+function showNum() { $('gver').textContent = (myNum ? '#' + myNum + '  ' : '') + PAGE_VER; }
+const EMBED_TOPIC = '__TOPIC__';  // サーバーが固定の入口の名前に置き換えて配信する
+const embedded = EMBED_TOPIC.indexOf('_' + '_') === 0 ? '' : EMBED_TOPIC;
+if (embedded) store.set('pl-topic', embedded);
+function dot(st) { const d = $('cdot'); if (d) { d.classList.toggle('ok', st === 'ok'); d.classList.toggle('err', st === 'err'); } }
+const sleep0 = (ms) => new Promise(r => setTimeout(r, ms));
+async function tryInfo(base) {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch(base + '/api/info', { cache:'no-store', signal: ctl.signal });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.app === 'phone-light' ? j : null;
+  } catch { return null; }
+}
+async function latestFromNtfy(topic) {
+  try {
+    const r = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1&since=12h`, { cache:'no-store' });
+    const lines = (await r.text()).trim().split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(m => m && m.event === 'message');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const m = lines[i];
+      const u = m.click || ((m.message || '').match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/) || [])[0];
+      if (u) return u.replace(/\/$/, '');
+    }
+  } catch { return null; }
+  return '';
+}
+async function findServer() {
+  for (let n = 0; ; n++) {
+    // 1) このページと同じサーバー
+    let info = await tryInfo('');
+    if (info) { API = ''; if (info.topic) store.set('pl-topic', info.topic); store.set('pl-last', location.origin); return; }
+    // 2) 固定の入口に出ている最新のアドレス
+    dot('search');
+    const topic = store.get('pl-topic') || embedded;
+    if (topic) {
+      const u = await latestFromNtfy(topic);
+      if (u === null) dot('err');
+      if (u && (info = await tryInfo(u))) { API = u; store.set('pl-last', u); return; }
+    }
+    // 3) 前回つながったアドレス
+    const lastU = store.get('pl-last');
+    if (lastU && lastU !== location.origin && (info = await tryInfo(lastU))) { API = lastU; return; }
+    $('msg').textContent = 'サーバーを探しています…'; $('dot').classList.remove('ok'); $('hud').classList.remove('fade');
+    await sleep0(3000);
+  }
+}
+
+// 別アドレスのサーバーにつながったら、そこから最新版のページを取り込んで端末に保存し直す
+async function selfUpdate() {
+  if (!API || !('caches' in window)) return;
+  try {
+    const r = await fetch(API + '/client.html', { cache:'no-store' });
+    if (!r.ok) return;
+    const html = await r.text();
+    const m = html.match(/const PAGE_VER = '([^']+)'/);
+    if (m && m[1] !== PAGE_VER) {
+      const c = await caches.open('phone-light-v1');
+      await c.put('/', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+    }
+  } catch {}
+}
+
+function report(extra) {
+  fetch(API + '/api/report', { method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify(Object.assign({ id }, extra)), keepalive:true }).catch(()=>{});
+}
+
+// 画面にエラー・状況を表示（原因調査用）
+function showErr(t) { const e = $('err'); if (e) { e.textContent = t; e.style.display = 'block'; clearTimeout(showErr.t); showErr.t = setTimeout(() => { e.style.display = 'none'; }, 8000); } }
+addEventListener('error', (e) => showErr('エラー: ' + e.message));
+addEventListener('unhandledrejection', (e) => showErr('エラー: ' + (e.reason?.message || e.reason)));
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+
+// --- ライト（カメラのトーチ） ---
+async function trackWithTorch(constraints) {
+  const st = await withTimeout(navigator.mediaDevices.getUserMedia({ video: constraints, audio:false }), 8000);
+  const t = st.getVideoTracks()[0];
+  // Android は映像が動き出すまでライトの可否が出ないことがあるので、再生して最大2秒待つ
+  const v = $('v'); v.srcObject = st; v.play().catch(()=>{});
+  for (let i = 0; i < 10; i++) {
+    const caps = t.getCapabilities ? t.getCapabilities() : {};
+    if (caps.torch) return t;
+    try {
+      if (window.ImageCapture) {
+        const pc = await new ImageCapture(t).getPhotoCapabilities();
+        if (pc && pc.fillLightMode && pc.fillLightMode.some(m => m === 'flash' || m === 'torch')) return t;
+      }
+    } catch {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+  t.stop(); v.srcObject = null; return null;
+}
+async function setupTorch() {
+  if (!window.isSecureContext) { showErr('http:// で開いているためライトは使えません。https:// のURLで開き直してください'); return false; }
+  if (!navigator.mediaDevices?.getUserMedia) return false;
+  try {
+    track = await trackWithTorch({ facingMode:{ ideal:'environment' } });
+    if (!track) {
+      // 背面カメラが複数ある機種向け：トーチ付きのカメラを探す
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+      for (const d of devs.reverse()) {
+        track = await trackWithTorch({ deviceId:{ exact:d.deviceId } }).catch(()=>null);
+        if (track) break;
+      }
+    }
+    if (track) {
+      const v = $('v'); v.srcObject = new MediaStream([track]); v.play().catch(()=>{});
+      track.addEventListener('ended', () => { torchOK = false; report({ torch:false }); updateHud(); });
+    }
+  } catch (e) {
+    console.warn(e);
+    if (e.name === 'NotAllowedError') showErr('カメラが「許可」されていないためライトは使えません（画面は光ります）。ブラウザのサイト設定でカメラを許可して再読み込みしてください');
+    else if (e.message === 'timeout') showErr('カメラの準備に時間がかかったため、ライトなしで参加しました');
+  }
+  return !!track;
+}
+let torchState = null, torchBusy = false;
+async function setTorch(on) {
+  if (!track || track.readyState !== 'live' || torchBusy || torchState === on) return;
+  torchBusy = true;
+  try { await track.applyConstraints({ advanced:[{ torch:on }] }); torchState = on; }
+  catch (e) { try { await track.applyConstraints({ torch:on }); torchState = on; } catch {} }
+  torchBusy = false;
+}
+// ストロボ：前の切替が終わり次第すぐ次を出す（端末が追いつける最速で点滅）
+let strobeTimer = null, strobeGen = 0, screenTimer = null;
+const strobeTorch = () => opts.strobe && (opts.target === 'torch' || opts.target === 'both');
+const strobeScreen = () => opts.strobe && (opts.target === 'screen' || opts.target === 'both');
+async function torchStrobeLoop(gen) {
+  let lit = false;
+  const half = 500 / Math.max(1, opts.hz);
+  while (gen === strobeGen) {
+    const t0 = performance.now();
+    lit = !lit;
+    if (track && track.readyState === 'live') {
+      try { await track.applyConstraints({ advanced:[{ torch:lit }] }); } catch {}
+    }
+    const wait = half - (performance.now() - t0);
+    await new Promise(r => setTimeout(r, Math.max(0, wait)));
+  }
+}
+function updateTorch() {
+  strobeGen++; clearInterval(strobeTimer); strobeTimer = null;
+  const want = wantOn && useTorch;
+  if (want && strobeTorch()) {
+    strobeTimer = 1; torchStrobeLoop(strobeGen);
+  } else {
+    torchState = null; setTorch(want);
+  }
+  // 画面のストロボ
+  clearInterval(screenTimer); screenTimer = null;
+  const L = $('light');
+  if (wantOn && strobeScreen()) {
+    L.classList.add('strobing');
+    let b = false;
+    screenTimer = setInterval(() => { b = !b; L.classList.toggle('blink', b); }, 500 / Math.max(1, opts.hz));
+  } else {
+    L.classList.remove('blink'); L.classList.remove('strobing');
+  }
+}
+
+// 虹色ジェネレーター：時計基準で色相を回すので、全台ほぼ同じ色になる
+let rainbowRAF = null;
+function rainbowLoop() {
+  // 全員が同じ速さで回りつつ、台数で均等にずらす（4台なら90度ずつ＝必ず別の色）
+  const hue = (Date.now() / 4000 * 360 + slot * 360 / total) % 360;
+  $('light').style.background = `hsl(${hue.toFixed(1)},100%,50%)`;
+  rainbowRAF = requestAnimationFrame(rainbowLoop);
+}
+function updateColor() {
+  cancelAnimationFrame(rainbowRAF); rainbowRAF = null;
+  if (opts.mode === 'rainbow') rainbowLoop(); else $('light').style.background = '#fff';
+  document.documentElement.style.setProperty('--fade', Math.max(0, Math.min(10, Number(opts.fade) || 0)) + 's');
+}
+
+// --- 画面を点けっぱなしにする ---
+async function keepAwake() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+document.addEventListener('visibilitychange', async () => {
+  if (joined && document.visibilityState === 'visible') { keepAwake(); apply(wantOn); }
+});
+
+// --- 点灯/消灯の反映 ---
+let offTimer = null, prevMode = null;
+// 色の切替：前の色を上に重ねて、フェード時間かけて消す（＝なめらかに切り替わる）
+function crossfade(sec) {
+  const L = $('light'), O = $('lightOld');
+  O.style.transition = 'none'; O.style.background = L.style.background; O.style.opacity = '1';
+  void O.offsetWidth;
+  O.style.transition = `opacity ${sec}s ease`; O.style.opacity = '0';
+}
+const themeMeta = document.querySelector('meta[name=theme-color]');
+async function apply(on) {
+  const changed = wantOn !== on;
+  wantOn = on;
+  clearTimeout(offTimer);
+  const L = $('light');
+  if (on) {
+    L.classList.remove('off');
+    if (!changed && prevMode && prevMode !== opts.mode) crossfade(Math.max(0, Number(opts.fade) || 0));
+    prevMode = opts.mode;
+    updateColor();
+  } else {
+    document.documentElement.style.setProperty('--fade', Math.max(0, Math.min(10, Number(opts.fade) || 0)) + 's');
+    offTimer = setTimeout(() => {
+      if (wantOn) return;
+      cancelAnimationFrame(rainbowRAF); rainbowRAF = null;
+      L.style.background = '#000'; L.classList.add('off');
+      themeMeta && themeMeta.setAttribute('content', '#000000');
+    }, (Number(opts.fade) || 0) * 1000 + 80);
+  }
+  document.body.classList.toggle('on', on);
+  document.documentElement.classList.toggle('on', on);
+  updateTorch();
+  if (changed) report({ ack:on });
+}
+
+let hudTimer = null;
+function updateHud(connected) {
+  if (connected === false) { clearTimeout(hudTimer); hudTimer = null; $('hud').classList.remove('fade'); }
+  if (connected === true && !hudTimer && !$('hud').classList.contains('fade')) hudTimer = setTimeout(() => $('hud').classList.add('fade'), 3000);
+  if (connected !== undefined) {
+    $('dot').classList.toggle('ok', connected);
+    $('msg').textContent = connected ? '待機中（接続OK）' : '再接続中…';
+  }
+  $('torchMsg').textContent = torchOK === null ? 'ライト：準備中…' : torchOK ? 'ライト：使用可' : 'ライト：非対応（画面のみ光ります）';
+}
+
+// ロングポーリングで状態を受け取る（ネット公開・トンネル経由でも確実に届く）
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function applyState(m) {
+  useTorch = m.torch !== false;
+  if (m.num && m.num !== myNum) { myNum = m.num; showNum(); }
+  opts = { mode: m.mode || 'white', strobe: !!m.strobe, hz: Number(m.hz) || 8, fade: m.fade ?? 0.5, target: m.target || 'torch' };
+  // 1〜9キー：自分の番号のキーが押されている間だけ消灯（フェードなし）
+  const manual = !!(myNum && Array.isArray(m.held) && m.held.includes(myNum));
+  if (manual !== manualOn && m.on) opts.fade = 0;
+  manualOn = manual;
+  const on = !!m.on && !manual;  // 自分の番号のキーが押されている間だけ消灯
+  if (ended && on) resume();
+  apply(on);
+}
+// ---- 安全装置：サーバーとつながらなくなったら、必ず白で点灯（ストロボ・虹色は止める） ----
+let lastOk = Date.now(), pollV = -1, safeOff = false, everOk = false;  // 一度もつながっていないうち（開演前）は白にしない
+function failsafeOff() {
+  // 点灯中だけ白にする（消灯中に切れても点灯しない）
+  if (ended || safeOff || !everOk || !wantOn || !ready) return;
+  safeOff = true;
+  opts = { ...opts, mode: 'white', fade: 1, strobe: false };
+  apply(true);
+  pollV = -1;  // つながったら今の状態を取り直す
+}
+setInterval(() => { if (joined && Date.now() - lastOk > 15000) failsafeOff(); }, 1000);
+
+async function connect() {
+  let endSeen = null, first = true, fails = 0;
+  await findServer();
+  while (joined) {
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 15000);
+      const r = await fetch(API + `/api/poll?id=${encodeURIComponent(id)}&name=${encodeURIComponent(myName)}&v=${pollV}`, { cache:'no-store', signal: ctl.signal });
+      clearTimeout(to);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const m = await r.json();
+      if (!joined) return;
+      lastOk = Date.now(); fails = 0; everOk = true;
+      updateHud(true); dot('ok');
+      if (first) { selfUpdate(); first = false; report({ name:myName, ver:PAGE_VER, ready, ...(torchOK === null ? {} : { torch:torchOK }) }); }
+      if (endSeen === null) endSeen = m.end;
+      else if (m.end !== endSeen) { endSeen = m.end; pollV = m.v; await finish(); continue; }
+      slot = Number(m.slot) || 0; total = Math.max(1, Number(m.total) || 1);
+      if (m.v !== pollV || safeOff) {
+        pollV = m.v; safeOff = false;
+        if (ready) applyState(m); else pendingState = m;  // 確認前は保留
+      }
+    } catch (e) {
+      updateHud(false); dot('search');
+      // 一瞬の不安定では反応しない：失敗が続き、6秒以上つながっていなければ白で点灯
+      if (++fails >= 3 && Date.now() - lastOk > 6000) failsafeOff();
+      // さらに失敗が続いたら、サーバーが起動し直されてアドレスが変わった可能性 → 探し直す
+      if (fails >= 4 && Date.now() - lastOk > 8000) { fails = 0; await findServer(); pollV = -1; endSeen = null; first = true; }
+      else await sleep(1000);
+    }
+  }
+}
+
+function safe(f) { try { const r = f(); if (r && r.catch) r.catch(()=>{}); return r; } catch (e) { console.warn(e); } }
+function join() {
+  // 最初に画面を切り替える（ここより後で何が失敗しても参加はできる）
+  joined = true;
+  $('torchMsg').textContent = 'ライト：準備中…';
+  // 全画面化・スリープ防止・カメラ許可（タップ操作の中で開始する必要がある。完了は待たない）
+  safe(() => document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI:'hide' }));
+  safe(keepAwake);
+  safe(lockStart);
+  safe(connect);
+  const torchReady = safe(setupTorch);
+  if (torchReady && torchReady.then) torchReady.then((ok) => {
+    torchOK = ok; updateHud(); report({ torch:ok });
+    updateTorch();
+  });
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+// ページを開いたら自動で参加（スマホ側の操作は不要）
+join();
+// 画面に触れたとき、スリープ防止やカメラが外れていたら付け直す（操作としては何も起きない）
+document.addEventListener('pointerdown', () => {
+  if (!wakeLock) keepAwake();
+  if (torchOK === false && !track && !ended) setupTorch().then(ok => { if (ok) { torchOK = true; updateHud(); report({ torch:true }); updateTorch(); } });
+}, true);
+
+// ---- 参加中のロック：タップ・長押し・ピンチ・スワイプ・戻る操作を無効化 ----
+const block = (e) => { if (e.target.closest && e.target.closest('#nameBox')) return; if (e.target.closest && e.target.closest('#guide') && !ready) return; if (joined && e.cancelable) e.preventDefault(); };
+['touchstart','touchmove','touchend','gesturestart','gesturechange','dblclick','contextmenu','selectstart','wheel']
+  .forEach(t => document.addEventListener(t, block, { passive:false }));
+// タップで全画面が解除されていたら全画面に戻す（タップ操作の中でしか全画面にできないため）
+document.addEventListener('pointerdown', () => {
+  if (joined && !document.fullscreenElement) document.documentElement.requestFullscreen?.({ navigationUI:'hide' }).catch(()=>{});
+  if (joined && !wakeLock) keepAwake();
+}, true);
+// 「戻る」ボタン／ジェスチャーでページを離れないようにする
+addEventListener('popstate', () => { if (joined) history.pushState({ lock:1 }, ''); });
+// 再読み込み・タブを閉じる操作に確認を出す
+addEventListener('beforeunload', (e) => { if (joined) { e.preventDefault(); e.returnValue = ''; } });
+function lockStart() { history.pushState({ lock:1 }, ''); history.pushState({ lock:1 }, ''); }
+
+// オペレーターの「終了」で元に戻す：ライト消灯・カメラ停止・全画面解除・スリープ防止解除・切断
+async function finish() {
+  ended = true; wantOn = false;
+  strobeGen++; clearInterval(strobeTimer); strobeTimer = null; clearInterval(screenTimer); screenTimer = null;
+  $('light').classList.remove('blink','strobing'); $('light').classList.add('off'); $('light').style.background = '#000'; cancelAnimationFrame(rainbowRAF);
+  document.body.classList.remove('on'); document.documentElement.classList.remove('on');
+  torchState = null; await setTorch(false);
+  if (track) { track.stop(); track = null; }
+  $('v').srcObject = null;
+  torchOK = null; report({ ack:false });
+  $('msg').textContent = '終了しました'; $('torchMsg').textContent = '';
+  $('hud').classList.remove('fade'); clearTimeout(hudTimer); hudTimer = setTimeout(() => $('hud').classList.add('fade'), 3000);
+}
+// 終了後にオペレーターが再び点灯したら自動で復帰
+function resume() {
+  ended = false;
+  safe(keepAwake);
+  const r = safe(setupTorch);
+  if (r && r.then) r.then(ok => { torchOK = ok; updateHud(); report({ torch:ok }); updateTorch(); });
+}
+</script>
+</body>
+</html>

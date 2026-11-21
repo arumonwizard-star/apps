@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+opkey.txt
+topic.txt
+cloudflared
+.env
+env.sh
+.dev.vars

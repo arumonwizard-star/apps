@@ -1,0 +1,54 @@
+#!/bin/bash
+# CH Cut.app の中身。ダブルクリックで app.py を起動します（ターミナルは開きません）。
+APPDIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$APPDIR" || exit 1
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+LOG="$HOME/Library/Logs/CHCut.log"
+mkdir -p "$HOME/Library/Logs"
+echo "=== $(date) 起動 (場所: $APPDIR) ===" >>"$LOG"
+VENV="$HOME/Library/Application Support/CHCut/venv"      # 動画フォルダとは別の場所に作る（権限の問題を避ける）
+SYS=""
+for c in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+  if [ -x "$c" ]; then SYS="$c"; break; fi
+done
+echo "python: $SYS" >>"$LOG"
+PY=""
+if [ -x "$VENV/bin/python3" ] && "$VENV/bin/python3" -c "import numpy" 2>>"$LOG"; then
+  PY="$VENV/bin/python3"
+elif [ -n "$SYS" ] && "$SYS" -c "import numpy" 2>>"$LOG"; then
+  PY="$SYS"
+elif [ -n "$SYS" ]; then
+  mkdir -p "$(dirname "$VENV")"
+  if "$SYS" -m venv "$VENV" >>"$LOG" 2>&1 && "$VENV/bin/python3" -m pip install numpy >>"$LOG" 2>&1; then
+    PY="$VENV/bin/python3"
+  elif "$SYS" -m pip install --user --break-system-packages numpy >>"$LOG" 2>&1 || "$SYS" -m pip install --user numpy >>"$LOG" 2>&1; then
+    PY="$SYS"
+  fi
+fi
+if [ -z "$PY" ] || ! "$PY" -c "import numpy" 2>>"$LOG"; then
+  TAIL="$(tail -n 8 "$LOG" | tr '"' "'" | tr '\n' ' ')"
+  osascript -e "display dialog \"準備に失敗しました。次の文章を教えてください:\\n\\n$TAIL\" buttons {\"OK\"} with title \"CH Cut\"" >/dev/null 2>&1
+  exit 1
+fi
+echo "使う python: $PY" >>"$LOG"
+# ブラウザを使わず、CH Cut 専用のウインドウで開くための部品（初回だけ入れる。入らなければ今まで通りブラウザで開く）
+NOWV="$HOME/Library/Application Support/CHCut/no_webview"
+if ! "$PY" -c "import webview" 2>>"$LOG" && [ ! -f "$NOWV" ]; then
+  PINS="pyobjc-core<12 pyobjc-framework-Cocoa<12 pyobjc-framework-WebKit<12 pyobjc-framework-Quartz<12 pyobjc-framework-Security<12 pyobjc-framework-UniformTypeIdentifiers<12"
+  if ! { "$PY" -m pip install --prefer-binary pywebview $PINS >>"$LOG" 2>&1 || "$PY" -m pip install --user --break-system-packages --prefer-binary pywebview $PINS >>"$LOG" 2>&1; }; then
+    echo "pywebview を入れられませんでした（ブラウザで開きます）" >>"$LOG"
+    mkdir -p "$(dirname "$NOWV")" && touch "$NOWV"
+  fi
+fi
+# 前に起動したまま残っている古い CH Cut があれば止める（古い画面が出続けるのを防ぐ）
+OLD="$(/usr/sbin/lsof -ti tcp:8765 -sTCP:LISTEN 2>/dev/null)"
+if [ -n "$OLD" ]; then
+  echo "古い CH Cut を終了: $OLD" >>"$LOG"
+  kill $OLD 2>/dev/null
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 0.5
+    [ -z "$(/usr/sbin/lsof -ti tcp:8765 -sTCP:LISTEN 2>/dev/null)" ] && break
+    [ "$i" = 6 ] && kill -9 $OLD 2>/dev/null
+  done
+fi
+exec "$PY" app.py >>"$LOG" 2>&1

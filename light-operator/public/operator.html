@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Light Operator</title>
+<link rel="manifest" href="/operator.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Light Operator">
+<style>
+  :root{--bg:#101114;--panel:#17191e;--panel2:#1d2026;--line:#2a2e36;--txt:#e8e8ea;--sub:#8b8f98;--go:#2ecc71;--sb:#f1c40f;--warn:#f39c12;--red:#e74c3c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px system-ui,-apple-system,"Hiragino Sans",sans-serif;height:100vh;display:grid;grid-template-columns:1fr 300px;grid-template-rows:auto 1fr auto}
+  header{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  #go{width:150px;height:72px;border-radius:12px;border:0;background:var(--go);color:#062;font-size:30px;font-weight:900;letter-spacing:.08em;cursor:pointer}
+  #go:active{filter:brightness(1.2)}
+  #devbar{flex:1;min-width:0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;min-height:56px}
+  .chip{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#1c1f25;border:1px solid #2f343d}
+  .chip .numb{font-size:22px;font-weight:900;color:#fff;background:#2a2e36;border-radius:8px;min-width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+  .chip.held{border-color:#e74c3c;box-shadow:0 0 0 2px #e74c3c inset}
+  .chip.held .numb{background:#e74c3c;color:#fff}
+  .chip .numb{cursor:pointer}
+  .chip .numb:hover{outline:2px solid #3498ff}
+  #numPick{position:fixed;z-index:60;background:#1d2026;border:1px solid #3a3f49;border-radius:12px;padding:10px;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  #numPick.show{display:block}
+  #numPick .t{font-size:12px;color:var(--sub);margin:0 2px 8px}
+  #numPick .g{display:grid;grid-template-columns:repeat(5,40px);gap:6px}
+  #numPick button{height:40px;border-radius:8px;border:1px solid #3a3f49;background:#262a31;color:#fff;font-size:17px;font-weight:800;cursor:pointer}
+  #numPick button.cur{background:#fff;color:#000}
+  #numPick button.used{color:#9aa0aa}
+  .chip .cd{width:10px;height:10px;border-radius:50%;background:#3498ff;box-shadow:0 0 8px #3498ff}
+  .chip.lost .cd{background:#e74c3c;box-shadow:0 0 8px #e74c3c}
+  .chip.lost{opacity:.6;border-color:#5a2a2a}
+  .chip .n{font-size:18px;font-weight:800;color:#fff;white-space:nowrap}
+  .chip .sw{width:30px;height:30px;border-radius:7px;border:1px solid #555;background:#000}
+  .chip .lt{font-size:10px}
+  .standby{flex:1;min-width:0}
+  .standby small{color:var(--sub);display:block;font-size:12px}
+  .standby b{font-size:20px;color:var(--sb);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .live{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--sub)}
+  .lamp{width:46px;height:46px;border-radius:10px;border:1px solid #444;background:#000;transition:background .2s}
+  #down{position:fixed;inset:0;z-index:50;background:rgba(10,11,14,.92);display:none;align-items:center;justify-content:center;text-align:center}
+  #down.show{display:flex}
+  #startBtn{display:inline-block;background:var(--go);color:#062;font-weight:800;font-size:18px;padding:13px 30px;border-radius:12px;text-decoration:none;margin-right:10px}
+  #reconn{margin-right:4px}
+  #panic{background:#3a1d1d;color:#ff9b9b;border:1px solid #5a2a2a;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+  main{overflow:auto;padding:12px 18px}
+  table{width:100%;border-collapse:collapse}
+  th{position:sticky;top:0;background:var(--bg);text-align:left;font-size:12px;color:var(--sub);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:10px 8px;border-bottom:1px solid #1c1f25;cursor:pointer;white-space:nowrap}
+  td.desc{white-space:normal}
+  tr.sel td{background:#2a2614}
+  tr.grp td{background:#181b22;font-weight:600}
+  tr.grp.sel td{background:#2a2614}
+  tr.child td.qc{padding-left:22px}
+  .tw{display:inline-block;width:14px;color:var(--sub);cursor:pointer}
+  .t-group{background:#2b2b2b;color:#fff}
+  tr.fired td{animation:flash .6s}
+  @keyframes flash{from{background:#1f4d2e}}
+  tr.sel td:first-child{box-shadow:inset 4px 0 var(--sb)}
+  tr.done td{color:#6f7680}
+  tr.last td .ph{visibility:visible}
+  .ph{visibility:hidden;color:var(--go)}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;margin-right:6px;background:#262a31}
+  .t-on{background:#1f3d2a;color:#7fe0a0}.t-off{background:#3a2323;color:#ff9b9b}.t-color{background:#2c2440;color:#c9b3ff}
+  .t-strobe{background:#3d3520;color:#ffd77a}.t-torch{background:#20323d;color:#8fd3ff}.t-end{background:#333;color:#ddd}
+  .rb{background:linear-gradient(90deg,#f33,#fc3,#3f6,#3cf,#93f);-webkit-background-clip:text;color:transparent;font-weight:700}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--line);background:var(--panel)}
+  button.sm{background:#262a31;color:var(--txt);border:1px solid #333944;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px}
+  button.sm:hover{background:#2f343d}
+  #editor{grid-column:1/2;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;padding:12px 18px;border-top:1px solid var(--line);background:var(--panel2)}
+  #editor label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--sub)}
+  #editor input,#editor select{background:#111;color:var(--txt);border:1px solid #333944;border-radius:6px;padding:7px 8px;font-size:14px}
+  #editor input.numin{width:80px;text-align:right}
+  #editor .hide{display:none}
+  aside{grid-row:2/4;grid-column:2;border-left:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto}
+  aside h2{font-size:12px;color:var(--sub);margin:0 0 8px;font-weight:600}
+  .stats{display:flex;gap:16px;margin-bottom:14px;font-size:12px;color:var(--sub)}
+  .stats b{display:block;font-size:24px;color:var(--txt)}
+  .dev{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:15px;background:#1c1f25;margin-bottom:6px;border:1px solid #262a31}
+  .dev .cd{width:9px;height:9px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px #2ecc71;flex:none}
+  .dev .n{flex:1;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#fff}
+  .dev .sw{width:34px;height:22px;border-radius:5px;border:1px solid #555;background:#000;flex:none}
+  .dev .num{font-size:11px;color:var(--sub);width:16px;text-align:center}
+  .dtag{font-size:11px;color:var(--sub)}
+  .lt{font-size:11px;padding:2px 7px;border-radius:999px;flex:none}
+  .lt.ok{background:#3d3520;color:#ffd77a}.lt.no{background:#2a2e36;color:#9aa0aa}.lt.wait{background:#20323d;color:#8fd3ff}
+  #hold{width:100%;margin:6px 0 14px;padding:14px;border-radius:10px;border:1px solid #444;background:#1b1d22;color:var(--sub);font-weight:700;cursor:pointer;touch-action:none}
+  #hold.on{background:#fff;color:#222}
+  .keys{font-size:11px;color:var(--sub);line-height:1.8}
+  kbd{background:#262a31;border:1px solid #3a3f49;border-radius:4px;padding:0 5px;font-size:11px}
+  #conn{font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div id="devbar"><span class="dtag">まだ接続している端末はありません</span></div>
+  <div class="live"><div class="lamp" id="lamp"></div><div id="liveText">消灯</div></div>
+  <button id="reconn" class="sm" title="サーバーとの接続を確認し直す">接続更新</button>
+  <button id="panic" title="Escキー">全消灯</button>
+</header>
+<div id="numPick"><div class="t"></div><div class="g"></div></div>
+<div id="down"><div class="box">
+  <div style="font-size:22px;font-weight:800;color:#fff">サーバーに接続していません</div>
+  <div style="color:var(--sub);margin:10px 0 22px">自動でつなぎ直しています…（数秒で消えます）</div>
+  <button id="reload2" class="sm" style="font-size:15px;padding:12px 20px">接続更新</button>
+  
+</div></div>
+
+<main>
+  <table>
+    <thead><tr><th style="width:24px"></th><th style="width:70px">Q</th><th>内容</th><th style="width:70px">待ち</th><th style="width:80px">フェード</th><th>メモ</th></tr></thead>
+    <tbody id="list"></tbody>
+  </table>
+</main>
+
+<div id="editor">
+  <label>Q番号<input id="eQ" style="width:70px"></label>
+  <label>種類<select id="eType">
+    <option value="on">点灯</option><option value="off">消灯</option><option value="color">色の切替</option>
+    <option value="strobe">ストロボ</option><option value="torch">ライト使用</option><option value="end">終了（全台を元に戻す）</option><option value="group">グループ</option>
+  </select></label>
+  <label data-f="wait">待ち時間（秒）<input id="eWait" class="numin" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></label>
+  <label data-f="mode">色<select id="eMode"><option value="white">白</option><option value="rainbow">虹色</option></select></label>
+  <label data-f="fade">フェード（秒）<input id="eFade" class="numin" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></label>
+  <label data-f="strobe">ストロボ<select id="eStrobe"><option value="1">ON</option><option value="0">OFF</option></select></label>
+  <label data-f="target">対象<select id="eTarget"><option value="torch">ライト</option><option value="screen">画面</option><option value="both">ライト＋画面</option></select></label>
+  <label data-f="hz">速さ（回/秒・最大30）<input id="eHz" class="numin" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"></label>
+  <label data-f="torch">ライト<select id="eTorch"><option value="1">使う</option><option value="0">使わない（画面のみ）</option></select></label>
+  <label>メモ<input id="eNote" style="width:220px"></label>
+</div>
+
+<div class="bar" style="grid-column:1/2">
+  <button class="sm" id="add">＋ 追加</button>
+  <button class="sm" id="dup">複製</button>
+  <button class="sm" id="del">削除</button>
+  <button class="sm" id="addg">＋ グループ</button>
+  <button class="sm" id="indent">→ 上のグループに入れる</button>
+  <button class="sm" id="outdent">← グループから出す</button>
+  <button class="sm" id="up">↑ 上へ</button>
+  <button class="sm" id="down">↓ 下へ</button>
+  <span style="flex:1"></span>
+  <button class="sm" id="reset">最初から（スタンバイをQ1へ）</button>
+  <button class="sm" id="sample">サンプルに戻す</button>
+</div>
+
+<aside>
+  <div class="stats">
+    <div><b id="nAll">0</b>接続中</div>
+    <div><b id="nTorch">0</b>ライト可</div>
+    <div><b id="nLit">0</b>点灯中</div>
+  </div>
+  <h2 style="margin-top:16px">スマホの参加</h2>
+  <div class="keys" id="links" style="margin-bottom:14px">ホーム画面の Light Operator を開くだけ<br>初めての端末：<span id="entry">—</span></div>
+  <h2>テスト点灯</h2>
+  <button id="hold">押している間だけ点灯</button>
+  <h2 style="margin-top:16px">キー操作</h2>
+  <div class="keys"><kbd>Space</kbd> GO（黄色い行のキューを実行）<br><kbd>↑</kbd><kbd>↓</kbd> スタンバイを移動<br><kbd>Esc</kbd> 全消灯<br><kbd>1</kbd>〜<kbd>9</kbd> 押している間だけ、その番号の端末を消灯<br>キューをクリックで選択・下で編集<br>グループの ▾ で折りたたみ</div>
+  <div style="margin-top:14px"><span id="conn">サーバー接続中…</span></div>
+
+</aside>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const key = new URLSearchParams(location.search).get('key') || '';
+const q = key ? `?key=${encodeURIComponent(key)}` : '';
+const store = { get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}} };
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+const SAMPLE = [
+  { q:'1', type:'on',     mode:'white', fade:1, note:'白でフェードイン' },
+  { q:'2', type:'group',  note:'虹色→1.5秒後にストロボ', open:true, children:[
+      { q:'2.1', type:'color',  mode:'rainbow', wait:0 },
+      { q:'2.2', type:'strobe', strobe:true, hz:12, target:'both', wait:1.5 },
+  ]},
+  { q:'3', type:'group',  note:'ストロボ止めて白に戻す', open:true, children:[
+      { q:'3.1', type:'strobe', strobe:false, wait:0 },
+      { q:'3.2', type:'color',  mode:'white', wait:0 },
+  ]},
+  { q:'4', type:'off', fade:2, note:'2秒でフェードアウト' },
+  { q:'5', type:'end', note:'終演・全台リセット' },
+];
+let cues = []; try { cues = JSON.parse(store.get('pl-cues')) || []; } catch {}
+if (!cues.length) cues = clone(SAMPLE);
+const save = () => store.set('pl-cues', JSON.stringify(cues));
+
+// 選択位置は [i] または [i, j]（グループ i の中の j 番目）
+let sel = [0], last = null;
+const get = (path) => path.length === 1 ? cues[path[0]] : cues[path[0]]?.children?.[path[1]];
+const container = (path) => path.length === 1 ? cues : cues[path[0]].children;
+const same = (a, b) => a && b && a.length === b.length && a.every((v, i) => v === b[i]);
+// 表示順に並べた行の一覧（閉じたグループの中身は出さない）
+function rows() {
+  const r = [];
+  cues.forEach((c, i) => {
+    r.push([i]);
+    if (c.type === 'group' && c.open !== false) (c.children || []).forEach((_, j) => r.push([i, j]));
+  });
+  return r;
+}
+
+const TYPE = { on:'点灯', off:'消灯', color:'色の切替', strobe:'ストロボ', torch:'ライト使用', end:'終了', group:'グループ' };
+const TGT = { torch:'ライト', screen:'画面', both:'ライト＋画面' };
+const colorName = (m) => m === 'rainbow' ? '<span class="rb">虹色</span>' : '白';
+function desc(c) {
+  switch (c.type) {
+    case 'on': return `${colorName(c.mode)} で点灯`;
+    case 'off': return '消灯';
+    case 'color': return `${colorName(c.mode)} に切替`;
+    case 'strobe': return c.strobe ? `ストロボ ON（${TGT[c.target || 'torch']}・${c.hz || 8}回/秒）` : 'ストロボ OFF';
+    case 'torch': return c.torch ? 'ライトを使う' : 'ライトを使わない（画面のみ）';
+    case 'end': return '全台を元に戻す';
+    case 'group': return `${(c.children || []).length} 個のキューをまとめて実行`;
+  }
+}
+const hasFade = (t) => t === 'on' || t === 'off' || t === 'color';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+function renderList(skipEditor) {
+  const R = rows();
+  const selIdx = R.findIndex(p => same(p, sel));
+  $('list').innerHTML = R.map((p, k) => {
+    const c = get(p), child = p.length === 2;
+    const isG = c.type === 'group';
+    const tw = isG ? `<span class="tw" data-tw="${p[0]}">${c.open === false ? '▸' : '▾'}</span>` : '';
+    return `<tr data-p="${p.join(',')}" class="${same(p, sel) ? 'sel' : ''} ${isG ? 'grp' : ''} ${child ? 'child' : ''} ${selIdx >= 0 && k < selIdx && last ? 'done' : ''} ${same(p, last) ? 'last' : ''}">
+      <td><span class="ph">▶</span></td>
+      <td class="qc">${tw}<b>${esc(c.q)}</b></td>
+      <td class="desc">${child ? '<span style="color:var(--sub)">└ </span>' : ''}<span class="tag t-${c.type}">${TYPE[c.type]}</span>${desc(c)}</td>
+      <td>${child || Number(c.wait) ? (Number(c.wait) || 0) + ' 秒' : '—'}</td>
+      <td>${hasFade(c.type) ? (c.type === 'color' ? (c.fade ?? 1) : (Number(c.fade) || 0)) + ' 秒' : '—'}</td>
+      <td style="color:var(--sub)">${esc(c.note)}</td>
+    </tr>`;
+  }).join('');
+  const c = get(sel);
+
+  const row = $('list').querySelector('tr.sel'); row && row.scrollIntoView({ block:'nearest' });
+  $('indent').disabled = !(sel.length === 1 && sel[0] > 0 && cues[sel[0] - 1]?.type === 'group' && get(sel)?.type !== 'group');
+  $('outdent').disabled = sel.length !== 2;
+  if (!skipEditor) renderEditor();
+}
+function renderEditor() {
+  const c = get(sel);
+  $('editor').style.opacity = c ? 1 : .4;
+  if (!c) return;
+  $('eQ').value = c.q; $('eType').value = c.type; $('eMode').value = c.mode || 'white';
+  $('eFade').value = c.fade ?? (c.type === 'color' ? 1 : 0); $('eStrobe').value = c.strobe === false ? '0' : '1';
+  $('eHz').value = c.hz || 8; $('eTarget').value = c.target || 'torch';
+  $('eTorch').value = c.torch === false ? '0' : '1'; $('eNote').value = c.note || ''; $('eWait').value = c.wait ?? 0;
+  const show = { on:['mode','fade'], off:['fade'], color:['mode','fade'], strobe:['strobe','target','hz'], torch:['torch'], end:[], group:[] }[c.type].concat(['wait']);
+  document.querySelectorAll('#editor [data-f]').forEach(el => el.classList.toggle('hide', !show.includes(el.dataset.f)));
+  // グループの中にグループは作れない
+  $('eType').querySelector('option[value=group]').disabled = sel.length === 2;
+}
+// 入力中は入力欄を書き換えない（打っている数字が勝手に変わらないように）。
+// 確定（Enter・Tab・別の場所をクリック）したときに数字を整えて表示し直す。
+const toHalf = (v) => String(v).replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/[．。，、]/g, '.').replace(/[^0-9.]/g, '');
+const num = (v, d) => { const n = parseFloat(toHalf(v)); return isFinite(n) ? n : d; };
+function readEditor(e) {
+  const c = get(sel); if (!c) return;
+  if (e && e.isComposing) return;  // 日本語入力の変換中は触らない
+  const isNum = e && e.target.classList && e.target.classList.contains('numin');
+  if (isNum && e.type === 'input') return;  // 数字欄は打っている間は何もしない（確定時に反映）
+  const typing = e && e.type === 'input' && e.target.tagName === 'INPUT';
+  const type = $('eType').value;
+  if (type === 'group' && c.type !== 'group') { c.children = c.children || []; c.open = true; }
+  c.q = $('eQ').value; c.type = type; c.note = $('eNote').value;
+  c.mode = $('eMode').value; c.target = $('eTarget').value;
+  c.strobe = $('eStrobe').value === '1'; c.torch = $('eTorch').value === '1';
+  // 数字：入力途中（空・「0.」など）は前の値を保つ
+  const f = num($('eFade').value, null), w = num($('eWait').value, null), h = num($('eHz').value, null);
+  if (f !== null) c.fade = Math.max(0, Math.min(10, f));
+  if (w !== null) c.wait = Math.max(0, Math.min(600, w));
+  if (h !== null) c.hz = Math.max(1, Math.min(30, Math.round(h)));
+  save();
+  if (typing) renderList(true); else renderList();
+}
+document.querySelectorAll('#editor input,#editor select').forEach(el => { el.addEventListener('input', readEditor); el.addEventListener('change', readEditor); });
+document.querySelectorAll('#editor .numin').forEach(el => {
+  el.addEventListener('blur', readEditor);
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); el.blur(); } });
+});
+
+$('list').addEventListener('click', (e) => {
+  const tw = e.target.closest('[data-tw]');
+  if (tw) { const g = cues[Number(tw.dataset.tw)]; g.open = g.open === false; if (!g.open && sel.length === 2 && sel[0] === Number(tw.dataset.tw)) sel = [sel[0]]; save(); renderList(); return; }
+  const tr = e.target.closest('tr'); if (tr) { sel = tr.dataset.p.split(',').map(Number); renderList(); }
+});
+
+// ---- 送信・実行 ----
+function post(path, body) {
+  return fetch(path + q, { method:'POST', headers:{'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined })
+    .catch(() => { $('conn').textContent = '送信失敗'; });
+}
+function send(c) {
+  const label = `Q${c.q}`;
+  switch (c.type) {
+    case 'on': return post('/api/set', { label, on:true, mode:c.mode || 'white', fade:Number(c.fade) || 0 });
+    case 'off': return post('/api/set', { label, on:false, fade:Number(c.fade) || 0 });
+    case 'color': return post('/api/set', { label, mode:c.mode || 'white', fade: c.fade ?? 1 });
+    case 'strobe': return post('/api/set', { label, strobe:c.strobe !== false, hz:Number(c.hz) || 8, target:c.target || 'torch' });
+    case 'torch': return post('/api/set', { label, torch:c.torch !== false });
+    case 'end': return post('/api/end');
+  }
+}
+// 待ち時間付きの実行（全消灯で取り消せるよう予約を記録）
+const pending = new Set();
+function later(sec, fn) {
+  if (!(sec > 0)) { fn(); return; }
+  const t = setTimeout(() => { pending.delete(t); fn(); }, sec * 1000);
+  pending.add(t);
+}
+function flash(path) { const tr = $('list').querySelector(`tr[data-p="${path.join(',')}"]`); if (tr) { tr.classList.remove('fired'); void tr.offsetWidth; tr.classList.add('fired'); } }
+function fire(path) {
+  const c = get(path);
+  later(Number(c.wait) || 0, () => {
+    if (c.type === 'group') (c.children || []).forEach((_, j) => fire([path[0], j]));
+    else { send(c); flash(path); }
+  });
+}
+// GO の後の次のスタンバイ：グループを実行したら中身は飛ばして次のキューへ
+function nextPath(path) {
+  if (path.length === 1) return path[0] + 1 < cues.length ? [path[0] + 1] : null;
+  const g = cues[path[0]];
+  if (path[1] + 1 < g.children.length) return [path[0], path[1] + 1];
+  return path[0] + 1 < cues.length ? [path[0] + 1] : null;
+}
+function go() {
+  if (!get(sel)) return;
+  fire(sel); last = sel; sel = nextPath(sel) || [cues.length]; renderList();
+}
+function panic() { pending.forEach(clearTimeout); pending.clear(); held.clear(); post('/api/set', { label:'全消灯', on:false, fade:0, strobe:false, held:[] }); }
+
+$('panic').onclick = panic;
+$('reset').onclick = () => { sel = [0]; last = null; renderList(); };
+twoStep($('sample'), 'リセットを確定', () => { cues = clone(SAMPLE); sel = [0]; last = null; save(); renderList(); });
+
+function nextQ(path) {
+  if (path && path.length === 2) {
+    const g = cues[path[0]];
+    const n = Math.max(0, ...g.children.map(c => { const m = String(c.q).split('.'); return Number(m[1]) || 0; }));
+    return `${g.q}.${n + 1}`;
+  }
+  const n = Math.max(0, ...cues.map(c => parseFloat(c.q) || 0));
+  return String(Math.floor(n) + 1);
+}
+// 追加：グループ選択中ならその中の最後に、グループ内のキュー選択中ならその次に
+$('add').onclick = () => {
+  const c = get(sel);
+  if (c && c.type === 'group') { c.open = true; const j = c.children.length; c.children.push({ q:nextQ([sel[0], 0]), type:'on', mode:'white', fade:0.5, wait:0 }); sel = [sel[0], j]; }
+  else if (sel.length === 2) { const g = cues[sel[0]]; g.children.splice(sel[1] + 1, 0, { q:nextQ(sel), type:'on', mode:'white', fade:0.5, wait:0 }); sel = [sel[0], sel[1] + 1]; }
+  else { const i = Math.min(sel[0] + 1, cues.length); cues.splice(i, 0, { q:nextQ(), type:'on', mode:'white', fade:0.5, note:'' }); sel = [i]; }
+  save(); renderList();
+};
+$('addg').onclick = () => {
+  const i = Math.min((sel[0] ?? -1) + 1, cues.length);
+  const g = { q:nextQ(), type:'group', note:'', open:true, children:[] };
+  cues.splice(i, 0, g); sel = [i]; save(); renderList();
+};
+$('dup').onclick = () => {
+  const c = get(sel); if (!c) return;
+  const box = container(sel), idx = sel[sel.length - 1];
+  const copy = clone(c); copy.q = nextQ(sel.length === 2 ? sel : null);
+  box.splice(idx + 1, 0, copy); sel = sel.length === 2 ? [sel[0], idx + 1] : [idx + 1]; save(); renderList();
+};
+twoStep($('del'), '削除を確定', () => {
+  if (!get(sel)) return;
+  const box = container(sel), idx = sel[sel.length - 1];
+  box.splice(idx, 1);
+  if (sel.length === 2) sel = box.length ? [sel[0], Math.min(idx, box.length - 1)] : [sel[0]];
+  else sel = [Math.max(0, Math.min(idx, cues.length - 1))];
+  save(); renderList();
+});
+$('up').onclick = () => {
+  const box = container(sel), idx = sel[sel.length - 1]; if (idx <= 0 || !get(sel)) return;
+  [box[idx - 1], box[idx]] = [box[idx], box[idx - 1]]; sel = sel.length === 2 ? [sel[0], idx - 1] : [idx - 1]; save(); renderList();
+};
+$('down').onclick = () => {
+  const box = container(sel), idx = sel[sel.length - 1]; if (idx >= box.length - 1) return;
+  [box[idx + 1], box[idx]] = [box[idx], box[idx + 1]]; sel = sel.length === 2 ? [sel[0], idx + 1] : [idx + 1]; save(); renderList();
+};
+// 上のグループに入れる / グループから出す
+$('indent').onclick = () => {
+  if ($('indent').disabled) return;
+  const i = sel[0], g = cues[i - 1], c = cues[i];
+  cues.splice(i, 1); c.wait = c.wait || 0; g.children.push(c); g.open = true; sel = [i - 1, g.children.length - 1]; save(); renderList();
+};
+$('outdent').onclick = () => {
+  if (sel.length !== 2) return;
+  const g = cues[sel[0]], c = g.children.splice(sel[1], 1)[0];
+  cues.splice(sel[0] + 1, 0, c); sel = [sel[0] + 1]; save(); renderList();
+};
+
+// テスト点灯（押している間だけ・フェードなし）
+const hold = $('hold');
+hold.addEventListener('pointerdown', (e) => { hold.setPointerCapture(e.pointerId); hold.classList.add('on'); post('/api/set', { label:'テスト', on:true, fade:0 }); });
+['pointerup','pointercancel'].forEach(t => hold.addEventListener(t, () => { if (hold.classList.contains('on')) { hold.classList.remove('on'); post('/api/set', { label:'テスト', on:false, fade:0 }); } }));
+
+// 番号の変更：カードの番号をクリック → 1〜9 から選ぶ（使われている番号なら入れ替え）
+let lastClients = [];
+$('devbar').addEventListener('click', (e) => {
+  const b = e.target.closest('.numb'); if (!b) return;
+  const id = b.dataset.id, me = lastClients.find(c => c.id === id); if (!me) return;
+  const r = b.getBoundingClientRect(), pk = $('numPick');
+  pk.querySelector('.t').textContent = `${me.name || '名前なし'} の番号`;
+  pk.querySelector('.g').innerHTML = Array.from({ length: 9 }, (_, i) => i + 1).map(n => {
+    const other = lastClients.find(c => c.num === n && c.id !== id);
+    return `<button data-n="${n}" class="${n === me.num ? 'cur' : other ? 'used' : ''}" title="${other ? (other.name || '名前なし') + ' と入れ替え' : ''}">${n}</button>`;
+  }).join('');
+  pk.style.left = Math.min(r.left, innerWidth - 260) + 'px'; pk.style.top = (r.bottom + 8) + 'px';
+  pk.classList.add('show'); pk.dataset.id = id;
+  e.stopPropagation();
+});
+$('numPick').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  post('/api/number', { id: $('numPick').dataset.id, num: Number(b.dataset.n) });
+  $('numPick').classList.remove('show'); e.stopPropagation();
+});
+addEventListener('click', () => $('numPick').classList.remove('show'));
+
+// 1〜9キー：押している間だけ、その番号の端末を消灯（同時押しOK）
+const held = new Set();
+function sendHeld() { post('/api/set', { label:'キー', held:[...held] }); document.querySelectorAll('.chip').forEach(el => el.classList.toggle('held', held.has(Number(el.dataset.num)))); }
+function numKey(e) { const m = /^(Digit|Numpad)([1-9])$/.exec(e.code); return m ? Number(m[2]) : null; }
+addEventListener('keydown', (e) => {
+  if (e.target.closest('input,select,textarea')) return;
+  const n = numKey(e); if (!n) return;
+  e.preventDefault(); if (e.repeat || held.has(n)) return;
+  held.add(n); sendHeld();
+});
+addEventListener('keyup', (e) => { const n = numKey(e); if (n && held.delete(n)) sendHeld(); });
+addEventListener('blur', () => { if (held.size) { held.clear(); sendHeld(); } });  // 別のウィンドウに移ったら全部離す
+
+// ボタンを押したら選択状態を外す（スペース＝GO やEnterがボタンに吸われて、キューが動いたり消えたりしないように）
+document.addEventListener('click', (e) => { const b = e.target.closest('button, a'); if (b) setTimeout(() => b.blur(), 0); }, true);
+document.addEventListener('keyup', (e) => { if ((e.code === 'Space' || e.key === 'Enter') && e.target.closest('button')) e.preventDefault(); }, true);
+document.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.key === 'Enter') && e.target.closest('button')) { e.preventDefault(); e.target.blur(); } }, true);
+// 「削除」「サンプルに戻す」は2回押しで実行
+function twoStep(btn, label, fn) {
+  let t = null;
+  btn.onclick = () => {
+    if (!btn.dataset.c) { btn.dataset.c = 1; const o = btn.textContent; btn.textContent = label; btn.style.background = '#c0392b';
+      t = setTimeout(() => { delete btn.dataset.c; btn.textContent = o; btn.style.background = ''; }, 2500); btn.dataset.o = o; return; }
+    clearTimeout(t); delete btn.dataset.c; btn.textContent = btn.dataset.o; btn.style.background = ''; fn();
+  };
+}
+
+// キー操作（入力欄の編集中は無効）
+addEventListener('keydown', (e) => {
+  if (e.target.closest('input,select,textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  const R = rows(), k = R.findIndex(p => same(p, sel));
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) go(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); sel = R[Math.min(k + 1, R.length - 1)] || [cues.length]; if (k < 0) sel = R[R.length - 1]; renderList(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); sel = k < 0 ? R[R.length - 1] : R[Math.max(k - 1, 0)]; renderList(); }
+  else if (e.key === 'Escape') { panic(); }
+});
+
+// ---- サーバーからの状態 ----
+let rbTimer = null;
+const es = new EventSource('/events/operator' + q);
+let downT = null;
+es.onopen = () => { $('conn').textContent = 'サーバー接続OK'; $('conn').style.color = 'var(--go)'; clearTimeout(downT); downT = null; $('down').classList.remove('show'); loadInfo(); };
+es.onerror = () => {
+  $('conn').textContent = 'サーバー再接続中…'; $('conn').style.color = 'var(--warn)';
+  if (!downT) downT = setTimeout(() => $('down').classList.add('show'), 2500);
+};
+$('reconn').onclick = $('reload2').onclick = () => location.reload();
+// サーバーが止まっていたら、自動で起動用アプリを呼び出す（この画面を開いている間に1回だけ）
+let autoStarted = false;
+function autoStart() {
+  if (autoStarted) return; autoStarted = true;
+  const f = document.createElement('iframe'); f.style.display = 'none'; f.src = 'lightoperator://start';
+  document.body.appendChild(f); setTimeout(() => f.remove(), 3000);
+}
+es.onmessage = (ev) => {
+  const m = JSON.parse(ev.data);
+  if (m.type !== 'status') return;
+  clearInterval(rbTimer);
+  const lamp = $('lamp');
+  if (m.on && m.mode === 'rainbow') rbTimer = setInterval(() => { lamp.style.background = `hsl(${(Date.now() / 4000 * 360) % 360},100%,50%)`; }, 50);
+  else lamp.style.background = m.on ? '#fff' : '#000';
+  $('liveText').innerHTML = (m.on ? '<b style="color:#fff">点灯中</b>' : '消灯') +
+    `<br>${m.mode === 'rainbow' ? '虹色' : '白'}${m.strobe ? `・ストロボ（${TGT[m.target || 'torch']}）${m.hz}回/秒` : ''}${m.torch === false ? '・画面のみ' : ''}`;
+  const cs = m.clients;
+  $('nAll').textContent = cs.filter(c => !c.lost).length;
+  $('nTorch').textContent = cs.filter(c => c.torch).length;
+  $('nLit').textContent = cs.filter(c => c.ack).length;
+  devState = { on: m.on, mode: m.mode, n: cs.length };
+  lastClients = cs;
+  $('devbar').innerHTML = cs.length ? cs.slice().sort((a, b) => (a.num || 99) - (b.num || 99)).map((c, i) => `<div class="chip ${c.lost ? 'lost' : ''} ${held.has(c.num) ? 'held' : ''}" data-num="${c.num || ''}" title="${c.lost ? '接続が切れています' : '接続中'}：キー「${c.num}」を押している間だけ消灯"><span class="numb" data-id="${esc(c.id)}" title="クリックで番号を変更">${c.num || '?'}</span><span class="cd"></span><span class="n">${esc(c.name || '名前なし')}</span><span class="dtag" title="スマホのページの版">${esc(c.ver || '旧版')}</span>${c.ready ? '' : '<span class="lt" style="background:#4a3418;color:#ffb35c">未確認</span>'}
+    <span class="lt ${c.torch ? 'ok' : c.torch === false ? 'no' : 'wait'}">${c.torch ? 'ライト可' : c.torch === false ? '画面のみ' : '確認中'}</span><span class="sw" data-i="${cs.indexOf(c)}" data-num="${c.num || ''}"></span></div>`).join('') : '<span class="dtag">まだ接続している端末はありません</span>';
+  paintSwatches();
+};
+// 各端末がいま出している色（虹色は端末ごとにずれる）
+let devState = { on:false, mode:'white', n:0 };
+function paintSwatches() {
+  document.querySelectorAll('.chip .sw').forEach(el => {
+    const i = Number(el.dataset.i);
+    const lit = devState.on && !held.has(Number(el.dataset.num));
+    el.style.background = !lit ? '#000' : devState.mode === 'rainbow'
+      ? `hsl(${(Date.now() / 4000 * 360 + i * 360 / Math.max(1, devState.n)) % 360},100%,50%)` : '#fff';
+  });
+}
+setInterval(paintSwatches, 60);
+
+// 参加用リンクの表示
+function loadInfo() { fetch('/api/info?op=1').then(r => r.json()).then(j => {
+  $('links').innerHTML = 'ホーム画面の Light Operator を開くだけ<br>初めての端末：<span id="entry">—</span>';
+  const e = j.topic ? `https://ntfy.sh/${j.topic}` : '';
+  $('entry').innerHTML = e ? `<a href="${e}" target="_blank" style="color:#8fd3ff">${e}</a><br>（開いて一番上の「リンクを開く」→ ホーム画面に追加）` : '—';
+  if (j.url) $('links').insertAdjacentHTML('beforeend', `<br>今回のアドレス：<span style="color:#ddd;word-break:break-all">${esc(j.url)}</span>`);
+}).catch(() => {}); }
+loadInfo();
+// サーバーが止まっていても、この画面は開けるように保存しておく
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+renderList();
+</script>
+</body>
+</html>

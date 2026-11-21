@@ -1,0 +1,460 @@
+<?xml version='1.0' encoding='utf-8'?>
+<お手本共通>
+  <!-- お手本5本(250時間・おかちめんこ・IMG_4038ほか)に共通して入っていた編集: 終わりのアイキャッチ / 冒頭の調整レイヤー225％in / BGM。250時間.fcpxmld から取り出し -->
+  <resources>
+    <format id="r1" frameDuration="100/3000s" width="2160" height="3840" colorSpace="1-1-1 (Rec. 709)" />
+    <effect id="r5" name="Channel EQ" uid="AudioUnit: 0x61756678000000ec454d4147" />
+    <effect id="r6" name="Compressor" uid="AudioUnit: 0x617566780000009a454d4147" />
+    <effect id="r7" name="DeEsser 2" uid="AudioUnit: 0x6175667800000123454d4147" />
+    <effect id="r8" name="Denoiser Classic" uid="AudioUnit: 0x61756678446e636c4272746d" />
+    <asset id="r10" name="天国と地獄／運動会BGM" uid="30D4540A2A7D650EE1394CD4B0AFD3F7" start="0s" duration="5695392/48000s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="48000">
+      <media-rep kind="original-media" sig="30D4540A2A7D650EE1394CD4B0AFD3F7" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E9%9F%B3%E6%BA%90/BGM/%E5%A4%A9%E5%9B%BD%E3%81%A8%E5%9C%B0%E7%8D%84%EF%BC%8F%E9%81%8B%E5%8B%95%E4%BC%9ABGM.m4a">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.mio.ingestDate" value="2025-07-30 22:08:25 +0900" />
+      </metadata>
+    </asset>
+    <format id="r11" name="FFVideoFormatRateUndefined" />
+    <effect id="r13" name="カスタム" uid=".../Titles.localized/Build In:Out.localized/Custom.localized/Custom.moti" />
+    <effect id="r14" name="ストローク" uid="~/Effects.localized/自作プラグイン/ストローク/ストローク.moef" src="file:///Users/YUITONOMURA/Library/Containers/com.apple.FinalCut/Data/Movies/Motion%20Templates.localized/Effects.localized/%E8%87%AA%E4%BD%9C%E3%83%95%E3%82%9A%E3%83%A9%E3%82%AF%E3%82%99%E3%82%A4%E3%83%B3/%E3%82%B9%E3%83%88%E3%83%AD%E3%83%BC%E3%82%AF/%E3%82%B9%E3%83%88%E3%83%AD%E3%83%BC%E3%82%AF.moef" />
+    <effect id="r15" name="ドロップシャドウ" uid="FxPlug:9C13F991-BC99-4DC8-B150-381D7CCE183B" />
+    <effect id="r17" name="調整レイヤー225％in" uid="~/Titles.localized/プラグイン/調整レイヤー225％in/調整レイヤー225％in.moti" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E5%A4%96%E5%87%BACH.fcpbundle/Motion%20Templates.localized/Titles.localized/%E3%83%95%E3%82%9A%E3%83%A9%E3%82%AF%E3%82%99%E3%82%A4%E3%83%B3/%E8%AA%BF%E6%95%B4%E3%83%AC%E3%82%A4%E3%83%A4%E3%83%BC225%EF%BC%85in%20%E3%82%B3%E3%83%92%E3%82%9A%E3%83%BC%2037/%E8%AA%BF%E6%95%B4%E3%83%AC%E3%82%A4%E3%83%A4%E3%83%BC225%EF%BC%85in%20%E3%82%B3%E3%83%92%E3%82%9A%E3%83%BC%2037.moti" />
+    <media id="r43" name="アイキャッチ 2026 ロゴ版" uid="CLIXvBsiQkiKIHJSE1jBoQ" modDate="2026-03-23 01:46:53 +0900">
+      <sequence format="r1" duration="1800/3000s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k">
+        <spine>
+          <video ref="r44" offset="0s" name="カスタム" start="3600s" duration="1800/3000s">
+            <param name="Color" key="9999/10008/10006/2/1/1" value="0 0 0" />
+            <adjust-blend mode="22 (差分)" />
+            <asset-clip ref="r45" lane="-1" offset="3600s" name="ホ#06.1" start="2625431948/720000s" duration="432000/720000s" audioRole="dialogue">
+              <audio-channel-source srcCh="1, 2" role="俺.俺-1" />
+              <filter-audio ref="r46" name="Noise Gate">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QWFgAAAACAAAAEAAAAEdBTUVUU1BQswAAAAAAAAAAAHDCAAAAAAAAyMIAAIA/AAAAAP7//0AAQJxGAACgQQAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAoMFYVW50aXRsZWQQsxAA0iwtLi9aJGNsYXNzbmFtZVgkY2xhc3Nlc1xOU0RpY3Rpb25hcnmiLjBYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAWABaAGwAcgB5AIEAjACTAJoAnACeAKAAogCkAKYArQCvALEAswC1ALcAuQC7AMAAzQDSANcA3wDnAOwA8QFMAVUBVwFZAV4BaQFyAX8BggAAAAAAAAIBAAAAAAAAADEAAAAAAAAAAAAAAAAAAAGL</data>
+                <param name="Threshold [dB]" key="1" value="-60" auxValue="40" />
+                <param name="Hysteresis [dB]" key="2" value="0.0" auxValue="40" />
+                <param name="Release [ms]" key="6" value="8.0" auxValue="8" />
+              </filter-audio>
+              <filter-audio ref="r6" name="Compressor">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QlJQAAAABAAAAHwAAAEdBTUVUU1BQmgAAAAAAAAAAAMjBAABgQAAAgD8AAHpEAAAAAAAAgD8AAAAAAACAPwAAAAAAAIA/AAAAAAAAAAAAAIA/AACAPwAAAAAAAAAAAAAAAAAA3EUAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAMhCAAAAAAAAAAAAACBAAACAPwAAAABYVW50aXRsZWQQmhAA0iwtLi9aJGNsYXNzbmFtZVgkY2xhc3Nlc1xOU0RpY3Rpb25hcnmiLjBYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAWABaAGwAcgB5AIEAjACTAJoAnACeAKAAogCkAKYArQCvALEAswC1ALcAuQC7AMAAzQDSANcA3wDnAOwA8QGIAZEBkwGVAZoBpQGuAbsBvgAAAAAAAAIBAAAAAAAAADEAAAAAAAAAAAAAAAAAAAHH</data>
+                <param name="Threshold [dB]" key="1" value="-25.0" auxValue="50" />
+                <param name="Ratio" key="2" value="3.5:1" auxValue="31" />
+                <param name="Attack [ms]" key="3" value="1.0" auxValue="2" />
+                <param name="Circuit Type" key="10" value="1 (Studio VCA)" />
+                <param name="Limiter On" key="13" value="1" />
+                <param name="Auto Release" key="14" value="1" />
+                <param name="Output Gain [dB]" key="28" value="+2.5" auxValue="65" />
+                <param name="Display Select" key="29" value="1 (Graph)" />
+              </filter-audio>
+              <filter-audio ref="r5" name="Channel EQ">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08Q8PAAAAABAAAANAAAAEdBTUVUU1BQ7AAAAAAAAAAAAIA/AACPQgAAAEGPwjU/AACAPwAAlkIAAAAAAACAPwAAgD8AANRCZmaWwB6F6z4AAIA/AABUQ2Zm9sAAAJBAAACAPwDAI0QAAODAAABQQQAAgD8AQKFEmplZwAAA0EEAAIA//2/4RZqZuUApXA8/AAAAAABAnEYAAABAj8I1PwAAAAAAAIA/MzNDQQAAAAAAAAAAAAAAAAAAAEAAAAAAAAAgQQAAgD8AAIA/AAAAAAAAgD8AAAAAAACAPwAAcEIAAAAAAABwQgAAgD94OFBMCAAAAFhVbnRpdGxlZBDsEADSLC0uL1okY2xhc3NuYW1lWCRjbGFzc2VzXE5TRGljdGlvbmFyeaIuMFhOU09iamVjdAAIABEAGgAkACkAMgA3AEkATABYAFoAbAByAHkAgQCMAJMAmgCcAJ4AoACiAKQApgCtAK8AsQCzALUAtwC5ALsAwADNANIA1wDfAOcA7ADxAeQB7QHvAfEB9gIBAgoCFwIaAAAAAAAAAgEAAAAAAAAAMQAAAAAAAAAAAAAAAAAAAiM=</data>
+                <param name="Low Cut On/Off" key="1" value="1" />
+                <param name="Low Cut Frequency [Hz]" key="2" value="71.5" auxValue="193" />
+                <param name="Low Cut Slope [dB/Oct]" key="3" value="5 (48)" />
+                <param name="Peak 1 Frequency [Hz]" key="10" value="106" auxValue="256" />
+                <param name="Peak 1 Gain [dB]" key="11" value="-4.7" auxValue="193" />
+                <param name="Peak 1 Q-Factor" key="12" value="0.46" auxValue="28" />
+                <param name="Peak 2 Frequency [Hz]" key="14" value="212" auxValue="356" />
+                <param name="Peak 2 Gain [dB]" key="15" value="-7.7" auxValue="163" />
+                <param name="Peak 2 Q-Factor" key="16" value="4.50" auxValue="70" />
+                <param name="Peak 3 Frequency [Hz]" key="18" value="655" auxValue="531" />
+                <param name="Peak 3 Gain [dB]" key="19" value="-7.0" auxValue="170" />
+                <param name="Peak 3 Q-Factor" key="20" value="13.0" auxValue="90" />
+                <param name="Peak 4 Frequency [Hz]" key="22" value="1290" auxValue="629" />
+                <param name="Peak 4 Gain [dB]" key="23" value="-3.4" auxValue="206" />
+                <param name="Peak 4 Q-Factor" key="24" value="26.0" auxValue="102" />
+                <param name="High Shelf Frequency [Hz]" key="26" value="7950" auxValue="909" />
+                <param name="High Shelf Gain [dB]" key="27" value="+5.8" auxValue="298" />
+                <param name="High Shelf Q-Factor" key="28" value="0.56" auxValue="30" />
+                <param name="Analyzer On/Off" key="34" value="1" />
+              </filter-audio>
+              <filter-audio ref="r7" name="DeEsser 2">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QREQAAAABAAAACwAAAEdBTUVUU1BQIwEAAAAAAACZmTlAmpkhwQAAAAAoAMhFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWFVudGl0bGVkEQEjEADSLC0uL1okY2xhc3NuYW1lWCRjbGFzc2VzXE5TRGljdGlvbmFyeaIuMFhOU09iamVjdAAIABEAGgAkACkAMgA3AEkATABYAFoAbAByAHkAgQCMAJMAmgCcAJ4AoACiAKQApgCtAK8AsQCzALUAtwC5ALsAwADNANIA1wDfAOcA7ADxATgBQQFEAUYBSwFWAV8BbAFvAAAAAAAAAgEAAAAAAAAAMQAAAAAAAAAAAAAAAAAAAXg=</data>
+                <param name="Max Reduction [dB]" key="1" value="2.9" auxValue="221" />
+                <param name="Threshold [dB]" key="2" value="-10.1" auxValue="499" />
+                <param name="Detector Frequency [Hz]" key="4" value="6400" auxValue="1454" />
+              </filter-audio>
+              <filter-audio ref="r8" name="Denoiser Classic">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAbCwwjJCUmJygpKissLTU2Nz0+P0ZMTU5PUFFSVSRudWxs0w0ODxAZIldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzqBESExQVFhcYgAKAA4AEgAWABoAHgAiACagaGxwdHh8gIYAKgAuADIAVgBaAF4AYgBmAGlxtYW51ZmFjdHVyZXJUZGF0YVxlbGVtZW50LW5hbWVXc3VidHlwZVd2ZXJzaW9uVHR5cGVfEA9qdWNlUGx1Z2luU3RhdGVUbmFtZRJCcnRtTxB8AAAAAAAAAAAAAAAOAAAAVAAAAAAAAAofP0zMzQAACiA/TMzNAAAKIT9MzM0AAAoiP0zMzQAACiM/TMzNAAAKJD9MzM0SZZnbAAAAADlvPIsAAAAAQBN7rAAAAABKO0MaP4AAAFjz8AcAAAAAdatg6AAAAAB+1nS3AAAAANMNDg8uMTSiLzCADYAOojIzgA+AE4ASUTFRMtMNDg84OjShOYAQoTuAEYASUTBVSW5wdXTSQEFCQ1okY2xhc3NuYW1lWCRjbGFzc2VzXxATTlNNdXRhYmxlRGljdGlvbmFyeaNCREVcTlNEaWN0aW9uYXJ5WE5TT2JqZWN00w0OD0dJNKE5gBChSoAUgBJWT3V0cHV0EkRuY2wQABJhdWZ4TxECXFBhcmFtZXRlcnMAAQJhY3R1YWxMb3dGcmVxAAEJBAAAACAAADlAYWN0dWFsSGlnaEZyZXEAAQkEAAAAAABAz0ABD1BBUkFNAAECaWQAAQgFQllQQVNTAHZhbHVlAAEJBAAAAAAAAAAAAFBBUkFNAAECaWQAAQgFSEZCSUFTAHZhbHVlAAEJBAAAAAAAAAAAAFBBUkFNAAECaWQAAQoFSElHSEZSRVEAdmFsdWUAAQkEAAAAAABAz0AAUEFSQU0AAQJpZAABCgVIUEVOQUJMRQB2YWx1ZQABCQQAAAAAAAAAAABQQVJBTQABAmlkAAEJBUxPV0ZSRVEAdmFsdWUAAQkEAAAAIAAAOUAAUEFSQU0AAQJpZAABCgVMUEVOQUJMRQB2YWx1ZQABCQQAAAAAAAAAAABQQVJBTQABAmlkAAEEBVIxAHZhbHVlAAEJBAAAAAAAAJg+AFBBUkFNAAECaWQAAQQFUjIAdmFsdWUAAQkEAAAAIDMzF8AAUEFSQU0AAQJpZAABBAVSMwB2YWx1ZQABCQQAAADAzMwqwABQQVJBTQABAmlkAAEEBVI0AHZhbHVlAAEJBAAAAGBm5jPAAFBBUkFNAAECaWQAAQQFUjUAdmFsdWUAAQkEAAAAAAAAJMAAUEFSQU0AAQJpZAABBAVSNgB2YWx1ZQABCQQAAACgzMwMwABQQVJBTQABAmlkAAEIBVNUTElOSwB2YWx1ZQABCQQAAAAAAAAAAABQQVJBTQABAmlkAAEDBVQAdmFsdWUAAQkEAAAAwMzMTMAARWRpdG9yU3RhdGUAAABYVW50aXRsZWTSQEFEU6JERQAIABEAGgAkACkAMgA3AEkATABYAFoAeAB+AIUAjQCYAJ8AqACqAKwArgCwALIAtAC2ALgAwQDDAMUAxwDJAMsAzQDPANEA0wDgAOUA8gD6AQIBBwEZAR4BIwGiAakBrAGuAbABswG1AbcBuQG7Ab0BxAHGAcgBygHMAc4B0AHWAdsB5gHvAgUCCQIWAh8CJgIoAioCLAIuAjACNwI8Aj4CQwSjBKwEsQAAAAAAAAIBAAAAAAAAAFQAAAAAAAAAAAAAAAAAAAS0</data>
+                <param name="Threshold" key="84" value="-56.6 dB" auxValue="0.393612" />
+                <param name="Range 2" key="2592" value="-5.8 dB" auxValue="0.606667" />
+                <param name="Range 3" key="2593" value="-13.4 dB" auxValue="0.353333" />
+                <param name="Range 4" key="2594" value="-19.9 dB" auxValue="0.136667" />
+                <param name="Range 5" key="2595" value="-10.0 dB" auxValue="0.466667" />
+                <param name="Range 6" key="2596" value="-3.6 dB" auxValue="0.68" />
+              </filter-audio>
+            </asset-clip>
+            <asset-clip ref="r47" lane="-1" offset="3600s" name="Anime_Motion16-1(High)" start="79208/720000s" duration="432000/720000s" format="r11" audioRole="dialogue">
+              <adjust-volume amount="-13dB" />
+              <audio-channel-source srcCh="1, 2" role="effects.effects-1" />
+            </asset-clip>
+            <asset-clip ref="r48" lane="-1" offset="3600s" name="キラキラ⑤" duration="432000/720000s" format="r11" audioRole="dialogue">
+              <timeMap>
+                <timept time="0s" value="0s" interp="smooth2" />
+                <timept time="37440/44100s" value="1697959722/1000000000s" interp="smooth2" />
+              </timeMap>
+              <adjust-volume amount="-17.7295dB">
+                <param name="amount">
+                  <fadeOut type="easeIn" duration="228978/720000s" />
+                </param>
+              </adjust-volume>
+            </asset-clip>
+            <asset-clip ref="r49" lane="-1" offset="3600s" name="チ#08" start="2625381076/720000s" duration="432000/720000s" audioRole="dialogue">
+              <audio-channel-source srcCh="1, 2" role="やす.やす-1" />
+              <filter-audio ref="r46" name="Noise Gate">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QWFgAAAACAAAAEAAAAEdBTUVUU1BQswAAAAAAAAAAAEjCAAAAAAAAyMIAAIA/AAAAAGgAEEEAQJxGAACgQQAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAoMFYVW50aXRsZWQQsxAA0iwtLi9aJGNsYXNzbmFtZVgkY2xhc3Nlc1xOU0RpY3Rpb25hcnmiLjBYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAWABaAGwAcgB5AIEAjACTAJoAnACeAKAAogCkAKYArQCvALEAswC1ALcAuQC7AMAAzQDSANcA3wDnAOwA8QFMAVUBVwFZAV4BaQFyAX8BggAAAAAAAAIBAAAAAAAAADEAAAAAAAAAAAAAAAAAAAGL</data>
+                <param name="Threshold [dB]" key="1" value="-50" auxValue="50" />
+                <param name="Hysteresis [dB]" key="2" value="0.0" auxValue="40" />
+                <param name="Release [ms]" key="6" value="9.0" auxValue="9" />
+              </filter-audio>
+              <filter-audio ref="r6" name="Compressor">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QlJQAAAABAAAAHwAAAEdBTUVUU1BQmgAAAAAAAAAAAMjBAABgQAAAgD8AAHpEAAAAAAAAgD8AAAAAAACAPwAAAAAAAIA/AAAAAAAAAAAAAIA/AACAPwAAAAAAAAAAAAAAAAAA3EUAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAMhCAAAAAAAAAAAAAEBAAACAPwAAAABYVW50aXRsZWQQmhAA0iwtLi9aJGNsYXNzbmFtZVgkY2xhc3Nlc1xOU0RpY3Rpb25hcnmiLjBYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAWABaAGwAcgB5AIEAjACTAJoAnACeAKAAogCkAKYArQCvALEAswC1ALcAuQC7AMAAzQDSANcA3wDnAOwA8QGIAZEBkwGVAZoBpQGuAbsBvgAAAAAAAAIBAAAAAAAAADEAAAAAAAAAAAAAAAAAAAHH</data>
+                <param name="Threshold [dB]" key="1" value="-25.0" auxValue="50" />
+                <param name="Ratio" key="2" value="3.5:1" auxValue="31" />
+                <param name="Attack [ms]" key="3" value="1.0" auxValue="2" />
+                <param name="Circuit Type" key="10" value="1 (Studio VCA)" />
+                <param name="Limiter On" key="13" value="1" />
+                <param name="Auto Release" key="14" value="1" />
+                <param name="Output Gain [dB]" key="28" value="+3.0" auxValue="66" />
+                <param name="Display Select" key="29" value="1 (Graph)" />
+              </filter-audio>
+              <filter-audio ref="r5" name="Channel EQ">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08Q8PAAAAABAAAANAAAAEdBTUVUU1BQ7AAAAAAAAAAAAIA/AAAOQwAAAEEehSs/AACAPwAAmEMAAIDAAACAPwAAgD8AAFhDMzPzv5qZiUAAAIA/AEAhRDMzK8EAADBBAACAP///b0SamRHBAABwQQAAgD8AgKJEMzODwQAAIEIAAIA/ANgLRs3MvEB7FK4+AAAAAABAnEYAAABAj8I1PwAAAAAAAIA/MzNDQQAAAAAAAAAAAAAAAAAAAEAAAAAAAAAgQQAAgD8AAIA/AAAAAAAAgD8AAAAAAACAPwAAcEIAAAAAAABwQgAAgD94OFBMCAAAAFhVbnRpdGxlZBDsEADSLC0uL1okY2xhc3NuYW1lWCRjbGFzc2VzXE5TRGljdGlvbmFyeaIuMFhOU09iamVjdAAIABEAGgAkACkAMgA3AEkATABYAFoAbAByAHkAgQCMAJMAmgCcAJ4AoACiAKQApgCtAK8AsQCzALUAtwC5ALsAwADNANIA1wDfAOcA7ADxAeQB7QHvAfEB9gIBAgoCFwIaAAAAAAAAAgEAAAAAAAAAMQAAAAAAAAAAAAAAAAAAAiM=</data>
+                <param name="Low Cut On/Off" key="1" value="1" />
+                <param name="Low Cut Frequency [Hz]" key="2" value="142" auxValue="292" />
+                <param name="Low Cut Slope [dB/Oct]" key="3" value="5 (48)" />
+                <param name="Low Cut Q-Factor" key="4" value="0.67" auxValue="35" />
+                <param name="Low Shelf Frequency [Hz]" key="6" value="304" auxValue="402" />
+                <param name="Low Shelf Gain [dB]" key="7" value="-4.0" auxValue="200" />
+                <param name="Peak 1 Frequency [Hz]" key="10" value="216" auxValue="358" />
+                <param name="Peak 1 Gain [dB]" key="11" value="-1.9" auxValue="221" />
+                <param name="Peak 1 Q-Factor" key="12" value="4.30" auxValue="69" />
+                <param name="Peak 2 Frequency [Hz]" key="14" value="645" auxValue="529" />
+                <param name="Peak 2 Gain [dB]" key="15" value="-10.7" auxValue="133" />
+                <param name="Peak 2 Q-Factor" key="16" value="11.0" auxValue="86" />
+                <param name="Peak 3 Frequency [Hz]" key="18" value="960" auxValue="592" />
+                <param name="Peak 3 Gain [dB]" key="19" value="-9.1" auxValue="149" />
+                <param name="Peak 3 Q-Factor" key="20" value="15.0" auxValue="92" />
+                <param name="Peak 4 Frequency [Hz]" key="22" value="1300" auxValue="630" />
+                <param name="Peak 4 Gain [dB]" key="23" value="-16.4" auxValue="76" />
+                <param name="Peak 4 Q-Factor" key="24" value="40.0" auxValue="110" />
+                <param name="High Shelf Frequency [Hz]" key="26" value="8950" auxValue="929" />
+                <param name="High Shelf Gain [dB]" key="27" value="+5.9" auxValue="299" />
+                <param name="High Shelf Q-Factor" key="28" value="0.34" auxValue="21" />
+                <param name="Analyzer On/Off" key="34" value="1" />
+              </filter-audio>
+              <filter-audio ref="r7" name="DeEsser 2">
+                <data key="effectState">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVtlZmZlY3RTdGF0ZYABrxAPCwwfICEiIyQlJicoKSorVSRudWxs0w0ODxAXHldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzphESExQVFoACgAOABIAFgAaAB6YYGRobHB2ACIAJgAqAC4AMgA2ADlR0eXBlXG1hbnVmYWN0dXJlclRkYXRhVG5hbWVXc3VidHlwZVd2ZXJzaW9uEmF1ZngSRU1BR08QREQAAAABAAAACwAAAEdBTUVUU1BQIwEAAAAAAAAAAIBAmpnpwAAAAACAs+1FAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWFVudGl0bGVkEQEjEADSLC0uL1okY2xhc3NuYW1lWCRjbGFzc2VzXE5TRGljdGlvbmFyeaIuMFhOU09iamVjdAAIABEAGgAkACkAMgA3AEkATABYAFoAbAByAHkAgQCMAJMAmgCcAJ4AoACiAKQApgCtAK8AsQCzALUAtwC5ALsAwADNANIA1wDfAOcA7ADxATgBQQFEAUYBSwFWAV8BbAFvAAAAAAAAAgEAAAAAAAAAMQAAAAAAAAAAAAAAAAAAAXg=</data>
+                <param name="Max Reduction [dB]" key="1" value="4.0" auxValue="210" />
+                <param name="Threshold [dB]" key="2" value="-7.3" auxValue="527" />
+                <param name="Detector Frequency [Hz]" key="4" value="7606" auxValue="1604" />
+              </filter-audio>
+            </asset-clip>
+            <video ref="r50" lane="1" offset="3600s" name="360° グラデーション" start="3600s" duration="460800/768000s">
+              <param name="場所" key="9999/10153/10164/2/1/310/1/1/1" value="0.0691892" />
+              <param name="カラー" key="9999/10153/10164/2/1/310/1/1/3" value="0.370555 0.370565 0.37056" />
+              <param name="場所" key="9999/10153/10164/2/1/310/1/2/1" value="0.645042" />
+              <param name="カラー" key="9999/10153/10164/2/1/310/1/2/3" value="0.129842 0.129846 0.129844" />
+              <adjust-conform type="none" />
+              <adjust-orientation mapping="normal" />
+            </video>
+            <video ref="r51" lane="2" offset="3600s" name="RGB-fullcolor" start="3600s" duration="1800/3000s">
+              <adjust-transform>
+                <param name="anchor">
+                  <keyframeAnimation>
+                    <keyframe time="3600s" value="0 0" />
+                    <keyframe time="10801500/3000s" value="0 0" />
+                  </keyframeAnimation>
+                </param>
+                <param name="position">
+                  <keyframeAnimation>
+                    <keyframe time="3600s" value="0 0" />
+                    <keyframe time="10801500/3000s" value="0 0" />
+                  </keyframeAnimation>
+                </param>
+                <param name="rotation">
+                  <keyframeAnimation>
+                    <keyframe time="3600s" value="0" curve="linear" />
+                    <keyframe time="10801500/3000s" value="0" />
+                  </keyframeAnimation>
+                </param>
+                <param name="scale">
+                  <keyframeAnimation>
+                    <keyframe time="3600s" value="0.54 0.54" />
+                    <keyframe time="21603000/6000s" value="0.572088 0.572088" />
+                  </keyframeAnimation>
+                </param>
+              </adjust-transform>
+              <filter-video ref="r53" name="バランス">
+                <data key="effectData">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGvECULDCcoKSorLC0uLzAxNzhBTk9ZXF1gYWRlaGlsbXF3eH5/hYaHVSRudWxs0w0ODxAbJldOUy5rZXlzWk5TLm9iamVjdHNWJGNsYXNzqhESExQVFhcYGRqAAoADgASABYAGgAeACIAJgAqAC6ocHR4fHx8fHx8lgAyAHoAfgCKAIoAigCKAIoAigCOAJFlsdW1hQnVtcHNdSERSQ29tcGF0aWJsZV8QEXJlZkNvbG9yTWF0Y2hJbmZvXxAWd2hpdGVCYWxhbmNlQ29sb3JHcmVlblxza2luQ29sb3JSZWRec2tpbkNvbG9yR3JlZW5fEBV3aGl0ZUJhbGFuY2VDb2xvckJsdWVdc2tpbkNvbG9yQmx1ZV8QFHdoaXRlQmFsYW5jZUNvbG9yUmVkXmJhbGFuY2VPcHRpb25z0zIzDzQ1NlVidW1wc1xwZXJzaXN0ZW50SUSADoANgB1fECQ4OTZCQTY5MS1FQTU1LTRBQzYtODUxMi1BQURBNzEzQzg1NkbSDg85QKY6Ozw9Pj+AD4ASgBSAFoAYgBqAHNcPQjNDREVGR0hJSktMTVdidW1wSHVlWXdoaXRlQmFsWVpzYXR1cmF0aW9uWWJ1bXBTaWdtYVl3aGl0ZUJhbFiAESM/tlllgAAAAIAQI78Kik8gAAAAIz/xVmrAAAAAI7+DgTigAAAAI76bFkGgAAAAXxAkRUQ1MkJCREQtNDI2Ny00MTZFLUIwREYtMDA1OEY3RUY0RDgx0lBRUlNaJGNsYXNzbmFtZVgkY2xhc3Nlc1pGRkx1bWFCdW1wpVRVVldYWkZGTHVtYUJ1bXBeRkZCYXNlRFNPYmplY3RdRkZNb2RlbE9iamVjdFhEU09iamVjdFhOU09iamVjdNIzD1pHgBOAEV8QJEY0OEM1M0E5LUQ0NEMtNEFFQy1CMjlDLUI4MkRDM0M4QkExNNIzD15HgBWAEV8QJDFFQ0ZBOTkyLUFGRjItNEJBOC05NjIyLUJBMkU2RUQyQzY4MdIzD2JHgBeAEV8QJEYzQURENzM5LURBOEUtNDZGQi1COEY4LTk2OUYwQTdDN0Q3MNIzD2ZHgBmAEV8QJEVBMzU3QkY1LTgwOEEtNDQ3MC1COEI5LUQ2RjkwMkIxNTU5NtIzD2pHgBuAEV8QJEE5MjhGNjhDLTZFOEMtNDAxMC04NjRELTAzNUIyODM2QjVGOdJQUW5vXk5TTXV0YWJsZUFycmF5o25wWFdOU0FycmF50lBRcnNfEBNGRkx1bWFCdW1wQ29udGFpbmVypXR1dldYXxATRkZMdW1hQnVtcENvbnRhaW5lcl5GRkJhc2VEU09iamVjdF1GRk1vZGVsT2JqZWN0CNR5M3oPe3x7fVtmYWNlU2F0X3JlZlZzYXRSZWYjP/AAAAAAAACAIIAhXxAkREU1QjgwNkEtNEU0RS00QTRCLTgwMDEtMEJCRDEwOEY5MUND0lBRgIFfEBxGRlJlZkNvbG9yTWF0Y2hJbmZvQ29udGFpbmVypYKDhFdYXxAcRkZSZWZDb2xvck1hdGNoSW5mb0NvbnRhaW5lcl5GRkJhc2VEU09iamVjdF1GRk1vZGVsT2JqZWN0IwAAAAAAAAAAEADSUFGIiVxOU0RpY3Rpb25hcnmiiFgACAARABoAJAApADIANwBJAEwAUQBTAHsAgQCIAJAAmwCiAK0ArwCxALMAtQC3ALkAuwC9AL8AwQDMAM4A0ADSANQA1gDYANoA3ADeAOAA4gDsAPoBDgEnATQBQwFbAWkBgAGPAZYBnAGpAasBrQGvAdYB2wHiAeQB5gHoAeoB7AHuAfAB/wIHAhECHAImAjACMgI7Aj0CRgJPAlgCYQKIAo0CmAKhAqwCsgK9AswC2gLjAuwC8QLzAvUDHAMhAyMDJQNMA1EDUwNVA3wDgQODA4UDrAOxA7MDtQPcA+ED8AP0A/wEAQQXBB0EMwRCBFAEUQRaBGYEbQR2BHgEegShBKYExQTLBOoE+QUHBRAFEgUXBSQAAAAAAAACAQAAAAAAAACKAAAAAAAAAAAAAAAAAAAFJw==</data>
+              </filter-video>
+              <filter-video ref="r15" name="ドロップシャドウ" nameOverride="ぼかしシャドウ">
+                <data key="effectConfig">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGlCwwVFhdVJG51bGzTDQ4PEBIUV05TLmtleXNaTlMub2JqZWN0c1YkY2xhc3OhEYACoROAA4AEXXBsdWdpblZlcnNpb24QAdIYGRobWiRjbGFzc25hbWVYJGNsYXNzZXNfEBNOU011dGFibGVEaWN0aW9uYXJ5oxocHVxOU0RpY3Rpb25hcnlYTlNPYmplY3QIERokKTI3SUxRU1lfZm55gIKEhoiKmJqfqrPJzdoAAAAAAAABAQAAAAAAAAAeAAAAAAAAAAAAAAAAAAAA4w==</data>
+                <param name="カラー" key="1" value="1 0.578105 0" />
+                <param name="不透明度" key="2" value="1" />
+                <param name="プリセット" key="8" value="3 (カスタム)" />
+                <param name="ぼかし" key="4" value="100" />
+                <param name="ブラー減衰" key="5" value="1" />
+                <param name="位置" key="3" value="0.5 0" />
+                <param name="遠近の量" key="7" value="0" />
+              </filter-video>
+            </video>
+            <video ref="r54" lane="3" offset="3600s" name="S__71147525 2" start="3600s" duration="1800/3000s">
+              <adjust-crop mode="trim">
+                <trim-rect bottom="12.0326" />
+              </adjust-crop>
+              <adjust-transform position="-17.9688 0">
+                <param name="scale">
+                  <keyframeAnimation>
+                    <keyframe time="3600s" value="-0.2 0.2" />
+                    <keyframe time="21600800/6000s" value="0.2 0.2" />
+                  </keyframeAnimation>
+                </param>
+              </adjust-transform>
+              <filter-video ref="r15" name="ドロップシャドウ" nameOverride="ぼかしシャドウ">
+                <data key="effectConfig">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGlCwwVFhdVJG51bGzTDQ4PEBIUV05TLmtleXNaTlMub2JqZWN0c1YkY2xhc3OhEYACoROAA4AEXXBsdWdpblZlcnNpb24QAdIYGRobWiRjbGFzc25hbWVYJGNsYXNzZXNfEBNOU011dGFibGVEaWN0aW9uYXJ5oxocHVxOU0RpY3Rpb25hcnlYTlNPYmplY3QIERokKTI3SUxRU1lfZm55gIKEhoiKmJqfqrPJzdoAAAAAAAABAQAAAAAAAAAeAAAAAAAAAAAAAAAAAAAA4w==</data>
+                <param name="不透明度" key="2" value="1" />
+                <param name="プリセット" key="8" value="3 (カスタム)" />
+                <param name="ぼかし" key="4" value="100" />
+                <param name="ブラー減衰" key="5" value="1" />
+                <param name="位置" key="3" value="0.5 0" />
+                <param name="遠近の量" key="7" value="0" />
+              </filter-video>
+            </video>
+            <video ref="r56" lane="4" offset="3600s" name="S__71147524 2" start="21601200/6000s" duration="1800/3000s">
+              <adjust-crop mode="trim">
+                <trim-rect bottom="11.938" />
+              </adjust-crop>
+              <adjust-transform position="17.9688 0">
+                <param name="scale">
+                  <param name="調整（X方向）" key="1">
+                    <keyframeAnimation>
+                      <keyframe time="2592144000/720000s" value="-0.2" />
+                      <keyframe time="10801000/3000s" value="0.2" />
+                    </keyframeAnimation>
+                  </param>
+                  <param name="調整（Y方向）" key="2" value="0.2" />
+                </param>
+              </adjust-transform>
+              <filter-video ref="r15" name="ドロップシャドウ" nameOverride="ぼかしシャドウ">
+                <data key="effectConfig">YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGlCwwVFhdVJG51bGzTDQ4PEBIUV05TLmtleXNaTlMub2JqZWN0c1YkY2xhc3OhEYACoROAA4AEXXBsdWdpblZlcnNpb24QAdIYGRobWiRjbGFzc25hbWVYJGNsYXNzZXNfEBNOU011dGFibGVEaWN0aW9uYXJ5oxocHVxOU0RpY3Rpb25hcnlYTlNPYmplY3QIERokKTI3SUxRU1lfZm55gIKEhoiKmJqfqrPJzdoAAAAAAAABAQAAAAAAAAAeAAAAAAAAAAAAAAAAAAAA4w==</data>
+                <param name="不透明度" key="2" value="1" />
+                <param name="プリセット" key="8" value="3 (カスタム)" />
+                <param name="ぼかし" key="4" value="100" />
+                <param name="ブラー減衰" key="5" value="1" />
+                <param name="位置" key="3" value="0.5 0" />
+                <param name="遠近の量" key="7" value="0" />
+              </filter-video>
+            </video>
+            <title ref="r13" lane="5" offset="3600s" name="俺たちだって - カスタム" start="10800100/3000s" duration="1800/3000s" enabled="0">
+              <param name="位置" key="9999/10199/10201/1/100/101" value="1.2 9.80807" />
+              <param name="調整" key="9999/10199/10201/1/100/105" value="0.8 0.8393" />
+              <param name="配置" key="9999/10199/10201/2/354/1002961760/401" value="1 (水平方向に中央揃え)" />
+              <param name="配置" key="9999/10199/10201/2/354/3001977829/401" value="1 (水平方向に中央揃え)" />
+              <param name="配置" key="9999/10199/10201/2/373" value="0 (左揃え) 1 (中央)" />
+              <param name="Out Sequencing" key="9999/10199/10201/4/10233/201/202" value="0 (終了)" />
+              <param name="ディスタンス" key="9999/10199/10201/5/10203/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/10203/21/75" value="4.12 4.12" />
+              <param name="ディスタンス" key="9999/10199/10201/5/3002154499/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/3002154499/21/75" value="4.12 4.12" />
+              <param name="ディスタンス" key="9999/10199/10201/5/3002154643/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/3002154643/21/75" value="4.12 4.12" />
+              <param name="ディスタンス" key="9999/10199/10201/5/3002155285/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/3002155285/21/75" value="4.12 4.12" />
+              <param name="ディスタンス" key="9999/10199/10201/5/3002155316/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/3002155316/21/75" value="4.12 4.12" />
+              <param name="ディスタンス" key="9999/10199/10201/5/3297671601/21/27" value="3" />
+              <param name="ブラー" key="9999/10199/10201/5/3297671601/21/75" value="4.12 4.12" />
+              <param name="disableDRT" key="3733" value="1" />
+              <text>
+                <text-style ref="ts186">俺</text-style>
+                <text-style ref="ts187">たちだって</text-style>
+                <text-style ref="ts188">
+</text-style>
+                <text-style ref="ts189">チヤ</text-style>
+                <text-style ref="ts190">ホ</text-style>
+                <text-style ref="ts191">ヤ</text-style>
+                <text-style ref="ts187">された</text-style>
+                <text-style ref="ts188">い</text-style>
+              </text>
+              <text-style-def id="ts186">
+                <text-style font="GenEi POPle Pw" fontSize="57" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" kerning="2.6858" alignment="center">
+                  <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                    <param name="motionTextTracking" key="tracking" value="-2.3142" />
+                    <param name="motionTextKerning" key="kerning" value="5" />
+                  </param>
+                </text-style>
+              </text-style-def>
+              <text-style-def id="ts187">
+                <text-style font="GenEi POPle Pw" fontSize="50" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" kerning="-2.03" alignment="center">
+                  <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                    <param name="motionTextTracking" key="tracking" value="-2.03" />
+                  </param>
+                </text-style>
+              </text-style-def>
+              <text-style-def id="ts188">
+                <text-style font="GenEi POPle Pw" fontSize="50" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" alignment="center" />
+              </text-style-def>
+              <text-style-def id="ts189">
+                <text-style font="GenEi POPle Pw" fontSize="58" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" kerning="-2.3548" alignment="center">
+                  <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                    <param name="motionTextTracking" key="tracking" value="-2.3548" />
+                  </param>
+                </text-style>
+              </text-style-def>
+              <text-style-def id="ts190">
+                <text-style font="GenEi POPle Pw" fontSize="58" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" kerning="-6.3548" alignment="center">
+                  <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                    <param name="motionTextTracking" key="tracking" value="-2.3548" />
+                    <param name="motionTextKerning" key="kerning" value="-4" />
+                  </param>
+                </text-style>
+              </text-style-def>
+              <text-style-def id="ts191">
+                <text-style font="GenEi POPle Pw" fontSize="58" fontFace="Black" fontColor="0 1.17859e-05 0.501966 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="3 315" shadowBlurRadius="8.24" kerning="-0.3548" alignment="center">
+                  <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                    <param name="motionTextTracking" key="tracking" value="-2.3548" />
+                    <param name="motionTextKerning" key="kerning" value="2" />
+                  </param>
+                </text-style>
+              </text-style-def>
+              <adjust-transform>
+                <param name="anchor">
+                  <keyframeAnimation>
+                    <keyframe time="10800100/3000s" value="0 0" curve="linear" />
+                  </keyframeAnimation>
+                </param>
+                <param name="position">
+                  <keyframeAnimation>
+                    <keyframe time="10800100/3000s" value="0 0" />
+                  </keyframeAnimation>
+                </param>
+                <param name="rotation">
+                  <keyframeAnimation>
+                    <keyframe time="10800100/3000s" value="0" curve="linear" />
+                  </keyframeAnimation>
+                </param>
+                <param name="scale">
+                  <keyframeAnimation>
+                    <keyframe time="10800100/3000s" value="1 1" />
+                    <keyframe time="10801600/3000s" value="1.05 1.05" />
+                  </keyframeAnimation>
+                </param>
+              </adjust-transform>
+              <adjust-colorConform enabled="1" autoOrManual="manual" conformType="conformNone" peakNitsOfPQSource="1000" peakNitsOfSDRToPQSource="203" />
+            </title>
+            <spine lane="6" offset="3600s">
+              <transition name="調整" offset="0s" duration="400/3000s">
+                <filter-video ref="r57" name="調整" />
+              </transition>
+              <title ref="r13" offset="0s" name="フォローよろしく✨ - カスタム" start="3600s" duration="1800/3000s">
+                <param name="位置" key="9999/10199/10201/1/100/101" value="33.8422 103.625" />
+                <param name="回転" key="9999/10199/10201/1/100/109" value="0 0 2.15985 0 (回転を使用)" />
+                <param name="配置" key="9999/10199/10201/2/354/1002961760/401" value="1 (水平方向に中央揃え)" />
+                <param name="Out Sequencing" key="9999/10199/10201/4/10233/201/202" value="0 (終了)" />
+                <text>
+                  <text-style ref="ts192">フォローよろしく</text-style>
+                  <text-style ref="ts193">✨</text-style>
+                </text>
+                <text-style-def id="ts192">
+                  <text-style font="GenEi POPle Pw" fontSize="53" fontFace="Black" fontColor="0 0 0 1" bold="1" shadowColor="0.0594717 0.501943 0.998465 0.8444" shadowOffset="5 315" shadowBlurRadius="0.94" kerning="-2.1253" alignment="center">
+                    <param name="MotionSimpleValues" key="MotionTextStyle:SimpleValues">
+                      <param name="motionTextTracking" key="tracking" value="-2.1253" />
+                    </param>
+                  </text-style>
+                </text-style-def>
+                <text-style-def id="ts193">
+                  <text-style font="GenEi POPle Pw" fontSize="53" fontFace="Black" fontColor="1 1 1 1" bold="1" shadowColor="0.990448 0.502245 0.0328808 1" shadowOffset="8 315" shadowBlurRadius="4.96" alignment="center" />
+                </text-style-def>
+                <filter-video ref="r59" name="スケッチ">
+                  <param name="Intensity" key="9999/987194048/100/987194049/2/100" value="1" />
+                </filter-video>
+                <filter-video ref="r60" name="ハンドヘルド">
+                  <param name="Distance" key="9999/999169396/100/999169397/2/100" value="0.136667" />
+                  <param name="Shakiness" key="9999/999169396/100/999169454/2/100" value="0.2955" />
+                </filter-video>
+                <filter-video ref="r14" name="ストローク">
+                  <param name="カラー" key="9999/10003/3/10016/2" value="0.580723 0.0667341 0 1" />
+                  <param name="外側をフェード" key="9999/10003/3/10016/9" value="0.4992" />
+                </filter-video>
+              </title>
+            </spine>
+          </video>
+        </spine>
+      </sequence>
+    </media>
+    <effect id="r44" name="カスタム" uid=".../Generators.localized/Solids.localized/Custom.localized/Custom.motn" />
+    <asset id="r45" name="ホ#06.1" uid="9F8B13DAE7CA9A5BD1B5433FE47071BB" start="160791677/44100s" duration="265985/44100s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100">
+      <media-rep kind="original-media" sig="9F8B13DAE7CA9A5BD1B5433FE47071BB" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E9%9F%B3%E6%BA%90/%E3%82%B3%E3%83%BC%E3%83%AB/2026%E3%82%A2%E3%82%A4%E3%82%AD%E3%83%A3%E3%83%83%E3%83%81/%E3%83%9B%2306.1.wav">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-01-04 02:06:12 +0900" />
+      </metadata>
+    </asset>
+    <effect id="r46" name="Noise Gate" uid="AudioUnit: 0x61756678000000b3454d4147" />
+    <asset id="r47" name="Anime_Motion16-1(High)" uid="CD957A2CDE3DE15DC03E15BDCA3DB49E" start="0s" duration="77609/44100s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100">
+      <media-rep kind="original-media" sig="CD957A2CDE3DE15DC03E15BDCA3DB49E" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E9%9F%B3%E6%BA%90/%E3%82%B3%E3%83%BC%E3%83%AB/2026%E3%82%A2%E3%82%A4%E3%82%AD%E3%83%A3%E3%83%83%E3%83%81/Anime_Motion16/Anime_Motion16-1(High).mp3">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-01-04 02:26:05 +0900" />
+      </metadata>
+    </asset>
+    <asset id="r48" name="キラキラ⑤" uid="B7A1D6991EDCDED1B41BA41F7B95A43B" start="0s" duration="74880/44100s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100">
+      <media-rep kind="original-media" sig="B7A1D6991EDCDED1B41BA41F7B95A43B" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E9%9F%B3%E6%BA%90/SE/%E3%82%AD%E3%83%A9%E3%82%AD%E3%83%A9%E2%91%A4.mp3">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-03-22 22:05:19 +0900" />
+      </metadata>
+    </asset>
+    <asset id="r49" name="チ#08" uid="90C26D0D2283217E8683AF757F52C039" start="160628284/44100s" duration="288770/44100s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100">
+      <media-rep kind="original-media" sig="90C26D0D2283217E8683AF757F52C039" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E9%9F%B3%E6%BA%90/%E3%82%B3%E3%83%BC%E3%83%AB/2026%E3%82%A2%E3%82%A4%E3%82%AD%E3%83%A3%E3%83%83%E3%83%81/%E3%83%81%2308.wav">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-01-04 02:06:12 +0900" />
+      </metadata>
+    </asset>
+    <effect id="r50" name="360° グラデーション" uid=".../Generators.localized/360°.localized/360° Gradient.localized/360° Gradient.motn" />
+    <asset id="r51" name="RGB-fullcolor" uid="9C047ACF701676C89BD8E611F13622E8" start="0s" duration="0s" hasVideo="1" format="r52" videoSources="1">
+      <media-rep kind="original-media" sig="9C047ACF701676C89BD8E611F13622E8" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E7%94%BB%E5%83%8F%E9%A1%9E/%E3%83%AD%E3%82%B3%E3%82%99/RGB-fullcolor.PNG">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.studio.rawToLogConversion" value="0" />
+        <md key="com.apple.proapps.studio.cameraISO" value="0" />
+        <md key="com.apple.proapps.studio.cameraColorTemperature" value="0" />
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-03-22 21:59:14 +0900" />
+        <md key="com.apple.proapps.spotlight.kMDItemOrientation" value="0" />
+      </metadata>
+    </asset>
+    <format id="r52" name="FFVideoFormatRateUndefined" width="4080" height="2441" colorSpace="1-13-1" />
+    <effect id="r53" name="バランス" uid="FFBalanceColorUserEffect" />
+    <asset id="r54" name="S__71147525 2" uid="E2F09A44550E61786FF2418123EE37D7" start="0s" duration="0s" hasVideo="1" format="r55" videoSources="1">
+      <media-rep kind="original-media" sig="E2F09A44550E61786FF2418123EE37D7" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E7%94%BB%E5%83%8F%E9%A1%9E/%E3%81%9D%E3%81%AE%E4%BB%96/%E7%94%BB%E8%B3%AA%E8%8D%92%E3%81%84%E3%81%91%E3%81%A8%E3%82%99/S__71147525%202.png">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.studio.rawToLogConversion" value="0" />
+        <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="sRGB IEC61966-2.1" />
+        <md key="com.apple.proapps.studio.cameraISO" value="0" />
+        <md key="com.apple.proapps.studio.cameraColorTemperature" value="0" />
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-01-04 02:01:30 +0900" />
+        <md key="com.apple.proapps.spotlight.kMDItemOrientation" value="1" />
+      </metadata>
+    </asset>
+    <format id="r55" name="FFVideoFormatRateUndefined" width="1098" height="1491" colorSpace="1-13-1" />
+    <asset id="r56" name="S__71147524 2" uid="2F68D2A35F63E0B0BC268F4FEF121D8A" start="0s" duration="0s" hasVideo="1" format="r55" videoSources="1">
+      <media-rep kind="original-media" sig="2F68D2A35F63E0B0BC268F4FEF121D8A" src="file:///Volumes/%E7%B7%A8%E9%9B%86%E7%94%A8/%E5%A4%96%E5%87%BACH/%E7%94%BB%E5%83%8F%E9%A1%9E/%E3%81%9D%E3%81%AE%E4%BB%96/%E7%94%BB%E8%B3%AA%E8%8D%92%E3%81%84%E3%81%91%E3%81%A8%E3%82%99/S__71147524%202.png">
+                </media-rep>
+      <metadata>
+        <md key="com.apple.proapps.studio.rawToLogConversion" value="0" />
+        <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="sRGB IEC61966-2.1" />
+        <md key="com.apple.proapps.studio.cameraISO" value="0" />
+        <md key="com.apple.proapps.studio.cameraColorTemperature" value="0" />
+        <md key="com.apple.proapps.mio.ingestDate" value="2026-01-04 02:01:30 +0900" />
+        <md key="com.apple.proapps.spotlight.kMDItemOrientation" value="1" />
+      </metadata>
+    </asset>
+    <effect id="r57" name="調整" uid=".../Transitions.localized/Movements.localized/Scale.localized/Scale.motr" />
+    <effect id="r59" name="スケッチ" uid=".../Effects.localized/Stylize.localized/Sketch.localized/Sketch.moef" />
+    <effect id="r60" name="ハンドヘルド" uid=".../Effects.localized/Stylize.localized/Handheld.localized/Handheld.moef" />
+  </resources>
+  <logo ref="r43" name="アイキャッチ 2026 ロゴ版" duration="1800/3000s" />
+  <zoom ref="r17" name="調整レイヤー225％in" duration="1s" lane="10" />
+  <bgm ref="r10" name="天国と地獄／運動会BGM" start="5.04" volume_dB="-15.0281" duration="5695392/48000s" />
+</お手本共通>
