@@ -31,7 +31,8 @@ if command -v node >/dev/null 2>&1; then RUN=(node "$RES/server.js"); else
 fi
 [ ${#RUN[@]} -eq 0 ] && { log "Node.js も Python も見つかりません"; exit 1; }
 
-SERVER_PID=""; CF_PID=""; URL=""; LAST_POST=0
+SERVER_PID=""; CF_PID=""; URL=""; LAST_POST=0; LAST_UPD=0
+UPD="$HOME/Applications/.apps-updater/update.sh"
 # サーバーの部品が更新されたら、自動で新しい版に入れ替える（公開アドレスはそのまま）
 code_stamp() { stat -f %m "$RES/server.py" "$RES/server.js" 2>/dev/null | tr '\n' ' '; }
 STAMP=$(code_stamp)
@@ -106,6 +107,12 @@ while true; do
 
   # 入口の掲示は3時間ごとに更新（12時間で消えるため）
   if [ -n "$URL" ] && [ $(( $(date +%s) - LAST_POST )) -gt 10800 ]; then post; fi
+
+  # アプリ置き場（GitHub apps）の新しい版を5分ごとに確認して、Mac のアプリに反映
+  if [ $(( $(date +%s) - LAST_UPD )) -ge 300 ]; then
+    LAST_UPD=$(date +%s)
+    [ -f "$UPD" ] && nohup /bin/bash "$UPD" >/dev/null 2>&1 < /dev/null &
+  fi
 
   sleep 5
 done
