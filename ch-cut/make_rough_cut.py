@@ -1027,15 +1027,24 @@ def main():
     color = "9-18-9 (Rec. 2020 HLG)" if vs.get("color_transfer") == "arib-std-b67" else "1-1-1 (Rec. 709)"
     ET.SubElement(res, "format", id="r1", name="FFVideoFormat%dx%dp%s" % (width, height, fps_tag),
                   frameDuration=fd_str, width=str(width), height=str(height), colorSpace=color)
+    try:
+        import fcp_ids as _fi
+        _ids = _fi.media_ids()
+    except Exception:
+        _fi, _ids = None, {}
     va = ET.SubElement(res, "asset", id="r2", name=vpath.stem, start="0s", duration=mf.t(vdur),
                        hasVideo="1", hasAudio="1", format="r1", audioSources="1",
                        audioChannels=cam_chan, audioRate=cam_rate)
-    ET.SubElement(va, "media-rep", kind="original-media",
+    if vpath.stem in _ids:
+        va.set("uid", _ids[vpath.stem])
+    ET.SubElement(va, "media-rep", kind="original-media", **({"sig": _ids[vpath.stem]} if vpath.stem in _ids else {}),
                   src=Path(args.video_uri_path).as_uri() if args.video_uri_path else vpath.as_uri())
     aa = ET.SubElement(res, "asset", id="r3", name=apath.stem, start="0s", duration=mf.t(adur),
                        hasAudio="1", audioSources="1", audioChannels=str(achan),
                        audioRate=mf.AUDIO_RATES[arate])
-    ET.SubElement(aa, "media-rep", kind="original-media",
+    if apath.stem in _ids:
+        aa.set("uid", _ids[apath.stem])
+    ET.SubElement(aa, "media-rep", kind="original-media", **({"sig": _ids[apath.stem]} if apath.stem in _ids else {}),
                   src=Path(args.audio_uri_path).as_uri() if args.audio_uri_path else apath.as_uri())
 
     se_cfg = None
@@ -1072,6 +1081,8 @@ def main():
     if _libp.exists() and os.environ.get("CHCUT_LIBLOC", "1") != "0":      # the library the projects go into
         lib.set("location", _libp.as_uri() + "/")
     ev = ET.SubElement(lib, "event", name="CH Cut")
+    if _fi is not None and _libp.exists():
+        ev.set("uid", _fi.event_uid())
     proj = ET.SubElement(ev, "project", name=(args.title or vpath.stem))
     seq = ET.SubElement(proj, "sequence", format="r1", duration=mf.t(total), tcStart="0s",
                         tcFormat="NDF", audioLayout="stereo", audioRate="48k")
