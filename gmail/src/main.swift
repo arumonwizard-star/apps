@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         webView.load(URLRequest(url: homeURL))
         if !background { showWindow() }
 
-        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.checkFeed() }
+        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.checkFeed() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in self?.checkFeed() }
         Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in self?.checkUpdate() }
     }
@@ -117,6 +117,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+    func windowDidBecomeKey(_ n: Notification) { checkFeed() }
 
     func windowShouldClose(_ w: NSWindow) -> Bool {
         w.orderOut(nil)   // 閉じても裏で受信を続ける
@@ -291,16 +293,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         NSApp.dockTile.badgeLabel = n > 0 ? (n > 999 ? "999+" : "\(n)") : nil
     }
 
+    var feedTimer: Timer?
     func titleChanged(_ t: String) {
         if window.title != appName { window.title = appName }
-        guard !(feedOK && Date().timeIntervalSince(lastFeedOK) < 180) else { return }
-        // 確認が使えないときは、ページの見出しの数を使う
-        var n = 0
-        if let r = t.range(of: #"\((\d+)\)"#, options: .regularExpression) {
-            n = Int(t[r].dropFirst().dropLast()) ?? 0
-        }
         if t.isEmpty { return }
-        setBadge(n)
+        var n = 0, hasCount = false
+        if let r = t.range(of: #"\((\d+)\)"#, options: .regularExpression) {
+            n = Int(t[r].dropFirst().dropLast()) ?? 0; hasCount = true
+        }
+        let frag = webView.url?.fragment ?? ""
+        let list = frag.isEmpty || frag == "inbox" || frag.hasPrefix("inbox?")
+        if hasCount || list { setBadge(n) }   // 既読・新着をすぐ反映
+        // 少し待ってから、正確な数を確認
+        feedTimer?.invalidate()
+        feedTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: false) { [weak self] _ in self?.checkFeed() }
+        // 確認が使えないときだけ、見出しの数の増加で新着を知らせる
+        guard !(feedOK && Date().timeIntervalSince(lastFeedOK) < 180), hasCount || list else { return }
         if titleCount >= 0 && n > titleCount {
             let before = titleCount
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
@@ -499,7 +507,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     func setupIcon() {
         let res = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources")
         let icns = res.appendingPathComponent("AppIcon.icns")
-        if let img = NSImage(contentsOf: icns) { NSApp.applicationIconImage = img; return }
+        if FileManager.default.fileExists(atPath: icns.path) { return }   // 実行中も Dock は同梱のアイコンをそのまま使う
         let saved = home.appendingPathComponent("Library/Application Support/Gmail/AppIcon.icns")
         if !FileManager.default.fileExists(atPath: saved.path), FileManager.default.fileExists(atPath: oldSafariApp.path) {
             let img = NSWorkspace.shared.icon(forFile: oldSafariApp.path)
@@ -515,7 +523,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         if FileManager.default.fileExists(atPath: saved.path) {
             try? FileManager.default.createDirectory(at: res, withIntermediateDirectories: true)
             try? FileManager.default.copyItem(at: saved, to: icns)
-            if let img = NSImage(contentsOf: saved) { NSApp.applicationIconImage = img }
             let now = Date()
             try? FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: Bundle.main.bundlePath)
         }
