@@ -48,9 +48,22 @@ NOTE_MARK = "※"
 ASCII_WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’._-]*")
 
 
+LETTER_READ = {"A": "えー", "B": "びー", "C": "しー", "D": "でぃー", "E": "いー", "F": "えふ", "G": "じー", "H": "えいち", "I": "あい",
+               "J": "じぇー", "K": "けー", "L": "える", "M": "えむ", "N": "えぬ", "O": "おー", "P": "ぴー", "Q": "きゅー",
+               "R": "あーる", "S": "えす", "T": "てぃー", "U": "ゆー", "V": "ぶい", "W": "だぶりゅー", "X": "えっくす",
+               "Y": "わい", "Z": "ぜっと"}
+
+
+def read_letters(text):
+    """A capital letter standing alone ("PコートのP") is said as its name ("ぴー"), and Whisper writes it that way."""
+    t = unicodedata.normalize("NFKC", text)
+    return re.sub(r"(?<![A-Za-z])([A-Z])(?![A-Za-z])", lambda m: LETTER_READ[m.group(1)], t)
+
+
 def norm_script(spoken):
     """Normalized script text for matching.  Latin-letter words ("VIVANT") are left out: Whisper writes
     them in katakana ("ビバン"), which cannot be matched letter by letter."""
+    spoken = read_letters(spoken)
     base = normalize(spoken)
     nf = unicodedata.normalize("NFKC", spoken)
     nf = re.sub(r"(?<![0-9])([1-9])(?![0-9])", lambda m: "〇一二三四五六七八九"[int(m.group(1))], nf)   # "1つ" is heard as "一つ"

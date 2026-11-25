@@ -187,7 +187,20 @@ def exact_block(pieces, block, auto=False):
                         alt=sb._split_two_lines("".join(hv)), src="s")
             new.append(base)
     handled = {id(p) for j_, ln_ in enumerate(lines) for p, k in zip(speech, idx) if k == j_}
-    res = new + other + [p for p, k in zip(speech, idx) if k is None] + keep
+    left = []                                # a heard phrase nobody took, lying on the same sound as a script line just written: the same thing twice
+    for p, e, k in zip(speech, ends, idx):
+        if k is not None:
+            continue
+        dur = max(e - p["start"], 0.05)
+        dup = [n for n in new if n.get("speaker") == p.get("speaker")
+               and min(e, n["end"]) - max(p["start"], n["start"]) >= 0.5 * min(dur, max(n["end"] - n["start"], 0.05))]
+        if dup:
+            n = max(dup, key=lambda n: min(e, n["end"]) - max(p["start"], n["start"]))
+            n["alt"] = sb._split_two_lines(p["text"].replace("\n", ""))      # what was heard there stays as the other choice
+            n["src"] = "s"
+            continue
+        left.append(p)
+    res = new + other + left + keep
     res = list({id(p): p for p in res}.values())
     res.sort(key=lambda p: p["start"])
     return res
@@ -200,3 +213,132 @@ def _ends(pieces, speech):
         nxt = speech[i + 1]["start"] if i + 1 < len(speech) else p.get("end", p["start"] + 1)
         out.append(max(nxt, p["start"] + 0.1))
     return out
+
+
+def _nchars(raw):
+    """[(raw index, normalized char)] ; a capital letter is read ("P" -> "ぴー") the way Whisper writes it."""
+    out = []
+    for i, ch in enumerate(raw):
+        rd = ps.read_letters(ch) if ch.isascii() and ch.isalpha() else ch
+        for c in rd:
+            n = ps.normalize(c)
+            if n:
+                out.append((i, n))
+    return out
+
+
+def align_alts(pieces, block):
+    """The script's wording for each heard telop, found by lining the heard letters up with the script's letters (not by
+    time): every telop takes the stretch of the script that its own letters fall on, and the letters nobody heard
+    next to it.  Returns a list parallel to `pieces`: the script wording, or None."""
+    lines = [l for l in block["lines"] if l["kind"] == "speech" and l["norm"]]
+    res = [None] * len(pieces)
+    idx = [i for i, p in enumerate(pieces) if p.get("speaker", 0) >= 0 and (p.get("text") or "").strip() and not p.get("deleted")
+           and not p.get("ov") and not (p["text"].replace("\n", "").startswith("※"))]
+    if not lines or not idx:
+        return res
+    idx.sort(key=lambda i: pieces[i]["start"])
+    quote = "｢｣「」『』"
+    S = "".join(re.sub("[%s]" % quote, "", l["text"]) for l in lines)
+    Sn = _nchars(S)
+    Hn, owner = [], []
+    for k, i in enumerate(idx):
+        for _, c in _nchars(pieces[i]["text"].replace("\n", "")):
+            Hn.append(c)
+            owner.append(k)
+    if not Sn or not Hn:
+        return res
+    sm = difflib.SequenceMatcher(None, "".join(Hn), "".join(c for _, c in Sn), autojunk=False)
+    hmap = {}
+    for b in sm.get_matching_blocks():
+        for o in range(b.size):
+            hmap[b.a + o] = b.b + o
+    n = len(idx)
+    lo, hi, head_u, tail_u = [None] * n, [None] * n, [0] * n, [0] * n
+    for k in range(n):
+        hs = [h for h in range(len(Hn)) if owner[h] == k]
+        mt = [hmap[h] for h in hs if h in hmap]
+        if not mt or len(mt) < 0.4 * len(hs):
+            continue
+        lo[k], hi[k] = Sn[min(mt)][0], Sn[max(mt)][0] + 1
+        head_u[k] = sum(1 for h in hs[:hs.index(next(h for h in hs if h in hmap))])
+        last = max(h for h in hs if h in hmap)
+        tail_u[k] = sum(1 for h in hs if h > last)
+    ok = [k for k in range(n) if lo[k] is not None]
+    for pos, k in enumerate(ok):
+        a_lo = ok[pos - 1] if pos else None
+        lo_lim = hi[a_lo] if a_lo is not None else 0
+        nx = ok[pos + 1] if pos + 1 < len(ok) else None
+        hi_lim = lo[nx] if nx is not None else len(S)
+        lo[k] = max(lo[k], lo_lim)
+        if hi[k] < lo[k]:
+            lo[k] = None
+            continue
+    live = [k for k in ok if lo[k] is not None]
+    for pos, k in enumerate(live):
+        nx = live[pos + 1] if pos + 1 < len(live) else None
+        end_lim = lo[nx] if nx is not None else len(S)
+        gap = max(end_lim - hi[k], 0)
+        if not gap:
+            continue
+        ub = head_u[nx] if nx is not None else 0
+        ua = tail_u[k]
+        give = min(ua, gap)
+        punct = re.match(r"[！？!?、。…〜~ー]*", S[hi[k] + give:end_lim])
+        hi[k] += give + (len(punct.group(0)) if punct else 0)
+        if nx is not None:
+            lo[nx] = max(min(ub, end_lim - hi[k]), 0) and end_lim - min(ub, end_lim - hi[k]) or lo[nx]
+    for k in ok:
+        if lo[k] is None or hi[k] <= lo[k]:
+            continue
+        txt = re.sub(r"^[！？!?、。…〜~]+", "", S[lo[k]:hi[k]].strip())
+        if txt:
+            res[idx[k]] = sb._split_two_lines(re.sub(r"\s+", "", txt))
+    return res
+
+
+def gap_text(pieces, k, block):
+    """The script wording that fits the empty slot `k` (a （？） telop): the letters of the script between what the telop
+    before it and the telop after it have taken.  None when nothing is left over there."""
+    lines = [l for l in block["lines"] if l["kind"] == "speech" and l["norm"]]
+    idx = [i for i, p in enumerate(pieces) if i != k and p.get("speaker", 0) >= 0 and (p.get("text") or "").strip()
+           and not (p["text"].replace("\n", "").startswith("（？")) and not p.get("deleted") and not p.get("ov")
+           and not (p["text"].replace("\n", "").startswith("※"))]
+    if not lines or not idx:
+        return None
+    idx.sort(key=lambda i: pieces[i]["start"])
+    quote = "｢｣「」『』"
+    S = "".join(re.sub("[%s]" % quote, "", l["text"]) for l in lines)
+    Sn = _nchars(S)
+    Hn, owner = [], []
+    for n_, i in enumerate(idx):
+        for _, c in _nchars(pieces[i]["text"].replace("\n", "")):
+            Hn.append(c)
+            owner.append(i)
+    if not Sn or not Hn:
+        return None
+    sm = difflib.SequenceMatcher(None, "".join(Hn), "".join(c for _, c in Sn), autojunk=False)
+    lo, hi = {}, {}
+    for b in sm.get_matching_blocks():
+        for o in range(b.size):
+            i = owner[b.a + o]
+            si = Sn[b.b + o][0]
+            lo[i] = min(lo.get(i, 1 << 30), si)
+            hi[i] = max(hi.get(i, -1), si + 1)
+    before = [i for i in idx if i < k and i in hi]
+    after = [i for i in idx if i > k and i in lo]
+    a = hi[before[-1]] if before else 0
+    b = lo[after[0]] if after else len(S)
+    if b <= a:
+        return None
+    pos_ = 0
+    for l in lines:                        # not across a line of the script (the other person's line in between is not part of it)
+        pos_ += len(re.sub("[%s]" % quote, "", l["text"]))
+        if pos_ > a:
+            b = min(b, pos_)
+            break
+    txt = re.sub(r"^[！？!?、。…〜~\s]+", "", S[a:b])
+    txt = re.sub(r"[\s]+", "", txt)
+    if not txt or len(txt) > 24:
+        return None
+    return sb._split_two_lines(txt)

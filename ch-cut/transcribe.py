@@ -62,10 +62,12 @@ def parse_whisper_json(data):
     return segments, tokens
 
 
-def run_whisper(whisper, model, wav, lang, tmp, tag, offset=0.0):
+def run_whisper(whisper, model, wav, lang, tmp, tag, offset=0.0, prompt=None):
     prefix = str(Path(tmp) / ("result_" + tag))
     # -mc 0: do not feed earlier text back in (stops Whisper from looping on one phrase)
     cmd = [whisper, "-m", str(model), "-f", wav, "-l", lang, "-mc", "0", "-ojf", "-of", prefix]
+    if prompt:
+        cmd += ["--prompt", prompt]
     r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if r.returncode != 0 or not Path(prefix + ".json").exists():
         tail = r.stderr.decode(errors="replace")[-1500:]

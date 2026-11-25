@@ -148,14 +148,33 @@ def voicing_ratio(x, t0, t1):
     return voiced / total if total else 0.0
 
 
-def closing_clap_after(t, claps, runs):
+def closing_clap_after(t, claps, runs, env=None):
     """First clap at/after t that CLOSES a take: the voice does not go on after it.
     A clap in the middle of laughter or speech is followed by more voiced sound, either
-    in a run that contains the clap and goes on, or in one starting soon after it."""
+    in a run that contains the clap and goes on, or in one starting soon after it (env: the level in dB per FRAME,
+    so a bang inside a word - a plosive that looks like a clap - is told from a real clap by the voice right after it)."""
     for c in claps:
-        if c >= t and not any(r[1] > c + 0.25 and r[0] < c + 0.6 for r in runs):
-            return c
+        if c < t or any(r[1] > c + 0.2 and r[0] < c + 0.6 for r in runs):
+            continue
+        if env is not None:
+            db = env[0]
+            a0_, a1_ = int((c - 0.5) / FRAME), int((c - 0.08) / FRAME)
+            b0_, b1_ = int((c + 0.19) / FRAME), int((c + 0.4) / FRAME) + 1
+            if 0 <= a0_ < a1_ <= len(db) and b1_ <= len(db) and float(max(db[b0_:b1_])) >= float(max(db[a0_:a1_])) - 14.0:
+                continue
+        return c
     return None
+
+
+def _much_quieter(env, r_prev, r_main, gap_db=20.0):
+    """A sound in front of the line (a breath, a lip noise) that is far quieter than the line itself is not part of it."""
+    if env is None:
+        return False
+    db, _thr = env
+    def pk(r):
+        a, b = int(r[0] / FRAME), max(int(r[1] / FRAME), int(r[0] / FRAME) + 1)
+        return float(max(db[a:b])) if b > a and a < len(db) else -999.0
+    return (r_prev[1] - r_prev[0]) < 0.6 and pk(r_prev) < pk(r_main) - gap_db
 
 
 def refine(take, runs, claps, cue_chars, cap_after, pad_before, pad_after,
@@ -194,20 +213,34 @@ def refine(take, runs, claps, cue_chars, cap_after, pad_before, pad_after,
         first = win[-1]
     else:
         return t0, t1, False
-    onset = max(first[0], floor_start)
-    idx = runs.index(first)
-
     def speechlike(r):
         if r[1] - r[0] >= 0.5:
             return True
         return x is None or voicing_ratio(x, r[0], r[1]) >= 0.5
+
+    # Whisper spreads the first words of a line over the silence in front of them: a short burst (a clap, a click, a
+    # breath) with a long silence after it and then a long stretch of voice that the cue needs is not the line;
+    # the line begins with the voice.
+    try:
+        if first[1] - first[0] < 0.4 and not os.environ.get("CHCUT_NO_BURST"):
+            for r_ in runs[runs.index(first) + 1:]:
+                if r_[0] > first[1] + 6.0 or r_[0] > t1:
+                    break
+                if r_[0] - first[1] >= 1.0 and r_[1] - r_[0] >= max(0.6, 0.35 * est) and speechlike(r_):
+                    first = r_
+                    break
+    except Exception:   # noqa: BLE001
+        pass
+    onset = max(first[0], floor_start)
+    idx = runs.index(first)
 
     # join an earlier sound only when it is part of the same sentence (short pause)
     # the cue sentence must last about as long as its characters need: if what was found is far too short,
     # an earlier sound after a longer pause is the beginning of the same sentence ("お寿司…この皿の枚数…どう")
     while idx > 0 and onset - runs[idx - 1][1] < (max(JOIN_GAP, 0.7) if (cue_end - onset) < 0.7 * est else JOIN_GAP) \
             and runs[idx - 1][0] >= floor_start \
-            and runs[idx - 1][1] - runs[idx - 1][0] >= 0.12 and speechlike(runs[idx - 1]):
+            and runs[idx - 1][1] - runs[idx - 1][0] >= 0.12 and speechlike(runs[idx - 1]) \
+            and not _much_quieter(env, runs[idx - 1], runs[idx]):
         idx -= 1
         onset = max(runs[idx][0], floor_start)
     prev_end = runs[idx - 1][1] if idx > 0 else None
@@ -225,8 +258,24 @@ def refine(take, runs, claps, cue_chars, cap_after, pad_before, pad_after,
     if env is not None:
         db, thr_lo = env
         i = int(onset / FRAME)
+        try:     # the run starts with a breath / click far quieter than the voice: the head is where the voice really begins
+            if not os.environ.get("CHCUT_NO_QUIETHEAD") and i + int(0.8 / FRAME) < len(db):
+                pk0 = float(max(db[i:i + int(0.8 / FRAME) + 1]))
+                j0 = i
+                while j0 < i + int(0.8 / FRAME) and db[j0] < pk0 - 26.0:
+                    j0 += 1
+                if (j0 - i) * FRAME > 0.1 and (j0 - i) * FRAME < 0.7:
+                    onset = max(onset, j0 * FRAME - 0.02)
+                    i = int(onset / FRAME)
+        except ValueError:
+            pass
         lowest = max(floor_start, (prev_end or 0.0))
-        while i > 0 and db[i - 1] > thr_lo and onset - (i - 1) * FRAME <= 0.25 \
+        try:     # a breath or a click far quieter than the voice that follows is not part of it (it only adds silence to the head)
+            pk_db = float(max(db[i:i + int(0.4 / FRAME) + 1])) if i < len(db) else None
+        except ValueError:
+            pk_db = None
+        floor_db = max(thr_lo, pk_db - 26.0) if (pk_db is not None and not os.environ.get("CHCUT_NO_QUIETHEAD")) else thr_lo
+        while i > 0 and db[i - 1] > floor_db and onset - (i - 1) * FRAME <= 0.25 \
                 and (i - 1) * FRAME >= lowest:
             i -= 1
         onset = i * FRAME
@@ -239,7 +288,7 @@ def refine(take, runs, claps, cue_chars, cap_after, pad_before, pad_after,
         return start, t1, False
     end = inside[-1][1]
     caps = []
-    cc = closing_clap_after(max(onset + 0.5, t1 - 0.3), claps, runs)
+    cc = closing_clap_after(max(onset + 0.5, t1 - 0.3), claps, runs, env)
     if cc is not None:
         caps.append(cc - 0.05)
     if cap_after:
@@ -247,6 +296,8 @@ def refine(take, runs, claps, cue_chars, cap_after, pad_before, pad_after,
     if take.get("restart_at"):
         caps.append(take["restart_at"])
     hard = min(caps) if caps else 1e9
+    if debug is not None:
+        debug.append("    終わり: 音の塊の終わり %.2f 上限 %s 拍手 %s 台本後 %s" % (end, [round(c_, 2) for c_ in caps], cc, cap_after))
     end = min(end, hard)
     soft = runs_lo if runs_lo is not None else runs
     if tail and speech_until:
@@ -470,6 +521,14 @@ def build_plan(e, blocks, segs, takes, chosen, args):
                               tail=not args.no_tail, tail_gap=gap,
                               max_tail=args.max_tail, env=env, runs_lo=runs_lo, debug=dbg,
                               speech_until=speech_until, clamp_to=clamp_to)
+        try:        # the script ends with a slap / clap as an action line ("（叩）"): the block lasts until that sound has rung out
+            dl_ = [l for l in b["lines"] if l["kind"] != "laugh"]
+            if dl_ and dl_[-1]["kind"] == "direction" and re.search(r"叩|拍手|パン|はたく|ビンタ", dl_[-1]["raw"]):
+                cl_ = [c_ for c_ in claps if e_a - 0.6 <= c_ <= e_a + 1.5]
+                if cl_:
+                    e_a = max(e_a, cl_[0] + 0.4)
+        except Exception:   # noqa: BLE001
+            pass
         try:
             if not os.environ.get("CHCUT_NO_LEADIN") and speech:
                 import subtitles as _sbl
@@ -585,7 +644,7 @@ def load_common_edits(res, args):
     rs = root.find("resources")
     ids = {e.get("id") for e in rs}
     # The アイキャッチ already exists in the user's Final Cut library: do not ship a second copy of it (it would be
-    # imported as a duplicate compound clip + clips).  It is embedded by default (uid unchanged, so Final Cut can match the existing one); CHCUT_LOGO=0 skips it.
+    # imported as a duplicate compound clip + clips).  The real one is placed (CHCUT_LOGO=0 to turn off).
     skip = set()
     if os.environ.get("CHCUT_LOGO") == "0":
         lg = root.find("logo")
@@ -606,6 +665,9 @@ def load_common_edits(res, args):
                     if el.get("ref"):
                         keep.add(el.get("ref"))
         skip = {i for i in skip if i not in keep or i == (lg.get("ref") if lg is not None else None)}
+    _b = root.find("bgm")
+    if _b is not None:
+        skip.add(_b.get("ref"))             # BGM is not wanted
     for e in rs:
         if e.get("id") in skip:
             continue
@@ -614,11 +676,75 @@ def load_common_edits(res, args):
                 if el.get(a) in ids:
                     el.set(a, "x" + el.get(a))
         res.append(e)
-    cfg = {"logo": root.find("logo") if os.environ.get("CHCUT_LOGO") != "0" else None, "zoom": root.find("zoom"), "bgm": root.find("bgm")}
+    cfg = {"logo": root.find("logo") if os.environ.get("CHCUT_LOGO") != "0" else None, "zoom": root.find("zoom"), "bgm": None}
     for k in cfg:
         if cfg[k] is not None:
             cfg[k].set("ref", "x" + cfg[k].get("ref"))
     return cfg
+
+
+def _has_u(tb):
+    return any(x.get("_u") for x in (tb or {}).get("pieces", []))
+
+
+def merge_user_edits(auto, edited):
+    """The fresh automatic telops of a block with only what the person changed by hand laid over them (a flag _u on each
+    hand-changed piece: n = added by hand, t = time moved, x = line break changed, s = speaker changed, d = deleted).
+    An edit is carried over only onto the piece with the same words at the same place; an edit that no longer fits the new
+    analysis is dropped (the new analysis stands), so old text is never laid over different words.  Everything the person
+    did not touch follows the new analysis."""
+    import re as _re
+    nz = lambda s: _re.sub(r"[\s\n、。！？!?…]", "", s or "")
+    auto = [dict(a) for a in auto]
+    used = set()
+
+    def ov(a, e):
+        o = min(a["end"], e["end"]) - max(a["start"], e["start"])
+        return o / max(min(a["end"] - a["start"], e["end"] - e["start"]), 0.05)
+    extra = []
+    for e in sorted((x for x in edited if x.get("_u")), key=lambda x: x["start"]):
+        fl = e["_u"]
+        if "n" in fl:                                   # added by hand: kept when it does not sit on a new piece
+            if (e.get("text") or "").strip() and not any(a.get("speaker", 0) >= 0 and e.get("speaker", 0) >= 0 and ov(a, e) > 0.3 for a in auto):
+                extra.append(dict(e))
+            continue
+        best, bo = None, 0.4
+        for i, a in enumerate(auto):
+            if i in used or (a.get("speaker", 0) < 0) != (e.get("speaker", 0) < 0):
+                continue
+            o = ov(a, e)
+            same = nz(a["text"]) == nz(e["text"]) or ("x" in fl and o > 0.8 and abs(a["start"] - e["start"]) < 0.15 and abs(a["end"] - e["end"]) < 0.15)
+            if same and o > bo:
+                best, bo = i, o
+        if best is None:
+            continue
+        used.add(best)
+        a = auto[best]
+        if "d" in fl:
+            a["_del"] = True
+            continue
+        if "x" in fl:
+            a["text"] = e["text"]
+        if "t" in fl:
+            a["start"], a["end"] = e["start"], e["end"]
+            if "s0" in a:
+                a["s0"] = e["start"]
+            if "s1" in a:
+                a["s1"] = e["end"]
+        if "s" in fl:
+            a["speaker"] = e["speaker"]
+        a["_u"] = fl
+    res = [a for a in auto if not a.get("_del")] + extra
+    for x in extra:
+        x.setdefault("s0", x["start"])
+        x.setdefault("s1", x["end"])
+    lv = sorted((x for x in res if x.get("speaker", 0) >= 0 and not x.get("ov")), key=lambda x: x["start"])
+    for x, y in zip(lv, lv[1:]):                       # a hand-moved piece must not run into the neighbour
+        if x["end"] > y["start"] + 0.005 and y["start"] - x["start"] >= 0.1:
+            x["end"] = y["start"]
+            if "s1" in x:
+                x["s1"] = min(x["s1"], y["start"])
+    return sorted(res, key=lambda x: x["start"])
 
 
 def mono_gain_db(path):
@@ -652,6 +778,8 @@ def main():
     ap.add_argument("--out")
     ap.add_argument("--pad-before", type=float, default=0.0)
     ap.add_argument("--subtitles", action="store_true", help="add subtitles as editable titles")
+    ap.add_argument("--kerning", default="metrics", choices=["metrics", "optical", "mono"],
+                    help="letter spacing of the telops: font metrics / optical (even gaps) / monospaced Japanese")
     ap.add_argument("--speakers-config", help="JSON: title template per speaker")
     ap.add_argument("--swap-speakers", action="store_true", help="exchange speaker 1 and 2")
     ap.add_argument("--reference", help="JSON of a finished edit's titles {'titles': [[start_s, dur_s, lane, text], ...]} "
@@ -667,6 +795,8 @@ def main():
     ap.add_argument("--no-audio-preset", action="store_true", help="do not apply the voice preset")
     ap.add_argument("--telops-out", help="write the telops of every block to this JSON file (for the editor)")
     ap.add_argument("--title", help="name of the Final Cut project (same as the export file name)")
+    ap.add_argument("--onsets", help="JSON list of seconds: where a mountain of the waveform starts (telop heads are put there)")
+    ap.add_argument("--edited-out", help="write the hand-changed blocks (merged with the fresh analysis) here")
     ap.add_argument("--telops-in", help="use the telops from this (edited) JSON file instead of the automatic ones")
     ap.add_argument("--alts-only", action="append", default=[],
                     help="candidates of a block, e.g. --alts-only b09=1,3 (none: b09=)")
@@ -681,7 +811,7 @@ def main():
                     help="do not keep ad-libs/laughter after the last script line")
     ap.add_argument("--tail-gap", type=float, default=0.9,
                     help="silence (s) that ends the ad-lib/laughter tail (default 0.9)")
-    ap.add_argument("--max-tail", type=float, default=0.65,
+    ap.add_argument("--max-tail", type=float, default=2.5,
                     help="how long laughter is kept after the last line (s). Default 0.65, "
                          "measured from the finished edit IMG_4014 (laughter is cut about 0.65 s after the last line)")
     ap.add_argument("--laugh-gap", type=float, default=1.0,
@@ -704,6 +834,7 @@ def main():
     ap.add_argument("--no-block-se", action="store_true", help="do not put a sound effect at the head of each block")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
+    os.environ["CHCUT_KERN"] = args.kerning
 
     vpath = Path(args.video).expanduser().resolve()
     apath = Path(args.audio).expanduser().resolve()
@@ -938,7 +1069,14 @@ def main():
     spine = ET.SubElement(seq, "spine")
     audio_extra = []
     unheard_out, telops_out = {}, dict(pre_out)
+    auto_keep, merged_blocks, edited_out = {}, set(), {}
     telops_in = {}
+    onsets_ = []
+    if getattr(args, "onsets", None) and Path(args.onsets).exists():
+        try:
+            onsets_ = json.loads(Path(args.onsets).read_text(encoding="utf-8"))
+        except Exception:   # noqa: BLE001
+            onsets_ = []
     if args.telops_in and Path(args.telops_in).exists():
         import json as _json2
         telops_in = _json2.loads(Path(args.telops_in).read_text(encoding="utf-8"))
@@ -1037,8 +1175,8 @@ def main():
         if sub_ctx:
             if pp.get("_pieces") is not None:
                 pieces = pp["_pieces"]
-            elif is_main and bid in telops_in and abs(telops_in[bid].get("a0", -9) - pp.get("a0_orig", pp["a0"])) < 0.3:   # edited in the app
-                pieces = [dict(x) for x in telops_in[bid]["pieces"] if not x.get("deleted") and not x.get("cut")]
+            elif is_main and bid in telops_in and abs(telops_in[bid].get("a0", -9) - pp.get("a0_orig", pp["a0"])) < 0.3 and not _has_u(telops_in[bid]):   # edited in the app
+                pieces = [dict(x) for x in telops_in[bid]["pieces"] if not x.get("deleted") and not x.get("cut") and (x.get("text") or "").strip()]
             else:
                 if os.environ.get("CHCUT_DUMP") and is_main:
                     _dump = json.load(open(os.environ["CHCUT_DUMP"])) if os.path.exists(os.environ["CHCUT_DUMP"]) else {}
@@ -1063,14 +1201,48 @@ def main():
                         pieces = _le.apply(pieces, pp["a0"])
                     except Exception:   # noqa: BLE001
                         pass
+                if is_main and ref_titles is None and not os.environ.get("CHCUT_NO_WORDCUT"):
+                    try:        # never a cut inside a word
+                        sub_ctx["sb"].fix_word_cuts(pieces)
+                    except Exception as ex_:   # noqa: BLE001
+                        print("fix_word_cuts:", ex_, file=sys.stderr)
+                    try:        # where the person cut the telops by hand before
+                        import learn_edits as _le2
+                        pieces = _le2.apply_cuts(pieces)
+                    except Exception as ex_:   # noqa: BLE001
+                        print("apply_cuts:", ex_, file=sys.stderr)
+                if is_main and ref_titles is None and onsets_ and not os.environ.get("CHCUT_NO_SNAPON"):
+                    try:        # the head of a telop sits where the voice starts (as when it is put right by hand)
+                        sub_ctx["sb"].snap_to_onsets(pieces, onsets_)
+                    except Exception:   # noqa: BLE001
+                        pass
+                    if not os.environ.get("CHCUT_NO_ALIGNV"):
+                        try:    # all heads together: onsets of the voice, with room for the letters
+                            sub_ctx["sb"].align_starts(pieces, onsets_, pp["a0"], pp["a1"], hard=sub_ctx["sb"].silence_ends(getattr(sub_ctx["spk"], "env", None)), env=getattr(sub_ctx["spk"], "env", None))
+                        except Exception as ex_:   # noqa: BLE001
+                            print("align_starts:", ex_, file=sys.stderr)
                 if is_main and ref_titles is None and not os.environ.get("CHCUT_NO_UNHEARD"):
                     try:        # a voice nobody heard: "（？）"
                         pieces = list(pieces) + sub_ctx["sb"].unheard_pieces(pieces, pp["a0"], pp["a1"], segs, pp.get("runs") or [], sub_ctx["spk"])
                         pieces.sort(key=lambda q: q["start"])
+                        try:        # a voice nobody heard where the script has a line left over: that line is what was said
+                            import exact_script as _ex2
+                            for k_, q_ in enumerate(pieces):
+                                if q_["text"] == "（？）":
+                                    g_ = _ex2.gap_text(pieces, k_, pp["block"])
+                                    mo_ = sum(sub_ctx["sb"]._mora_w(c) for c in (g_ or "") if not c.isspace())
+                                    if g_ and 0.04 <= (q_["end"] - q_["start"]) / max(mo_, 1) <= 0.45:
+                                        q_["text"] = g_
+                        except Exception:   # noqa: BLE001
+                            pass
                     except Exception:   # noqa: BLE001
                         pass
                 if is_main and ref_titles is not None:
                     pieces = _from_reference(ref_titles, c, at, offset, sub_ctx["spk"], pieces)
+            if is_main and pp.get("_pieces") is None and bid in telops_in and abs(telops_in[bid].get("a0", -9) - pp.get("a0_orig", pp["a0"])) < 0.3 and _has_u(telops_in[bid]):
+                auto_keep[bid] = [dict(x) for x in pieces]
+                pieces = merge_user_edits(pieces, telops_in[bid]["pieces"])
+                merged_blocks.add(bid)
             if is_main:
                 try:        # the same word written the same way everywhere (表記統一)
                     import words as _wd2
@@ -1078,13 +1250,36 @@ def main():
                         x_["text"] = _wd2.apply(x_["text"])
                 except ImportError:
                     pass
+            if is_main and not pp.get("_sub") and bid in merged_blocks:
+                _pm = [x for x in pieces]
+                pieces = auto_keep[bid]
+                try:
+                    import words as _wd3
+                    for x_ in pieces:
+                        x_["text"] = _wd3.apply(x_["text"])
+                except ImportError:
+                    pass
+                edited_out[bid] = {"a0": pp["a0"], "a1": pp["a1"],
+                                   "pieces": [dict({"start": round(x["start"], 3), "end": round(x["end"], 3), "text": x["text"], "speaker": int(x["speaker"])},
+                                                  **({"alt": x["alt"], "src": x.get("src", "s")} if x.get("alt") and x.get("src") in ("s", "h") else {}),
+                                                  **({"_u": x["_u"]} if x.get("_u") else {})) for x in _pm],
+                                   "notes": telops_in[bid].get("notes", [])}
+                for k_ in ("c0", "c1"):
+                    if k_ in telops_in[bid]:
+                        edited_out[bid][k_] = telops_in[bid][k_]
+                pieces_for_titles = _pm
+            else:
+                pieces_for_titles = None
             if is_main and not pp.get("_sub"):
                 telops_out[bid] = {"a0": pp["a0"], "a1": pp["a1"], "pieces": [
-                    {"start": round(x["start"], 3), "end": round(x["end"], 3), "text": x["text"],
-                     "speaker": int(x["speaker"])} for x in pieces],
+                    dict({"start": round(x["start"], 3), "end": round(x["end"], 3), "text": x["text"],
+                          "speaker": int(x["speaker"])},
+                         **({"alt": x["alt"], "src": x.get("src", "s")} if x.get("alt") and x.get("src") in ("s", "h") else {}),
+                         **({"_u": x["_u"]} if x.get("_u") else {}))
+                    for x in pieces],
                     "notes": [{"start": round(n_["start"], 3), "end": round(n_["end"], 3), "text": n_["text"],
                                "with_telop": n_["with_telop"]} for n_ in sub_ctx["sb"].place_notes(pieces, pp["block"])]}
-            sub_ctx["sb"].add_titles(vc, pieces, sub_ctx["ids"], sub_ctx["cfg"],
+            sub_ctx["sb"].add_titles(vc, (pieces_for_titles if pieces_for_titles is not None else pieces), sub_ctx["ids"], sub_ctx["cfg"],
                                      lambda t: Fraction(t).limit_denominator(1000) + offset, fps,
                                      sub_ctx["n"], lo=c["start"], hi=c["start"] + c["dur"], block=pp["block"],
                                      notes_in=(telops_in[bid].get("notes") if (is_main and bid in telops_in and "notes" in telops_in[bid]
@@ -1220,6 +1415,12 @@ def main():
         for b_ in rep["blocks"]:
             b_["unheard"] = unheard_out.get(b_["id"], [])
         Path(args.report_json).write_text(_json3.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+    if args.edited_out and telops_in:
+        import json as _json5
+        keep_ = {k_: v_ for k_, v_ in telops_in.items() if k_ not in merged_blocks}
+        keep_ = {k_: v_ for k_, v_ in keep_.items() if k_ not in telops_out or not _has_u(v_)}
+        keep_.update(edited_out)
+        Path(args.edited_out).write_text(_json5.dumps(keep_, ensure_ascii=False, indent=1), encoding="utf-8")
     if args.telops_out:
         import json as _json4
         Path(args.telops_out).parent.mkdir(parents=True, exist_ok=True)

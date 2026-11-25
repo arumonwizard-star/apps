@@ -223,6 +223,8 @@
    "bold": "1",
    "kerning": "-7.488",
    "alignment": "center"
-  }
+  },
+  "pos_with_telop": "-47.6652 -120",
+  "pos_empty": "-47.6652 -14.3044"
  }
 ]

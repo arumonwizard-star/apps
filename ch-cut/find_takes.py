@@ -181,6 +181,12 @@ def find_takes(segs, blocks):
                     hit_ = sum(1 for t_ in nxt if contain(t_, after) >= 0.6)
                     if hit_ >= max(1, (len(nxt) + 1) // 2):
                         best = (bi, 1, 0.58, 0.58)
+        if best and best[1] >= 2 and i + 1 < n:
+            # a false start ("恋愛長続き…" and then the whole line said again from the top): the take begins at the repeat
+            n0_, n1_ = segs[i]["norm"], segs[i + 1]["norm"]
+            if 3 <= len(n0_) < 0.8 * len(n1_) and n1_.startswith(n0_[:max(3, len(n0_) - 1)]) and segs[i + 1]["start"] - segs[i]["end"] < 3.0:
+                best = (best[0], best[1] - 1, best[2], best[3])
+                i += 1
         if best:
             starts.append({"seg": i, "block": best[0], "cue_score": best[2], "k": best[1]})
             cur = best[0]
@@ -300,7 +306,7 @@ def find_takes(segs, blocks):
             status = "OK"
         elif not missing:
             status = "CHECK"
-        elif len(missing) <= 1 and len(present) + len(maybe) >= total - 1 and total >= 4:
+        elif len(missing) <= 1 and len(present) + len(maybe) + len(minor) >= total - 1 and total >= 4:
             status = "CHECK"
         else:
             status = "NG"

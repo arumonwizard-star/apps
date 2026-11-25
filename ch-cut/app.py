@@ -33,6 +33,23 @@ DEFAULT_SPEAKERS = HERE / "presets" / "字幕テンプレ_CH.json"
 LAST_SEEN = [time.time()]
 WHISPER_MODEL = Path.home() / ".local/share/whisper-cpp/ggml-large-v3-turbo-q5_0.bin"
 
+def engine_sig():
+    """A short fingerprint of every program file: when any of them is replaced the version changes by itself."""
+    import hashlib
+    h = hashlib.md5()
+    for f in sorted(HERE.glob("*.py")):
+        try:
+            h.update(f.name.encode("utf-8"))
+            h.update(f.read_bytes())
+        except OSError:
+            pass
+    return h.hexdigest()[:6]
+
+
+# (the version changes with every program file)
+ENGINE_SIG = engine_sig()
+APP_VER = "2026.11.25-" + ENGINE_SIG
+BOOT = str(time.time())
 STATE = {"project": None, "job": {"state": "idle", "log": [], "label": "", "result": None}}
 LOCK = threading.Lock()
 
@@ -48,7 +65,7 @@ def new_project(video="", audio=""):
     return {"name": stem, "auto_name": True, "video": video, "audio": audio, "script": "", "offset": None,
             "picks": {}, "alts_sel": {}, "skip_blocks": [], "subtitles": True, "swap_speakers": False, "diarize": True,
             "speakers_config": "", "alts": True, "out": "",
-            "out_dir": str(Path.home() / "Desktop" / "テスト"), "voice_preset": True, "dual_mono": True}
+            "out_dir": str(Path.home() / "Desktop" / "テスト"), "voice_preset": True, "dual_mono": True, "kerning": "metrics"}
 
 
 def _has_content(p):
@@ -491,16 +508,61 @@ def job_main(stage):
         if not p.get("script", "").strip():              # no script: write down what was said, as it was said
             log("台本がないので、聞こえた通りに字幕を起こします")
             script.write_text(script_from_transcript(transcript), encoding="utf-8")
+        try:                                       # what was edited by hand is never lost to a new analysis: keep a copy
+            te0_ = d / "telops_edited.json"
+            if te0_.exists():
+                bk_ = d / ".backup"
+                bk_.mkdir(exist_ok=True)
+                shutil.copy2(str(te0_), str(bk_ / ("telops_edited_%s.json" % time.strftime("%Y%m%d_%H%M%S"))))
+                for old_ in sorted(bk_.glob("telops_edited_*.json"))[:-8]:
+                    old_.unlink()
+        except Exception:   # noqa: BLE001
+            pass
+        bid_ = stage[6:] if stage.startswith("block:") else ""
+        try:                                   # hand edits are never lost: keep a copy before every new analysis
+            te0_ = d / "telops_edited.json"
+            if stage != "export" and te0_.exists():
+                bk_ = d / "backups"
+                bk_.mkdir(exist_ok=True)
+                shutil.copy2(str(te0_), str(bk_ / ("telops_edited_%s.json" % time.strftime("%m%d_%H%M%S"))))
+                for old_ in sorted(bk_.glob("telops_edited_*.json"))[:-12]:
+                    old_.unlink()
+        except Exception:   # noqa: BLE001
+            pass
+        if bid_:
+            run_cmd([sys.executable, "-u", "reblock.py", str(transcript), str(script), str(d / "report.json"), stage[6:]],
+                    "ブロック再解析")
+            stage = "analyze"
         export = stage == "export"
         out = unique_out(p) if export else d / "preview.fcpxml"
         report = d / "report.json"
+        onsets_f = d / "onsets.json"
+        try:                                    # where the mountains of the waveform start: telop heads are put there
+            onsets_f.write_text(json.dumps(wave_onsets(get_peaks(p)["peaks"])), encoding="utf-8")
+        except Exception as ex:   # noqa: BLE001
+            log("波形の頭を取得できませんでした: %s" % ex)
         cmd = [sys.executable, "-u", "make_rough_cut.py", p["video"], p["audio"], str(transcript), str(script),
                "--out", str(out), "--title", out_title(p), "--report-json", str(report), "--telops-out", str(d / "telops.json")]
+        if onsets_f.exists():
+            cmd += ["--onsets", str(onsets_f)]
+        if (d / "telops_edited.json").exists():                # keep only what was changed by hand (older versions saved every block)
+            try:
+                _ed = read_json(d / "telops_edited.json", {}) or {}
+                _kept = touched_blocks(_ed, read_json(d / "telops.json", {}) or {}, False)
+                if not any(q.get("_u") for b_ in _kept.values() for q in b_.get("pieces", [])):
+                    flag_user(_kept, read_json(d / "telops.json", {}) or {})          # older file: find what was changed by hand
+                    (d / "telops_edited.json").write_text(json.dumps(_kept, ensure_ascii=False, indent=1), encoding="utf-8")
+                if len(_kept) != len(_ed):
+                    (d / "telops_edited.json").write_text(json.dumps(_kept, ensure_ascii=False, indent=1), encoding="utf-8")
+                if not _kept:
+                    (d / "telops_edited.json").unlink(missing_ok=True)
+            except Exception as ex:   # noqa: BLE001
+                log("手直しの整理に失敗: %s" % ex)
         if stage == "analyze" and (d / "telops_edited.json").exists() and \
                 read_json(d / "telops_edited.json", None) == read_json(d / "telops.json", None):
             (d / "telops_edited.json").unlink()         # never changed by hand: a fresh analysis starts from scratch
         if p.get("subtitles") and (d / "telops_edited.json").exists():
-            cmd += ["--telops-in", str(d / "telops_edited.json")]
+            cmd += ["--telops-in", str(d / "telops_edited.json"), "--edited-out", str(d / "telops_edited.json")]
         if p.get("subtitles") and (d / "extra_telops.json").exists():
             cmd += ["--extra-telops", str(d / "extra_telops.json")]
         if p.get("offset") is not None:
@@ -508,7 +570,7 @@ def job_main(stage):
         for bid, no in (p.get("picks") or {}).items():
             cmd += ["--pick", "%s=%s" % (bid, no)]
         if p.get("subtitles"):
-            cmd += ["--subtitles"]
+            cmd += ["--subtitles", "--kerning", {"オプティカル": "optical", "和文等幅": "mono"}.get(p.get("kerning"), "metrics")]
             cfg = p.get("speakers_config") or (str(DEFAULT_SPEAKERS) if DEFAULT_SPEAKERS.exists() else "")
             if cfg:
                 cmd += ["--speakers-config", cfg]
@@ -527,11 +589,28 @@ def job_main(stage):
         if not p.get("dual_mono", True):
             cmd += ["--no-dual-mono"]
         run_cmd(cmd, "同期・テイク選び・カット")
+        if not bid_ and report.exists():       # every block has a good take: where none is found, listen to that block again
+            try:
+                weak = [b["id"] for b in json.loads(report.read_text(encoding="utf-8")).get("blocks", [])
+                        if b.get("status") == "NG-only" and b["id"] not in (p.get("picks") or {})]
+                tj0 = json.loads(transcript.read_text(encoding="utf-8"))
+                weak = [w for w in weak if w not in tj0.get("reblocks", [])]
+                for w in weak:
+                    try:
+                        run_cmd([sys.executable, "-u", "reblock.py", str(transcript), str(script), str(report), w], "ブロック再解析 " + w)
+                    except Exception as ex:   # noqa: BLE001
+                        log("再解析できませんでした: %s" % ex)
+                if weak:
+                    run_cmd(cmd, "同期・テイク選び・カット")
+            except Exception as ex:   # noqa: BLE001
+                log("再解析を省略: %s" % ex)
         if report.exists():
             rep = json.loads(report.read_text(encoding="utf-8"))
             p["offset"] = rep.get("offset", p.get("offset"))
         if export:
             p["out"] = str(out)
+        else:
+            p["analyzed_ver"] = APP_VER
         save_project(p)
         with LOCK:
             STATE["job"].update({"state": "done", "result": str(out) if export else None,
@@ -624,12 +703,12 @@ FX_CHAIN = ("highpass=f=78.5:p=2,highpass=f=78.5:p=2,highpass=f=78.5:p=2,highpas
             "alimiter=limit=0.316:attack=2:release=50:level=0")
 
 
-def get_peaks(p):
+def get_peaks(p, raw=False):
     """Loudness of the audio every 10 ms (0..1) for the editor's waveform.  It follows what Final Cut shows: channel B
     (dual mono) with the export's gain, channel A where the export switches to A (clipping), and the voice preset
     (CH整音デフォ: low cut, high shelf, noise gate, two compressors, limiter) approximated with ffmpeg."""
     d = project_dir(p)
-    f = d / "peaks4.json"
+    f = d / ("peaks_raw.json" if raw else "peaks5.json")
     src = Path(p["audio"])
     if f.exists() and (not MEDIA.get("audio", True) or f.stat().st_mtime >= src.stat().st_mtime):
         return json.loads(f.read_text(encoding="utf-8"))
@@ -649,11 +728,10 @@ def get_peaks(p):
             spans = mrc.clipped_spans(src, 0, n / 100.0)
     except Exception as ex:   # noqa: BLE001
         log("peaks gain: %s" % ex)
-    m = np.clip(x[:, 1] * gain, -1.0, 1.0)
-    for t0, t1 in spans:
-        k0, k1 = max(0, int(t0 * SR)), min(len(m), int(t1 * SR) + 1)
-        m[k0:k1] = x[k0:k1, 0]
+    m = np.clip(np.where(np.abs(x[:, 0]) > np.abs(x[:, 1]), x[:, 0], x[:, 1]) * gain, -1.0, 1.0)   # both voices (チ and ホ)
     try:
+        if raw:
+            raise RuntimeError("raw")     # the timeline waveform is the recording itself (as Final Cut draws it): every audible sound
         q = subprocess.run(["ffmpeg", "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", "-af", FX_CHAIN,
                             "-f", "f32le", "-"], input=m.astype(np.float32).tobytes(), stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -662,7 +740,8 @@ def get_peaks(p):
             raise RuntimeError(q.stderr.decode("utf-8", "replace")[:200])
         m = y
     except Exception as ex:   # noqa: BLE001
-        log("peaks fx: %s" % ex)
+        if not raw:
+            log("peaks fx: %s" % ex)
     hop = SR // 100
     n = len(m) // hop
     b = np.abs(m[: n * hop]).reshape(n, hop).max(axis=1)
@@ -772,6 +851,7 @@ def start_job(stage):
     try:
         import learn_edits
         learn_edits.update(PROJECTS)
+        learn_edits.update_cuts(PROJECTS)
     except Exception:   # noqa: BLE001
         pass
     with LOCK:
@@ -850,6 +930,59 @@ def frame_size(p):
         pass
     STATE["_frame"] = (key, wh)
     return wh
+
+
+def _block_sig(b, ends):
+    ps = [(round(q.get("start", 0), 2), q.get("text", ""), q.get("speaker"), bool(q.get("deleted")), bool(q.get("ov")), q.get("src", "s"))
+          for q in sorted(b.get("pieces", []), key=lambda q: (q.get("start", 0), q.get("text", "")))]
+    nt = [(round(n.get("start", 0), 2), n.get("text", ""), bool(n.get("deleted"))) for n in b.get("notes", [])]
+    return (ps, nt, (round(b.get("a0", 0), 2), round(b.get("a1", 0), 2), b.get("c0"), b.get("c1")) if ends else None)
+
+
+def flag_user(edited, auto):
+    """Mark every piece the person really changed (flag _u: n added, t time, x text / line break, s speaker, d deleted) against
+    the automatic result, so that a new analysis keeps exactly those and replaces everything else."""
+    for k, b in (edited or {}).items():
+        ap = ((auto or {}).get(k) or {}).get("pieces", [])
+        used = set()
+        for p in b.get("pieces", []):
+            p.pop("_u", None)
+            best, bo = None, 0.5
+            for i, q in enumerate(ap):
+                if i in used:
+                    continue
+                o = min(q["end"], p["end"]) - max(q["start"], p["start"])
+                o /= max(min(q["end"] - q["start"], p["end"] - p["start"]), 0.05)
+                if o > bo:
+                    best, bo = i, o
+            fl = ""
+            if best is None:
+                fl = "n"
+            else:
+                used.add(best)
+                q = ap[best]
+                if abs(q["start"] - p["start"]) > 0.02 or abs(q["end"] - p["end"]) > 0.02:
+                    fl += "t"
+                if q.get("text") != p.get("text"):
+                    fl += "x"
+                if q.get("speaker") != p.get("speaker"):
+                    fl += "s"
+            if p.get("deleted"):
+                fl += "d"
+            if fl:
+                p["_u"] = fl
+    return edited
+
+
+def touched_blocks(edited, auto, ends):
+    """Only the blocks that were really changed by hand.  A block that still equals the automatic result is not kept, so the
+    next analysis (a better program) replaces it instead of a stale copy of the old result."""
+    out = {}
+    for k, b in (edited or {}).items():
+        a_ = (auto or {}).get(k)
+        if a_ is None or _block_sig(b, ends) != _block_sig(a_, ends):
+            out[k] = b
+    return out
 
 
 def read_json(path, default):
@@ -1010,7 +1143,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/":
-            self._send(200, PAGE.replace("__TOKEN__", TOKEN), "text/html; charset=utf-8")
+            self._send(200, PAGE.replace("__TOKEN__", TOKEN).replace("__VER__", APP_VER), "text/html; charset=utf-8")
         elif self.path.startswith("/font/ch"):
             f = find_ch_font()
             if not f:
@@ -1038,18 +1171,18 @@ class Handler(BaseHTTPRequestHandler):
                 job = dict(STATE["job"])
                 job["log"] = job["log"][-200:]
                 self._json({"project": STATE["project"], "job": job, "report": get_report(),
-                            "recent": list_projects(), "doctor": doctor(),
+                            "recent": list_projects(), "boot": BOOT, "app_ver": APP_VER, "doctor": doctor(),
                             "proxy": STATE.get("proxy", ""), "av": STATE.get("av", ""), "media": dict(MEDIA)})
         elif self.path == "/api/words":
             import words as _w
             return self._json({"groups": _w.groups()})
         elif self.path == "/api/wavebias":
             return self._json({"bias": wave_bias()})
-        elif self.path == "/api/peaks":
+        elif self.path.split("?")[0] == "/api/peaks":
             p = STATE["project"]
-            if not p or not p.get("audio") or (not MEDIA.get("audio", True) and not (project_dir(p) / "peaks4.json").exists()):
+            if not p or not p.get("audio") or (not MEDIA.get("audio", True) and not (project_dir(p) / ("peaks_raw.json" if "raw=1" in self.path else "peaks5.json")).exists()):
                 return self._json({"peaks": []})
-            return self._json(get_peaks(p))
+            return self._json(get_peaks(p, raw="raw=1" in self.path))
         elif self.path == "/api/breaktest":
             return self._json(breaktest_samples())
         elif self.path == "/api/telops":
@@ -1057,7 +1190,9 @@ class Handler(BaseHTTPRequestHandler):
             if not p:
                 return self._json({"auto": None})
             d = project_dir(p)
+            _tj = d / "telops.json"
             return self._json({"auto": read_json(d / "telops.json", None), "edited": read_json(d / "telops_edited.json", {}),
+                               "gen": str(_tj.stat().st_mtime_ns) if _tj.exists() else "",
                                "names": speaker_names(p), "styles": telop_styles(p), "frame": frame_size(p),
                                "offset": (get_report() or {}).get("offset", 0),
                                "heard": [[s_.get("start"), s_.get("end"), s_.get("text", "")] for s_ in
@@ -1243,6 +1378,9 @@ class Handler(BaseHTTPRequestHandler):
                 (d / "telops_edited.json").unlink(missing_ok=True)
             else:
                 data_ = body.get("data", {})
+                _tj = d / "telops.json"
+                if body.get("gen") and _tj.exists() and str(_tj.stat().st_mtime_ns) != str(body.get("gen")):
+                    return self._json({"ok": False, "stale": True})      # the page shows an older analysis: never write it back
                 try:                                    # a telop that was added and not filled in yet is not saved
                     for b_ in data_.values():
                         b_["pieces"] = [q for q in b_.get("pieces", []) if (q.get("text") or "").strip() or q.get("speaker", 0) < 0]
@@ -1250,13 +1388,48 @@ class Handler(BaseHTTPRequestHandler):
                     pass
                 learn_wave(d, p, data_)
                 learn_words(d, data_, p.get("script", ""))
-                (d / "telops_edited.json").write_text(json.dumps(data_, ensure_ascii=False, indent=1), encoding="utf-8")
+                auto_ = read_json(d / "telops.json", {}) or {}
+                (d / "telops_edited.json").write_text(json.dumps(flag_user(touched_blocks(data_, auto_, True), auto_), ensure_ascii=False, indent=1), encoding="utf-8")
                 try:                                    # what was changed by hand is remembered (learn_edits.py)
                     import learn_edits
                     learn_edits.record(d, data_, read_json(d / "telops.json", {}) or {})
                 except Exception:   # noqa: BLE001
                     pass
             return self._json({"ok": True})
+        if path == "/api/chunks":
+            try:
+                import jp_seg
+                return self._json({"chunks": [jp_seg.chunks(str(t_)) for t_ in (body.get("texts") or [])[:400]]})
+            except Exception as e_:   # noqa: BLE001
+                return self._json({"error": str(e_)})
+        if path == "/api/alts":
+            p = STATE["project"]
+            if not p:
+                return self._json({"error": "プロジェクトがありません"})
+            try:
+                import parse_script as ps_
+                import exact_script as ex_
+                blocks_ = {b_["id"]: b_ for b_ in ps_.parse(p.get("script", ""))}
+                bid_ = body.get("bid")
+                if bid_ not in blocks_:
+                    return self._json({"alts": []})
+                return self._json({"alts": ex_.align_alts(body.get("pieces", []), blocks_[bid_])})
+            except Exception as e_:   # noqa: BLE001
+                return self._json({"error": str(e_)})
+        if path == "/api/gap":
+            p = STATE["project"]
+            if not p:
+                return self._json({"text": None})
+            try:
+                import parse_script as ps_
+                import exact_script as ex_
+                blocks_ = {b_["id"]: b_ for b_ in ps_.parse(p.get("script", ""))}
+                bid_ = body.get("bid")
+                if bid_ not in blocks_:
+                    return self._json({"text": None})
+                return self._json({"text": ex_.gap_text(body.get("pieces", []), int(body.get("k", 0)), blocks_[bid_])})
+            except Exception as e_:   # noqa: BLE001
+                return self._json({"error": str(e_)})
         if path == "/api/exact":
             p = STATE["project"]
             if not p:
@@ -1413,23 +1586,19 @@ def open_latest_project():
 
 
 def self_update_watch():
-    """When this program is replaced by a newer one, start the new one by itself (once nothing is being analysed):
+    """When any program file is replaced by a newer one, start the new one by itself (once nothing is being analysed):
     nobody has to close and reopen the app."""
-    me = Path(__file__).resolve()
-    try:
-        t0 = me.stat().st_mtime
-    except OSError:
-        return
-    launcher = me.parent / "CH Cut.app" / "Contents" / "MacOS" / "CHCut"
+    launcher = HERE / "CH Cut.app" / "Contents" / "MacOS" / "CHCut"
     while True:
         time.sleep(5)
         try:
-            if me.stat().st_mtime == t0:
+            if engine_sig() == ENGINE_SIG:
                 continue
             time.sleep(8)                                   # a copy in progress finishes first
-            t0 = me.stat().st_mtime
             while (STATE.get("job") or {}).get("state") == "running":
                 time.sleep(3)
+            if engine_sig() == ENGINE_SIG:
+                continue
             if launcher.exists():
                 subprocess.Popen([str(launcher)], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 time.sleep(1.0)
@@ -1510,7 +1679,7 @@ PAGE = r"""<!doctype html>
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"Hiragino Sans",sans-serif;display:flex;flex-direction:column}
 header{display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);-webkit-app-region:drag}
 .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#ff5a4f,#ff9a5a);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;letter-spacing:-1px}
-header h1{font-size:16px;margin:0}header .sub{color:var(--mute);font-size:12px}header .sp{flex:1}
+header{flex-wrap:nowrap;min-width:0}header button,header select,header h1,header .logo{white-space:nowrap;flex:none}header #name{flex:1 1 120px;min-width:90px;width:auto!important;max-width:240px}header #recent{width:auto!important;min-width:0;max-width:200px;flex:0 1 200px}header h1{font-size:16px;margin:0}header .sub{color:var(--mute);font-size:12px}header .sp{flex:1}
 select,input[type=text],textarea{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:0}
 select:focus,input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
 button{padding:8px 14px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
@@ -1588,7 +1757,7 @@ th{color:var(--mute);font-size:12px;font-weight:600}tr:last-child td{border-bott
 .tka{font-size:12px;border-radius:999px;padding:4px 10px;background:transparent;border:1px dashed var(--mute);color:var(--mute)}.tka.yes{background:#2bb67333;border:1px solid #2bb673;color:#8ff0c0}
 .r2{display:flex;gap:6px;align-items:center}.altbox{margin-top:8px;padding:8px 10px;background:var(--panel2);border-radius:8px}.altrow{display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px}.altrow label{display:flex;gap:4px;align-items:center}.unh{color:var(--warn);font-size:12px;margin:2px 0 8px}.lane2{opacity:.8}
 .vwrap{width:min(100%,calc(min(230px,28vh)*var(--ar,.5625)));aspect-ratio:var(--ar,.5625);margin:0 auto;max-width:100%;min-height:0}#vid{position:absolute;inset:0;width:100%;height:100%;max-height:none;min-height:0;min-width:0;object-fit:contain;margin:0}#vov{left:0;top:0;width:100%;height:100%}.vc textarea{width:100%;margin-top:2px}
-.lane2{border-left:3px solid #f5a}.l2b{grid-column:1/-1;grid-row:1;display:block;font-size:10px;color:#f5a;font-weight:700;margin-top:2px;line-height:1.2}.trow{grid-template-columns:64px 1fr 58px 130px}.ln{align-self:stretch;display:flex;gap:2px;min-height:22px;cursor:pointer;border-radius:3px}.ln:hover{background:rgba(255,255,255,.06)}.lb{flex:1;min-width:0;font-size:10px;line-height:1.15;color:#fff;overflow:hidden;position:relative;border-left:3px solid #9b86ff;background:rgba(155,134,255,.28)}.lb.c1{border-color:#ff9d4d;background:rgba(255,157,77,.28)}.lb.c2{border-color:#4dd6c0;background:rgba(77,214,192,.28)}.lb.c3{border-color:#ff6fa8;background:rgba(255,111,168,.28)}.lb span{display:block;padding:1px 2px;white-space:nowrap}.lb .wx{position:absolute;right:1px;top:0;display:inline;opacity:.7;cursor:pointer}#vov{display:none}#cap{margin:6px auto 0;min-height:64px;max-width:100%;text-align:center;background:#111318;border:1px solid #2f323b;border-radius:8px;padding:8px 6px;display:flex;flex-direction:column;justify-content:center;gap:2px}.capi{font-family:'ラノベPOP','Rampart One','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;font-weight:900;font-size:26px;line-height:1.15;white-space:pre-wrap}.lb{display:flex;align-items:center;gap:3px;padding:0 2px}.lb.f{border-top-left-radius:4px;border-top-right-radius:4px}.lb.l{border-bottom-left-radius:4px;border-bottom-right-radius:4px}.lb.cL{border-color:#e8d24d;background:rgba(232,210,77,.25)}.bhd{position:absolute;left:0;right:0;height:7px;cursor:ns-resize;background:rgba(255,255,255,.55);z-index:2}.bhd.top{top:0;border-radius:4px 4px 0 0}.bhd.bot{bottom:0;border-radius:0 0 4px 4px}.nin{flex:1;min-width:0;width:0;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);border-radius:3px;color:#fff;font-size:11px;padding:1px 3px;margin-top:8px}.nx{cursor:pointer;color:#fff;font-size:11px;padding:0 2px;margin-top:8px;opacity:.9}.nx:hover{color:#ff6b6b}.nl{font-size:10px;margin-top:8px}.lane2{opacity:1;border-left:3px solid #f5a}.l2b{display:none}.lb.cL{border-color:#ff3b4d!important;background:rgba(255,59,77,.35)!important}.wc.cl{box-shadow:-3px 0 0 #ff4d6a}.wc.cr{box-shadow:3px 0 0 #ff4d6a}@font-face{font-family:'CHPOP';src:local('LightNovelPopV2'),local('Light Novel Pop V2'),local('LightNovelPOP'),local('ラノベPOP'),url('/font/ch')}.ln:empty:hover::after{content:'＋※';color:#8a8;font-size:11px;padding:3px}.fb{color:#fff;background:#d33;border-radius:4px;font-size:10px;padding:0 4px;margin-top:3px;display:inline-block;font-weight:700}
+.lane2{border-left:3px solid #f5a}.l2b{grid-column:1/-1;grid-row:1;display:block;font-size:10px;color:#f5a;font-weight:700;margin-top:2px;line-height:1.2}.trow{grid-template-columns:64px 1fr 58px 130px}.ln{align-self:stretch;display:flex;gap:2px;min-height:22px;cursor:pointer;border-radius:3px}.ln:hover{background:rgba(255,255,255,.06)}.lb{flex:1;min-width:0;font-size:10px;line-height:1.15;color:#fff;overflow:hidden;position:relative;border-left:3px solid #9b86ff;background:rgba(155,134,255,.28)}.lb.c1{border-color:#ff9d4d;background:rgba(255,157,77,.28)}.lb.c2{border-color:#4dd6c0;background:rgba(77,214,192,.28)}.lb.c3{border-color:#ff6fa8;background:rgba(255,111,168,.28)}.lb span{display:block;padding:1px 2px;white-space:nowrap}.lb .wx{position:absolute;right:1px;top:0;display:inline;opacity:.7;cursor:pointer}#cap{margin:6px auto 0;min-height:64px;max-width:100%;text-align:center;background:#111318;border:1px solid #2f323b;border-radius:8px;padding:8px 6px;display:flex;flex-direction:column;justify-content:center;gap:2px}.capi{font-family:'ラノベPOP','Rampart One','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;font-weight:900;font-size:26px;line-height:1.15;white-space:pre-wrap}.lb{display:flex;align-items:center;gap:3px;padding:0 2px}.lb.f{border-top-left-radius:4px;border-top-right-radius:4px}.lb.l{border-bottom-left-radius:4px;border-bottom-right-radius:4px}.lb.cL{border-color:#e8d24d;background:rgba(232,210,77,.25)}.bhd{position:absolute;left:0;right:0;height:7px;cursor:ns-resize;background:rgba(255,255,255,.55);z-index:2}.bhd.top{top:0;border-radius:4px 4px 0 0}.bhd.bot{bottom:0;border-radius:0 0 4px 4px}.nin{flex:1;min-width:0;width:0;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);border-radius:3px;color:#fff;font-size:11px;padding:1px 3px;margin-top:8px}.nx{cursor:pointer;color:#fff;font-size:11px;padding:0 2px;margin-top:8px;opacity:.9}.nx:hover{color:#ff6b6b}.nl{font-size:10px;margin-top:8px}.lane2{opacity:1;border-left:3px solid #f5a}.l2b{display:none}.lb.cL{border-color:#ff3b4d!important;background:rgba(255,59,77,.35)!important}.wc.cl{box-shadow:-3px 0 0 #ff4d6a}.wc.cr{box-shadow:3px 0 0 #ff4d6a}@font-face{font-family:'CHPOP';src:local('LightNovelPopV2'),local('Light Novel Pop V2'),local('LightNovelPOP'),local('ラノベPOP'),url('/font/ch')}.ln:empty:hover::after{content:'＋※';color:#8a8;font-size:11px;padding:3px}.fb{color:#fff;background:#d33;border-radius:4px;font-size:10px;padding:0 4px;margin-top:3px;display:inline-block;font-weight:700}
 .side{display:flex;flex-direction:column;padding:0;overflow:hidden}
 .sidein{flex:1;min-height:0;overflow:auto;padding:14px 16px 6px}
 .sidego{padding:10px 16px 14px;border-top:1px solid var(--line);background:var(--panel)}
@@ -1604,7 +1773,7 @@ th{color:var(--mute);font-size:12px;font-weight:600}tr:last-child td{border-bott
 .tlov{position:fixed;left:0;right:0;bottom:0;height:320px;background:#101014;border-top:1px solid #2a2b33;z-index:40;display:none;flex-direction:column}.tlov.on{display:flex}
 .tlon #wave{display:none}.vctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .srcsel{margin-top:4px;width:auto;font-size:11px;padding:2px 6px}#capsrc{width:auto;margin:4px 0 0 auto;font-size:12px;padding:3px 8px}#capte{width:100%;box-sizing:border-box;font:700 26px/1.25 'Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;text-align:center;background:#000;color:#fff;border:1px solid var(--acc);border-radius:8px;padding:8px;resize:none;height:auto}
-.tlbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #2a2b33}.tlscroll{flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:auto;position:relative}#tlgrip{flex:0 0 7px;cursor:ns-resize;background:#1c1d24;border-bottom:1px solid #2a2b33;touch-action:none}#tlgrip:hover{background:#3a3f55}#tlspc{position:absolute;left:0;top:0}
+.tlbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #2a2b33}.tlscroll{flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:auto;position:relative}#tlgrip input{position:absolute;right:14px;top:-1px;width:110px;height:12px;accent-color:#6b7aa8;opacity:.8}#tlgrip{position:relative;flex:0 0 12px;cursor:ns-resize;background:#1c1d24;border-bottom:1px solid #2a2b33;touch-action:none}#tlgrip:hover{background:#3a3f55}#tlspc{position:absolute;left:0;top:0}
 .tlscroll canvas{display:block;cursor:default;touch-action:none}.tled{padding:8px 12px;border-top:1px solid #2a2b33}.tled textarea{width:100%;font-size:18px;background:#15161a;color:#fff;border:1px solid #2a2b33;border-radius:8px;padding:8px}
 .btov{position:fixed;inset:0;background:rgba(10,10,14,.92);z-index:50;display:none;flex-direction:column;align-items:center;padding:28px 24px;overflow:auto}
 .wdgrid{display:grid;grid-template-columns:200px 1fr 70px;gap:8px;width:min(720px,92vw);align-items:center}.wdgrid input{background:#1d1e26;border:1px solid #2f3140;color:var(--fg,#eee);border-radius:8px;padding:9px 10px;font-size:15px}.wdh{color:var(--mute);font-size:12px}.wdbt{display:flex;gap:10px;margin-top:18px}#wd{justify-content:flex-start}
@@ -1623,16 +1792,16 @@ body.intake .sidein textarea{height:clamp(90px,16vh,220px)}
 @keyframes bb{from{background-position:-40% 0}to{background-position:140% 0}}
 #busypill{position:fixed;left:50%;top:78px;transform:translateX(-50%);z-index:200;display:none;align-items:center;gap:10px;padding:9px 18px;border-radius:999px;background:#000d;border:1px solid var(--acc);font-size:15px;font-weight:700;color:#fff;pointer-events:none;box-shadow:0 4px 24px #0009}
 .busy #busypill,.busyjob #busypill{display:flex}#busypill i{width:18px;height:18px;border-radius:50%;border:3px solid #fff4;border-top-color:var(--acc);animation:bs .7s linear infinite}@keyframes bs{to{transform:rotate(360deg)}}
-#tcur,#d2info{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;display:inline-block;min-width:8ch;white-space:nowrap}#dock{overflow-x:hidden}.vwrap{width:min(100%,calc(var(--vwh,230px)*var(--ar,.5625)))}
+#tcur,#d2info{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;display:inline-block;min-width:8ch;white-space:nowrap}#dock{overflow-x:hidden}#vov{display:none!important}#cap{height:96px;min-height:96px;overflow:hidden}.vwrap{width:min(100%,calc(var(--vwh,230px)*var(--ar,.5625)))}.hc.sel{outline:2px solid #ffd60a;border-radius:3px}#dock{padding:8px 10px}#dock .vctl{margin-top:6px;gap:8px}#dock .vctl button{padding:6px 12px}.hc:empty{display:inline-block;min-width:40px;height:16px;border:1px dashed #666;border-radius:3px;vertical-align:middle}
 </style></head><body>
-<div id="busybar"></div><div id="busypill"><i></i><span id="busytx">読み込み中</span></div><div id="ver" style="position:fixed;left:8px;bottom:3px;font-size:10px;opacity:.45;z-index:5;pointer-events:none">版 2026.11.20-33</div><div id="conn" style="display:none;position:fixed;left:0;right:0;top:0;z-index:9999;background:#c0392b;color:#fff;padding:10px 14px;font-weight:700;text-align:center">接続が切れています</div>
+<div id="busybar"></div><div id="busypill"><i></i><span id="busytx">読み込み中</span></div><div id="ver" style="position:fixed;left:8px;bottom:3px;font-size:10px;opacity:.45;z-index:5;pointer-events:none">版 __VER__</div><div id="conn" style="display:none;position:fixed;left:0;right:0;top:0;z-index:9999;background:#c0392b;color:#fff;padding:10px 14px;font-weight:700;text-align:center">接続が切れています</div>
 <header><div class="logo">CH</div><div><h1>CH Cut</h1><div class="sub"></div></div>
 <input type="text" id="name" placeholder="プロジェクト名" onchange="setf('name',this.value)" style="width:240px;margin-left:14px"><span class="sp"></span>
-<button onclick="intake(true)">素材</button> <button onclick="run('analyze')">再解析</button> <button onclick="tlToggle()">タイムライン</button> <button onclick="btOpen()">改行テスト</button> <button onclick="tlWaveFit()">波形調整</button> <button onclick="wdOpen()">表記統一</button> <select id="recent" style="width:220px"><option value="">最近のプロジェクト…</option></select>
+<button onclick="intake(true)">素材</button> <button onclick="run('analyze')">再解析</button> <button onclick="wdOpen()">表記統一</button> <select id="recent" style="width:220px"><option value="">最近のプロジェクト…</option></select>
 <button onclick="newProj()">＋ 新規</button>
 <button class="p" id="exp" onclick="doExport()" style="background:#2f9e6e">書き出し</button><span id="label" class="small" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></header>
 <div class="wrap">
-<div id="dock" style="display:none"><div class="vwrap" id="vwrap"><video id="vid" muted playsinline preload="auto"></video><div id="vov"></div><div id="vmsg" class="small"></div></div><div id="cap"></div><select id="capsrc" style="display:none" onchange="capSrc(this.value);this.blur()"><option value="s">台本</option><option value="h">聞き取り</option></select>
+<div id="dock" style="display:none"><div class="vwrap" id="vwrap"><video id="vid" muted playsinline preload="auto"></video><div id="vov"></div><div id="vmsg" class="small"></div></div><div id="cap"></div><div class="kernrow"><label>カーニング <select id="kerning" onchange="setKern(this.value)"><option>メトリクス</option><option>オプティカル</option><option>和文等幅</option></select></label></div><select id="capsrc" style="display:none" onchange="capSrc(this.value);this.blur()"><option value="s">台本</option><option value="h">聞き取り</option></select>
    <div class="vctl"><button class="p" id="pp" onclick="togglePlay()">▶ 再生</button> <span id="tcur" class="small">0:00.00</span>
     <button onclick="undo()">↶ 復元</button>
     <label class="small" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="fx" checked onchange="fxToggle()">整音プレビュー</label>
@@ -1679,7 +1848,6 @@ body.intake .sidein textarea{height:clamp(90px,16vh,220px)}
  <div class="card" id="telopCard" style="display:none">
   <div class="thead"><h3>テロップを編集</h3></div>
   <div id="telops"></div>
-  <div style="padding:6px 14px 14px;display:flex;gap:8px"><button id="rbtn" onclick="treset()">リセット</button></div>
  </div>
  <div class="empty" id="empty"></div>
 </div></div>
@@ -1766,6 +1934,9 @@ function syncPick(){const p=(S&&S.project)||{};(S.report?S.report.blocks:[]).for
  if(ALT[b.id]===undefined){const sel=p.alts_sel&&p.alts_sel[b.id];ALT[b.id]=sel?sel.slice():b.takes.map(t=>t.no)}})}
 function pickTake(id,no){PICK[id]=no;renderBlocks()}
 function toggleAlt(id,no){const a=ALT[id]=ALT[id]||[];const k=a.indexOf(no);k>=0?a.splice(k,1):a.push(no);renderBlocks()}
+const ZN='０１２３４５６７８９';
+function bnum(id){const bl=(S&&S.report&&S.report.blocks)||[];let f=bl.findIndex(b=>b.cut||(b.takes||[]).length);if(f<0)f=0;const i=bl.findIndex(b=>b.id===id);return i<f?0:i-f+1}
+function bname(id){const n=bnum(id);return n?'ブロック'+String(n).replace(/\d/g,d=>ZN[d]):'タイトル'}
 function skipped(id){return !!(S&&S.project&&(S.project.skip_blocks||[]).includes(id))}
 async function toggleSkip(id){const cur=((S.project||{}).skip_blocks||[]).slice();const k=cur.indexOf(id);k>=0?cur.splice(k,1):cur.push(id);await api('/api/project',{skip_blocks:cur});S=await api('/api/state');renderBlocks();renderTelops()}
 function renderBlocks(){if(!S||!S.report)return;const el=document.getElementById('blocks');
@@ -1775,9 +1946,9 @@ function renderBlocks(){if(!S||!S.report)return;const el=document.getElementById
   const hue=[350,28,48,150,190,215,260,300,330][bi%9];
   const pills=b.takes.map(t=>{const on=t.no===chosen,c=stColor(t.status),alt=(ALT[b.id]||[]).includes(t.no)&&!on;
    return '<div class="tk'+(on?' on':'')+'" style="--c:'+c+'"><button class="tkb" onclick="pickTake(\''+b.id+'\','+t.no+')"><b>テイク'+t.no+'</b><span>'+mmss(t.start)+'</span><i>'+stName(t.status)+'</i></button>'
-    +'<button class="tkp" title="聞く" onclick="playRange('+t.start+','+t.end+')">▶</button>'
+    +'<button class="tkp" title="聞く" onclick="takePlay('+t.start+','+t.end+')">▶</button>'
     +(on?'<span class="tkuse">使用</span>':'<button class="tka'+(alt?' yes':'')+'" onclick="toggleAlt(\''+b.id+'\','+t.no+')">'+(alt?'✓ 候補':'＋ 候補')+'</button>')+'</div>'}).join('');
-  return '<div class="bc'+(skipped(b.id)?' skipped':'')+'" style="--h:'+hue+'"><div class="bh"><span class="bid">'+esc(b.id)+'</span><span class="bcue">'+esc(b.cue)+'</span><span class="bcut">'+(b.cut?mmss(b.cut[0])+' – '+mmss(b.cut[1]):'')+'</span><button class="bskip" onclick="toggleSkip(\''+b.id+'\')">'+(skipped(b.id)?'使用':'不使用')+'</button></div>'
+  return '<div class="bc'+(skipped(b.id)?' skipped':'')+'" style="--h:'+hue+'"><div class="bh"><span class="bid">'+esc(bname(b.id))+'</span><span class="bcue">'+esc(b.cue)+'</span><button class="tkp" onclick="run(\'block:'+b.id+'\')">再解析</button><button class="tkp" onclick="playBlock(\''+b.id+'\')">▶</button><span class="bcut">'+(b.cut?mmss(b.cut[0])+' – '+mmss(b.cut[1]):'')+'</span><button class="bskip" onclick="toggleSkip(\''+b.id+'\')">'+(skipped(b.id)?'使用':'不使用')+'</button></div>'
    +warn+unh+(b.takes.length?'<div class="tks">'+pills+'</div>':'<div class="bwarn">テイクが見つかりません</div>')+'</div>'}).join('')
   +'<div style="padding:10px 0 4px"><button class="p" onclick="remake()">このテイクで解析</button></div>'}
 function altsSel(){const o={};for(const id in ALT)o[id]=ALT[id];return o}
@@ -1785,16 +1956,17 @@ function picks(){const o={};(S.report?S.report.blocks:[]).forEach(b=>{if(PICK[b.
 async function remake(){await api('/api/project',{picks:picks(),alts_sel:altsSel()});run('analyze')}
 let editing=false;
 let INTK0=false;
-async function refresh(force){const S0=await api('/api/state');if(S0.error)return;S=S0;const p=S.project||{};if(!INTK0){INTK0=true;if(!S.report&&!TE)intake(true)}
+let LV=null;async function refresh(force){const S0=await api('/api/state');if(S0.error)return;S=S0;if(LV===null)LV=S.app_ver;else if(S.app_ver&&S.app_ver!==LV){LV=S.app_ver;location.reload();return}const p=S.project||{};if(!INTK0){INTK0=true;if(!S.report&&!TE)intake(true)}
  const bad=S.doctor.filter(x=>!x.ok);
  if(S.media){if(MGEN===null)MGEN=S.media.gen;else if(S.media.gen!==MGEN){MGEN=S.media.gen;AUSET='';VKEY='';VSET='';AB=null;AUFALL=false;try{audSrc();vidSrc()}catch(e){}}}
  const mm=S.media&&(!S.media.audio||!S.media.video)?'<div class="warnbox"><b>外付けディスクが見えません</b></div>':'';
  document.getElementById('doctor').innerHTML=mm+(bad.length?'<div class="warnbox"><b>準備が必要です</b>'+bad.map(x=>'<div>'+esc(x.name)+' — '+esc(x.hint)+'</div>').join('')+'</div>':'');
  const rs=document.getElementById('recent');rs.innerHTML='<option value="">最近のプロジェクト…</option>'+S.recent.map(n=>'<option>'+esc(n)+'</option>').join('');
  const act=document.activeElement&&document.activeElement.id;
+ {const ks=document.getElementById('kerning');if(ks&&document.activeElement!==ks){const m={optical:'オプティカル',mono:'和文等幅'}[p.kerning]||(['オプティカル','和文等幅'].includes(p.kerning)?p.kerning:'メトリクス');if(ks.value!==m){ks.value=m;const c=document.getElementById('cap');if(c)c.dataset.h='';const o=document.getElementById('vov');if(o)o.dataset.h=''}}}
  const set=(id,v,c)=>{const el=document.getElementById(id);if(!el||act===id)return;if(c)el.checked=!!v;else el.value=v||''};
  set('name',p.name);dzset('video',p.video,'未選択',p.video_parts);dzset('audio',p.audio,'未選択',p.audio_parts);set('script',p.script);set('cfg',p.speakers_config);set('out_dir',p.out_dir);
- const D=(v)=>v===undefined?true:v;set('subtitles',D(p.subtitles),1);set('diarize',D(p.diarize),1);set('swap',p.swap_speakers,1);set('dual_mono',D(p.dual_mono),1);set('voice_preset',D(p.voice_preset),1);
+ const D=(v)=>v===undefined?true:v;set('subtitles',D(p.subtitles),1);set('diarize',D(p.diarize),1);set('swap',p.swap_speakers,1);set('dual_mono',D(p.dual_mono),1);set('voice_preset',D(p.voice_preset),1);document.getElementById('kerning').value=p.kerning||'メトリクス';
  const j=S.job;const run_=j.state==='running';
  document.getElementById('go').disabled=run_;document.getElementById('exp').disabled=run_||!S.report;
  const lg=j.log.join('\n');
@@ -1802,10 +1974,11 @@ async function refresh(force){const S0=await api('/api/state');if(S0.error)retur
  ['s1','s2','s3'].forEach((id,i)=>{const e=document.getElementById(id);e.className='st'+(stage>i+1||j.state==='done'?' done':(stage===i+1?' on':''))});
  document.body.classList.toggle('busyjob',!!run_);document.getElementById('busytx').textContent=run_?'処理中':'読み込み中';
  document.getElementById('label').textContent=run_?('実行中… '+j.label):(j.state==='done'?'完了':(j.state==='error'?'失敗しました（ログを見てください）':''));
- const l=document.getElementById('log');if(j.log.length){l.style.display='block';l.textContent=lg;l.scrollTop=l.scrollHeight}
+ const l=document.getElementById('log');if(j.log.length){l.style.display='block';l.textContent=lg.replace(/\bb(\d\d)(?![\d-])/g,(m,d)=>bname('b'+d));l.scrollTop=l.scrollHeight}
  document.getElementById('result').innerHTML=(j.state==='done'&&j.result)?'<div class="res"><b>書き出し完了</b><div class="small" style="word-break:break-all;margin:4px 0 8px">'+esc(j.result)+'</div><button id="rev">Finderで表示</button></div>':'';
  const rv=document.getElementById('rev');if(rv)rv.onclick=()=>api('/api/reveal',{path:j.result});
- const key=(p.name||'')+'|'+(j.tick||'');if(key!==TKEY&&!run_){TKEY=key;loadTelops()}vidSrc();
+ const key=(p.name||'')+'|'+(j.tick||'')+'|'+(S.boot||'');if(key!==TKEY&&!run_){TKEY=key;loadTelops()}vidSrc();
+ if(S.project&&S.report&&S.app_ver&&p.analyzed_ver!==S.app_ver&&!run_&&!AUTOAN&&!mm&&!bad.length&&p.video){AUTOAN=true;run('analyze')}
  document.getElementById('dock').style.display=S.report?'block':'none';document.querySelector('.main').classList.toggle('docked',!!S.report);if(S.report&&S.report.offset!==undefined&&!TE)OFF=S.report.offset;const rc=document.getElementById('reportCard');document.getElementById('empty').style.display=S.report?'none':'block';
  if(S.report&&!editing){rc.style.display='block';
   const sg=JSON.stringify(S.report),chg=sg!==RSIG;if(chg){RSIG=sg;PICK={};ALT={}}syncPick();if(chg||!document.getElementById('blocks').children.length)renderBlocks()}
@@ -1817,20 +1990,20 @@ const aud=new Audio();let MUX=false;
 let ABRATE=1,AB2=null,AB=null,ABPOS=0,ABS=[],ABN=[],ABPLAY=false,ABEND=0,ABLOAD='';
 function abNow(){if(!ABPLAY||!AC)return ABPOS;const n=AC.currentTime;for(const s of ABS){if(n<s.c0+s.d/s.r)return s.a0+Math.max(n-s.c0,0)*s.r}const l=ABS[ABS.length-1];return l?l.a0+l.d:ABPOS}
 function abStop(keep){if(ABPLAY&&keep)ABPOS=abNow();ABPLAY=false;for(const s of ABN){try{s.onended=null;s.stop()}catch(e){}}ABN=[];ABS=[]}
-function abStart(pos){abStop(false);ensureAC();if(!AC||!AB)return false;if(AC.state==='suspended')AC.resume();
+function abStart(pos){abStop(false);ensureAC();if(!AC||!AB)return false;if(AC.state==='closed'){AC=null;FXN=null;fxSrc=null;ensureAC()}if(AC.state!=='running')AC.resume();
  let list=[];if(stopAt){list=[{a0:pos,a1:Math.min(stopAt,AB.duration)}]}
  else{const sg=segs();if(sg.length){for(const g of sg){if(g.a1>pos+0.02)list.push({a0:Math.max(g.a0,pos),a1:Math.min(g.a1,AB.duration)})}}else list=[{a0:pos,a1:AB.duration}]}
  list=list.filter(x=>x.a1-x.a0>0.01);if(!list.length){ABPOS=pos;return false}
- let c=AC.currentTime+0.04;for(const x of list){const s=AC.createBufferSource();const u2=ABRATE===2&&AB2;s.buffer=u2?AB2:AB;s.playbackRate.value=u2?1:ABRATE;if(fxSrc)fxSrc(s);else s.connect(AC.destination);if(u2){s.start(c,x.a0/2,Math.max((x.a1-x.a0)/2,0.005))}else s.start(c,x.a0,x.a1-x.a0);ABN.push(s);ABS.push({c0:c,a0:x.a0,d:x.a1-x.a0,r:ABRATE});c+=(x.a1-x.a0)/ABRATE}
+ let c=AC.currentTime+0.04;for(const x of list){const s=AC.createBufferSource();const u2=ABST[ABRATE];s.buffer=u2||AB;s.playbackRate.value=u2?1:ABRATE;if(fxSrc)fxSrc(s);else s.connect(AC.destination);if(u2){s.start(c,x.a0/ABRATE,Math.max((x.a1-x.a0)/ABRATE,0.005))}else s.start(c,x.a0,x.a1-x.a0);ABN.push(s);ABS.push({c0:c,a0:x.a0,d:x.a1-x.a0,r:ABRATE});c+=(x.a1-x.a0)/ABRATE}
  ABEND=c;ABPLAY=true;ABPOS=pos;return true}
 const au={get currentTime(){return AB?abNow():aud.currentTime},set currentTime(x){if(AB){ABPOS=x;if(ABPLAY){if(!abStart(x))pauseNow()}}else aud.currentTime=x},
  get paused(){return AB?!ABPLAY:aud.paused},play(){if(AB){if(!ABPLAY)abStart(ABPOS);return Promise.resolve()}return aud.play()},pause(){if(AB)abStop(true);aud.pause()},
  get error(){return aud.error},get readyState(){return AB?4:aud.readyState},set src(v){aud.src=v},set onerror(f){aud.onerror=f},
  addEventListener(n,f){aud.addEventListener(n,f)}};
 function setRate(r){if(r===ABRATE)return;const v=vid();if(AB&&ABPLAY){const pos=abNow();ABRATE=r;abStart(pos)}else ABRATE=r;try{aud.playbackRate=r;aud.preservesPitch=true;v.playbackRate=r}catch(e){}}
-let LFAST=false;
-document.addEventListener('keydown',e=>{if((e.key!=='l'&&e.key!=='L')||e.metaKey||e.ctrlKey||e.altKey||e.isComposing)return;const tg=(e.target&&e.target.tagName)||'';if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;e.preventDefault();if(e.repeat)return;LFAST=!LFAST;if(LFAST){if(au.paused)playNow();setRate(2)}else setRate(1)});
-async function stretch2(buf){const sr=buf.sampleRate,nc=buf.numberOfChannels,N=buf.length,F=Math.round(sr*0.04)&~7,H=F/2,HI=H*2,D=8,tol=Math.round(sr*0.01);
+let LFAST=0;
+document.addEventListener('keydown',e=>{if((e.key!=='l'&&e.key!=='L')||e.metaKey||e.ctrlKey||e.altKey||e.isComposing)return;const tg=(e.target&&e.target.tagName)||'';if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;e.preventDefault();if(e.repeat)return;const was=LFAST?LFAST:(au.paused?0:1);const nx=was<2?2:Math.min(was*2,8);LFAST=nx;if(au.paused)playNow();setRate(nx);const m=document.getElementById('tmsg');if(m)m.textContent=nx+'倍速'});
+async function stretchR(buf,R){const sr=buf.sampleRate,nc=buf.numberOfChannels,N=buf.length,F=Math.round(sr*0.04)&~7,H=F/2,HI=H*R,D=8,tol=Math.round(sr*0.01);
  const chs=[];for(let c=0;c<nc;c++)chs.push(buf.getChannelData(c));const m=new Float32Array(Math.floor(N/D));
  for(let i=0;i<m.length;i++){let a=0;for(let c=0;c<nc;c++)a+=chs[c][i*D+3];m[i]=a/nc}
  const nf=Math.floor((N-F-tol*2)/HI);if(nf<4)return null;const outLen=nf*H+F;const out=chs.map(()=>new Float32Array(outLen));
@@ -1841,7 +2014,8 @@ async function stretch2(buf){const sr=buf.sampleRate,nc=buf.numberOfChannels,N=b
   for(let L=-T;L<=T;L++){const a=q+L;if(a<0||a+W>=m.length)continue;let sum=0;for(let j=0;j<W;j+=2)sum+=m[a+j]*m[nat+j];if(sum>bv){bv=sum;bl=L}}
   let pp=(q+bl)*D;if(pp<0)pp=0;if(pp+F>N)pp=N-F;put(k,pp);p=pp;if(k%150===0)await new Promise(r=>setTimeout(r,0))}
  ensureAC();if(!AC)return null;const ab=AC.createBuffer(nc,outLen,sr);for(let c=0;c<nc;c++)ab.copyToChannel(out[c],c);return ab}
-async function loadAB(k){ABLOAD=k;AB=null;try{ensureAC();if(!AC)return;const r=await fetch('/media/audio?'+Date.now());const sz=+r.headers.get('content-length')||0;if(sz>80e6)return;const buf=await AC.decodeAudioData(await r.arrayBuffer());if(ABLOAD===k){AB=buf;AB2=null;stretch2(buf).then(b=>{if(ABLOAD===k&&b)AB2=b}).catch(()=>{})}}catch(e){AB=null}}
+const stretch2=b=>stretchR(b,2);let ABST={};
+async function loadAB(k){ABLOAD=k;AB=null;try{ensureAC();if(!AC)return;const r=await fetch('/media/audio?'+Date.now());const sz=+r.headers.get('content-length')||0;if(sz>80e6)return;const buf=await AC.decodeAudioData(await r.arrayBuffer());if(ABLOAD===k){AB=buf;AB2=null;ABST={};(async()=>{for(const R of [2,4,8]){try{const b=await stretchR(buf,R);if(ABLOAD!==k)return;if(b){ABST[R]=b;if(R===2)AB2=b}}catch(e){}}})()}}catch(e){AB=null}}
 let stopAt=0,TE=null,TN=['チ','ホ','笑'],TKEY='',OFF=0,VSET='',ACT=null,saveT=null,EDIT=false,STY=null,FR=[1920,1080],UNDO=[];
 const vid=()=>document.getElementById('vid');
 function tcf(t){const f=Math.round(t*30),ff=f%30,sec=Math.floor(f/30);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')+':'+String(ff).padStart(2,'0')}
@@ -1868,15 +2042,27 @@ function fxToggle(){const on=document.getElementById('fx').checked;if(FXN){FXN.w
 function fxLevel(){if(!FXN||!PK)return;const v=PK.peaks.filter(x=>x>0.25).map(x=>x*x).sort((a,b)=>a-b);if(!v.length)return;const med=v[Math.floor(v.length*0.6)];FXN.pre.gain.value=Math.min(Math.max(0.3/med,1),40)}
 let AUFALL=false;
 async function audFallback(why){if(AUFALL)return false;AUFALL=true;const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生用に変換しています…（'+why+'）';const r=await api('/api/need_audio',{});if(r.error){if(m)m.textContent=r.error;return false}au.src='/media/audio2?'+Date.now();if(m)m.textContent='';return true}
-function playNow(){if(!stopAt){const sg=segs(),t0=au.currentTime;if(sg.length&&!sg.some(g=>t0>=g.a0-0.001&&t0<g.a1-0.05)){const nx=sg.find(g=>g.a0>t0)||sg[0];seek(nx.a0)}}fxInit();if(AC&&AC.state==='suspended')AC.resume();au.play().catch(async e=>{if(e&&(e.name==='NotSupportedError'||(au.error&&au.error.code>=3))&&await audFallback(e.name)){au.play().catch(()=>{});return}const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生できません: '+(e&&e.name)+' / '+(e&&e.message)+' / エラー番号 '+(au.error?au.error.code:'なし')+' / 読み込み状態 '+au.readyState});try{vid().play().catch(()=>{})}catch(e){}document.getElementById('pp').textContent='❚❚ 停止'}
-function pauseNow(){if(typeof LFAST!=='undefined'&&LFAST){LFAST=false;setRate(1)}au.pause();try{vid().pause()}catch(e){}stopAt=0;document.getElementById('pp').textContent='▶ 再生'}
+let GAPOK=false;
+function playNow(){if(!stopAt){if(au.paused&&TLMX!==null&&!TLDRAG){const tt=curT();if(Math.abs(tt-au.currentTime)>0.01)seek(tt)}const sg=segs(),t0=au.currentTime;GAPOK=!!sg.length&&!sg.some(g=>t0>=g.a0-0.001&&t0<g.a1-0.05)}fxInit();if(AC&&AC.state!=='running'){try{AC.resume()}catch(e){}if(AC.state==='interrupted'||AC.state==='closed'){resetAC()}}au.play().catch(async e=>{if(e&&(e.name==='NotSupportedError'||(au.error&&au.error.code>=3))&&await audFallback(e.name)){au.play().catch(()=>{});return}const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生できません: '+(e&&e.name)+' / '+(e&&e.message)+' / エラー番号 '+(au.error?au.error.code:'なし')+' / 読み込み状態 '+au.readyState});try{vid().play().catch(()=>{})}catch(e){}document.getElementById('pp').textContent='❚❚ 停止';acCheck()}
+function pauseNow(){if(typeof LFAST!=='undefined'&&LFAST){LFAST=0;setRate(1)}au.pause();try{vid().pause()}catch(e){}stopAt=0;document.getElementById('pp').textContent='▶ 再生'}
 function togglePlay(){(au.paused&&vid().paused)?playNow():pauseNow()}
+const fr30=t=>Math.round(t*30)/30,r3=v=>Math.round(v*1000)/1000;
+function curT(){try{if(TLMX!==null&&!TLDRAG&&typeof tlT==='function'){const tt=tlT(TLMX,tlLayout());if(tt!==null)return tt}}catch(e){}return au.currentTime}
 function playRange(a,b){pauseNow();JUMP=false;seek(Math.max(a-0.05,0));stopAt=b+0.1;playNow()}
+function takePlay(a,b){let s=a-0.05;try{const o=tlOnsets().find(x=>x>=a-0.1&&x<b);if(o!==undefined)s=Math.max(o-0.12,a-0.05)}catch(e){}playRange(s+0.05,b)}
+function playBlock(bid){const b=S.report.blocks.find(x=>x.id===bid);if(!b||!b.takes.length)return;takePlay(Math.min(...b.takes.map(t=>t.start)),Math.max(...b.takes.map(t=>t.end)))}
+function resetAC(){try{const pos=au.currentTime,was=!au.paused;abStop(false);try{AC&&AC.close()}catch(e){}AC=null;FXN=null;fxSrc=null;ensureAC();if(AC&&AC.state==='suspended')AC.resume();if(was){ABPOS=pos;if(AB)abStart(pos)}}catch(e){}}
+function acCheck(){if(au.paused||!AB||!AC)return;const c0=AC.currentTime;setTimeout(()=>{try{if(!au.paused&&AB&&AC&&AC.currentTime-c0<0.15)resetAC()}catch(e){}},500)}
+document.addEventListener('pointerdown',()=>{try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}},true);document.addEventListener('keydown',()=>{try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}},true);
+let LASTT=-1,LASTM=0,STALL=0;
+const acBack=()=>{try{if(!AC)return;AC.resume();setTimeout(()=>{try{if(AC&&AC.state!=='running')resetAC();else if(AC&&!au.paused)acCheck()}catch(e){}},300)}catch(e){}};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)acBack()});window.addEventListener('focus',acBack);window.addEventListener('pageshow',acBack);
+setInterval(()=>{try{if(AC&&AC.state==='suspended'&&!au.paused)AC.resume();if(au.paused){LASTT=-1;return}const t=au.currentTime,n=Date.now();if(Math.abs(t-LASTT)>0.001){LASTT=t;LASTM=n;STALL=0;return}if(n-LASTM>900&&!au.seeking){LASTM=n;STALL++;if(STALL>=2&&AB){STALL=0;resetAC();return}if(AC&&AC.state!=='running')AC.resume();au.play().catch(()=>{});try{vid().play().catch(()=>{})}catch(e){}}}catch(e){}},400);
 function pend(bid,i){const b=TE[bid],ps=b.pieces;if(ps[i].speaker<0||ps[i].ov)return Math.min(ps[i].end,(b.c1!==undefined?b.c1:b.a1));for(let j=i+1;j<ps.length;j++)if(ps[j].speaker>=0&&!ps[j].ov&&!ps[j].deleted)return ps[j].start;return Math.max((b.c1!==undefined?b.c1:b.a1),ps[i].end||0)}
 function isDel(bid,i){return !!TE[bid].pieces[i].deleted}
 function findAct(t){if(!TE)return null;let best=null;for(const bid in TE){const ps=TE[bid].pieces;for(let i=0;i<ps.length;i++){if(ps[i].speaker<0||ps[i].ov)continue;if(t>=ps[i].start-0.001&&t<pend(bid,i)){best=[bid,i]}}}return best}
 function tick(force){if(JUMP&&!force)return;const t=au.currentTime;if(MUX){const vv=vid();if(vv.playbackRate!==1)vv.playbackRate=1}document.getElementById('tcur').textContent=fmt(t)+(TE?'　完成 '+fmt(cutPos(t))+' / '+fmt(cutTotal()):'');
- if(!au.paused){const v=vid();if(v&&v.readyState>0&&!v.seeking){const dd=(t+OFF)-v.currentTime;if(Math.abs(dd)>0.3){if(Date.now()-VSY>250){VSY=Date.now();v.currentTime=Math.max(t+OFF,0)}}else{const r=Math.abs(dd)<0.06?1:1+Math.max(-0.06,Math.min(0.06,dd*0.4));if(Math.abs(v.playbackRate-r)>0.02)v.playbackRate=r}}if(stopAt&&t>=stopAt)pauseNow();else{const d=findAct(t);if(d&&isDel(d[0],d[1])){seek(pend(d[0],d[1])+0.01)}}}
+ if(!au.paused){const v=vid();if(v&&v.readyState>0&&!v.seeking){const dd=(t+OFF)-v.currentTime;if(Math.abs(dd)>0.3){if(Date.now()-VSY>250){VSY=Date.now();v.currentTime=Math.max(t+OFF,0)}}else{const r=Math.abs(dd)<0.06?1:1+Math.max(-0.06,Math.min(0.06,dd*0.4));if(Math.abs(v.playbackRate-r)>0.02)v.playbackRate=r}}if(stopAt&&t>=stopAt)pauseNow();else if(!stopAt){const d=findAct(t);if(d&&isDel(d[0],d[1])){seek(pend(d[0],d[1])+0.01)}}}
  const ac=findAct(t);const key=ac?ac[0]+'_'+ac[1]:'';
  if(force||key!==ACT){ACT=key;document.querySelectorAll('.trow.act').forEach(e=>e.classList.remove('act'));
   const ov=document.getElementById('vov');
@@ -1884,11 +2070,12 @@ function tick(force){if(JUMP&&!force)return;const t=au.currentTime;if(MUX){const
   }chipLight(t,key);overlay(t)}
 function cssColor(c,def){const q=(c||'').split(' ').map(Number);return q.length>=3&&!q.some(isNaN)?'rgb('+Math.round(q[0]*255)+','+Math.round(q[1]*255)+','+Math.round(q[2]*255)+')':def}
 function ovItem(txt,st,kind,sp){const w=document.getElementById('vov').clientWidth,h=document.getElementById('vov').clientHeight;if(!w||!h)return '';
- const fs=(st?st.size:150)*h/FR[1],col=cssColor(st&&st.color,kind==='note'?'#fff':'#000'),stroke=kind==='note'?'#000':(sp===1?'#ffe14d':'#fff');
+ const fs=(st?st.size:150)*h/FR[1];
  let x=0,y=-(kind==='note'?450:(kind==='laugh'?-607:-350));
- if(st&&st.pos){const q=st.pos.split(' ').map(Number);x=q[0];y=-q[1]}else if(kind==='speaker'){y=h*0}
+ if(st&&st.pos){const q=st.pos.split(' ').map(Number);x=q[0];y=-q[1]}
  const px=w/2+x*w/FR[0],py=kind==='speaker'?h*0.78:h/2+y*h/FR[1];
- return '<div style="position:absolute;left:'+px+'px;top:'+py+'px;transform:translate(-50%,-50%);font-size:'+fs+'px;line-height:1.05;font-weight:900;color:'+col+';-webkit-text-stroke:'+(fs*0.14)+'px '+stroke+';paint-order:stroke fill;text-align:center;white-space:pre;font-family:\'Hiragino Maru Gothic ProN\',\'Hiragino Sans\',sans-serif">'+esc(txt)+'</div>'}
+ if(kind==='note')return '<div style="position:absolute;left:'+px+'px;top:'+py+'px;transform:translate(-50%,-50%);font-size:'+fs+'px;line-height:1.05;font-weight:900;color:#fff;-webkit-text-stroke:'+(fs*0.14)+'px #000;paint-order:stroke fill;text-align:center;white-space:pre;font-family:\'マティスEB(偽)\',\'Hiragino Sans\'">'+esc(txt)+'</div>';
+ return '<div style="position:absolute;left:'+px+'px;top:'+py+'px;transform:translate(-50%,-50%)">'+capSvg(txt,sp,fs/44*0.9)+'</div>'}
 function hasAlt(p){return p.alt!==undefined&&p.speaker>=0&&String(p.alt).replace(/\s/g,'')!==String(p.text||'').replace(/\s/g,'')}
 let CAPED=false;
 function capTarget(){if(!TE)return null;const ac=findAct(au.currentTime);if(ac)return TE[ac[0]].pieces[ac[1]];return tlSel()}
@@ -1898,21 +2085,32 @@ function capEdit(){if(CAPED||!TE)return;const p=capTarget();if(!p||p.speaker<0)r
  ta.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape'||((e.metaKey||e.ctrlKey)&&e.key==='Enter')){e.preventDefault();ta.blur()}};
  el.appendChild(ta);ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}
 function swapSrc(p,v){if(!p||p.alt===undefined||(p.src||'s')===v)return;snap();const t=p.text;p.text=p.alt;p.alt=t;p.src=v;p.m=1;dirty()}
+async function setKern(v){await setf('kerning',v);const el=document.getElementById('cap');if(el)el.dataset.h='';const o=document.getElementById('vov');if(o)o.dataset.h='';caption(au.currentTime);overlay(au.currentTime)}
 function capSrc(v){swapSrc(capTarget(),v);const el=document.getElementById('cap');el.dataset.h='';renderTelops();tlDraw();caption(au.currentTime)}
 function rowSrc(bid,i,v){swapSrc(TE[bid].pieces[i],v);renderTelops();tlDraw()}
 function srcSel(bid,i,p){if(!hasAlt(p))return '';const v=p.src||'s';return '<select class="srcsel" onchange="rowSrc(\''+bid+'\','+i+',this.value)"><option value="s"'+(v==='s'?' selected':'')+'>台本</option><option value="h"'+(v==='h'?' selected':'')+'>聞き取り</option></select>'}
-function capItem(txt,st,kind,sp){if(kind==='note'){return '<div class="capi" style="font-family:\'マティスEB(偽)\',\'Hiragino Sans\';color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill">'+esc(txt)+'</div>'}
- const C=sp===1?['#2f6bff','#0b2a8f']:['#ff2d3d','#7d0014'];const L=String(txt).split('\n'),fs=44,lh=fs*1.1;const W=Math.max(40,Math.max(...L.map(x=>[...x].length))*fs*0.94+24),H=L.length*lh+34;
- const tx=(att,dx,dy)=>'<text x="'+(W/2+dx)+'" y="0" text-anchor="middle" font-family="\'CHPOP\',\'LightNovelPopV2\',\'ラノベPOP\',\'Hiragino Maru Gothic ProN\'" font-size="'+fs+'" font-weight="400" stroke-linejoin="round" stroke-linecap="round" '+att+'>'+L.map((x,k)=>'<tspan x="'+(W/2+dx)+'" y="'+(fs+14+k*lh+dy)+'">'+esc(x)+'</tspan>').join('')+'</text>';
- return '<svg class="capi" viewBox="0 0 '+W+' '+H+'" style="height:'+Math.round(H*0.62)+'px;width:auto;max-width:100%;overflow:visible">'
+let KCV=null;const KFONT="'CHPOP','LightNovelPopV2','ラノベPOP','Hiragino Maru Gothic ProN'";
+function kernMode(){const k=(S&&S.project&&S.project.kerning)||'';return {optical:'オプティカル',mono:'和文等幅'}[k]||(['オプティカル','和文等幅'].includes(k)?k:'メトリクス')}
+function kernPos(line,fs,mode){/* x of every letter (px) and the line's width, the way the export sets the kerning */
+ if(!KCV)KCV=document.createElement('canvas').getContext('2d');const c=KCV;c.font='400 '+fs+'px '+KFONT;const L=[...line],n=L.length,base=-0.095,adv=[],il=[],ir=[];
+ for(const ch of L){const m=c.measureText(ch);adv.push(m.width/fs);il.push(-m.actualBoundingBoxLeft/fs);ir.push(m.actualBoundingBoxRight/fs)}
+ const k=new Array(n).fill(base);
+ if(mode==='オプティカル'&&n>1){const g=[];for(let q=0;q<n-1;q++)g.push((adv[q]-ir[q])+il[q+1]);const ref=[...g].sort((p,q)=>p-q)[g.length>>1];for(let q=0;q<n-1;q++)k[q]=base+Math.max(-0.075,Math.min(0.075,(ref-g[q])*0.8))}
+ else if(mode==='和文等幅'){for(let q=0;q<n;q++)k[q]=base+Math.max(0,1-adv[q])}
+ const xs=[];let x=0;for(let q=0;q<n;q++){xs.push(x);x+=(adv[q]+(q<n-1?k[q]:0))*fs}return {xs,w:x}}
+function capSvg(txt,sp,u){const C=sp===1?['#2f6bff','#0b2a8f']:['#ff2d3d','#7d0014'];const L=String(txt).split('\n'),fs=44,lh=fs*1.1,md=kernMode();const KP=L.map(x=>kernPos(x,fs,md));const W=Math.max(40,Math.max(...KP.map(k=>k.w))+24),H=L.length*lh+34;
+ const tx=(att,dx,dy)=>'<text x="0" y="0" text-anchor="start" font-family="'+KFONT.replace(/'/g,"&quot;")+'" font-size="'+fs+'" font-weight="400" stroke-linejoin="round" stroke-linecap="round" '+att+'>'+L.map((x,k)=>'<tspan x="'+KP[k].xs.map(v=>(W-KP[k].w)/2+v+dx).join(' ')+'" y="'+(fs+14+k*lh+dy)+'">'+esc(x)+'</tspan>').join('')+'</text>';
+ return '<svg viewBox="0 0 '+W+' '+H+'" style="height:'+Math.round(H*u)+'px;width:auto;overflow:visible;display:block">'
   +tx('fill="'+C[0]+'" stroke="'+C[0]+'" stroke-width="8"',3,4)+tx('fill="#fff" stroke="#fff" stroke-width="6"',0,0)+tx('fill="#000" stroke="'+C[1]+'" stroke-width="1.4" paint-order="stroke"',0,0)+'</svg>'}
+function capItem(txt,st,kind,sp){if(kind==='note'){return '<div class="capi" style="font-family:\'マティスEB(偽)\',\'Hiragino Sans\';color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill">'+esc(txt)+'</div>'}
+ return '<div class="capi" style="max-width:100%;display:flex;justify-content:center">'+capSvg(txt,sp,0.62)+'</div>'}
 function caption(t){const el=document.getElementById('cap');if(!el||CAPED)return;if(!TE||!STY){el.innerHTML='';return}let h='';
  const ac=findAct(t);if(ac&&!isDel(ac[0],ac[1])){const p=TE[ac[0]].pieces[ac[1]];h+=capItem(p.text,STY.speakers[Math.min(Math.max(p.speaker,0),STY.speakers.length-1)],'speaker',p.speaker)}
  for(const bid in TE){const b=TE[bid];b.pieces.forEach((p,i)=>{if(!p.deleted&&p.speaker<0&&t>=p.start&&t<pend(bid,i))h+=capItem(p.text,STY.laugh,'laugh',-1);if(!p.deleted&&p.ov&&p.speaker>=0&&t>=p.start&&t<pend(bid,i))h+=capItem(p.text,STY.speakers[Math.min(p.speaker,STY.speakers.length-1)],'speaker',p.speaker)});
   (b.notes||[]).forEach(n=>{if(!n.deleted&&t>=n.start&&t<n.end)h+=capItem('※'+n.text,STY.note,'note',0)})}
  const sl=document.getElementById('capsrc');if(sl){const q=capTarget();if(q&&hasAlt(q)){sl.style.display='';if(document.activeElement!==sl)sl.value=q.src||'s'}else sl.style.display='none'}
  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h||'<div class="capi" style="opacity:.25;-webkit-text-stroke:0;color:#aaa">テロップなし</div>'}}
-function overlay(t){caption(t);const ov=document.getElementById('vov');const v=vid();const vw=document.getElementById('vwrap');if(vw&&FR&&FR[1])vw.style.setProperty('--ar',(FR[0]/FR[1]).toFixed(4));if(!TE||!STY){ov.innerHTML='';return}let h='';
+let HASV=false;function overlay(t){caption(t);{const dk=document.getElementById('dock'),vv=vid(),hv=!!(vv&&vv.videoWidth>0);if(dk&&hv!==HASV){HASV=hv;dk.classList.toggle('hasv',hv);FITK=''}}const ov=document.getElementById('vov');const v=vid();const vw=document.getElementById('vwrap');if(vw&&FR&&FR[1])vw.style.setProperty('--ar',(FR[0]/FR[1]).toFixed(4));if(!TE||!STY){ov.innerHTML='';return}let h='';
  const ac=findAct(t);if(ac&&!isDel(ac[0],ac[1])){const p=TE[ac[0]].pieces[ac[1]];h+=ovItem(p.text,STY.speakers[Math.min(Math.max(p.speaker,0),STY.speakers.length-1)],'speaker',p.speaker)}
  for(const bid in TE){const b=TE[bid];b.pieces.forEach((p,i)=>{if(!p.deleted&&p.speaker<0&&t>=p.start&&t<pend(bid,i))h+=ovItem(p.text,STY.laugh,'laugh',-1);if(!p.deleted&&p.ov&&p.speaker>=0&&t>=p.start&&t<pend(bid,i))h+=ovItem(p.text,STY.speakers[Math.min(p.speaker,STY.speakers.length-1)],'speaker',p.speaker)});
   (b.notes||[]).forEach(n=>{if(!n.deleted&&t>=n.start&&t<n.end){const st=STY.note?Object.assign({},STY.note):null;if(st){st.pos=n.with_telop?'0 -450':st.pos}h+=ovItem('※'+n.text,st,'note',0)}})}
@@ -1923,13 +2121,15 @@ function cutTotal(){return segs().reduce((a,g)=>a+g.a1-g.a0,0)}
 function skipGaps(){if(AB){if(ABPLAY&&AC&&AC.currentTime>=ABEND){const e=ABS.length?ABS[ABS.length-1].a0+ABS[ABS.length-1].d:ABPOS;pauseNow();ABPOS=Math.max(e-0.05,0)}return}
  if(au.paused||stopAt||D2DRAG)return;const t=au.currentTime,sg=segs();if(!sg.length)return;
  const cur=sg.find(g=>t>=g.a0-0.001&&t<g.a1);
- if(!cur){const nx=sg.find(g=>g.a0>t);if(nx)seek(nx.a0);else pauseNow()}
+ if(cur)GAPOK=false;
+ if(!cur&&GAPOK){const nx0=sg.find(g=>g.a0>t);if(!nx0)return}
+ else if(!cur){const nx=sg.find(g=>g.a0>t);if(nx)seek(nx.a0);else pauseNow()}
  else if(t>=cur.a1-0.025){const nx=sg.find(g=>g.a0>=cur.a1-0.001);if(nx)seek(nx.a0);else{pauseNow();seek(cur.a1-0.05)}}}
 setInterval(skipGaps,15);
 setInterval(()=>tick(false),80);
 (function raf(){if(!au.paused)tick(false);requestAnimationFrame(raf)})();
-let PK=null,WC=0;const WIN=8;
-async function loadPeaks(){const r=await api('/api/peaks');PK=r.peaks&&r.peaks.length?r:null;fxLevel();drawWave()}
+let PK=null,PKD=null,WC=0;const WIN=8;
+async function loadPeaks(){const r=await api('/api/peaks');PK=r.peaks&&r.peaks.length?r:null;try{const q=await api('/api/peaks?raw=1');PKD=q.peaks&&q.peaks.length?q:null}catch(e){PKD=null}TLVS=null;TLONS=null;fxLevel();drawWave();if(TE)renderTelops()}
 function boundaries(){const o=[];if(!TE)return o;for(const bid in TE)TE[bid].pieces.forEach((p,i)=>{if(p.speaker>=0)o.push({bid,i,t:p.start,text:p.text.replace(/\n/g,'')})});return o}
 function drawWave(){const c=document.getElementById('wave');if(!c||!TE)return;const W=c.width,H=c.height,g=c.getContext('2d');g.clearRect(0,0,W,H);
  if(!au.paused)WC=au.currentTime;const t0=WC-WIN/2,px=W/WIN;g.fillStyle='#15161a';g.fillRect(0,0,W,H);
@@ -1966,11 +2166,14 @@ function fcpKey(e){if(!TE||e.isComposing||e.defaultPrevented)return;const tg=(e.
  if(e.shiftKey&&(k==='Z'||k==='z')){e.preventDefault();TLZ=Math.max(30,Math.min(1200,(document.getElementById('tls').clientWidth-60)/Math.max(1,segs().reduce((a,g)=>a+(g.a1-g.a0),0)+0.5*segs().length)));tlDraw();return}
  if(e.shiftKey&&k==='?'){e.preventDefault();tlAround();return}
  if(k==='k'||k==='K'){e.preventDefault();pauseNow();return}
+ if((k==='ArrowUp'||k==='ArrowDown')&&TLSEL&&tlSel()&&tlSel().speaker>=0&&!tlSel().ov&&tlSel().speaker<=1){e.preventDefault();snap();const q=tlSel();q.speaker=q.speaker===0?1:0;q.m=1;dirty();renderTelops();tlDraw();return}
  if(k==='ArrowUp'||k==='ArrowDown'){const ed=tlEdits();const n=k==='ArrowDown'?ed.find(x=>x>t+0.02):[...ed].reverse().find(x=>x<t-0.02);if(n!==undefined){e.preventDefault();seek(n+0.001)}return}
  if((k==='ArrowLeft'||k==='ArrowRight')&&!dp()){e.preventDefault();const d=(k==='ArrowLeft'?-1:1)*(e.shiftKey?10:1)/30;pauseNow();seek(t+d);return}
+ if((k==='Delete'||k==='Backspace')&&(CHIPCUR||NOCHIP))return;
  if((k==='Delete'||k==='Backspace')&&TLNS&&TE[TLNS[0]]&&(TE[TLNS[0]].notes||[])[TLNS[1]]){e.preventDefault();snap();TE[TLNS[0]].notes[TLNS[1]].deleted=true;TLNS=null;dirty();renderTelops();tlDraw();return}
  if((k==='Delete'||k==='Backspace')&&!SEL.size&&TLSEL&&tlSel()){e.preventDefault();tlDel(e.shiftKey);return}}
 document.addEventListener('keydown',fcpKey);
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();if(!TE)return;if(!EDIT)EDIT=true;tsave(false)}});
 setInterval(()=>{drawWave();drawDetail()},50);
 (()=>{const c=document.getElementById('wave');let drag=null;
  const tAt=e=>{const r=c.getBoundingClientRect();return (WC-WIN/2)+(e.clientX-r.left)/r.width*WIN};
@@ -1979,18 +2182,23 @@ setInterval(()=>{drawWave();drawDetail()},50);
   if(b){snap();drag=b}else{pauseNow();seek(t);WC=t}};
  c.onpointermove=e=>{if(!drag)return;const t=Math.round(tAt(e)*100)/100;TE[drag.bid].pieces[drag.i].start=t;drag.t=t;au.paused&&(au.currentTime=t)};
  c.onpointerup=()=>{if(drag){dirty();renderTelops();seek(drag.t);WC=drag.t;drag=null}}})();
-async function loadTelops(){const r=await api('/api/telops');if(!r.auto){TE=null;document.getElementById('telopCard').style.display='none';return}
+let TGEN='',AUTOAN=false;async function loadTelops(){const r=await api('/api/telops');TGEN=r.gen||'';if(!r.auto){TE=null;document.getElementById('telopCard').style.display='none';return}
  EDIT=false;TN=r.names;STY=r.styles;FR=r.frame||[1920,1080];OFF=r.offset||0;HEARD=r.heard||[];UNDO=[];TE=JSON.parse(JSON.stringify(r.auto));
  for(const k in (r.edited||{}))if(TE[k]&&Math.abs(r.edited[k].a0-TE[k].a0)<0.3)TE[k]=r.edited[k];
  for(const k in TE)tlNorm(k);document.getElementById('telopCard').style.display='block';renderTelops();loadPeaks();if(!TLCL)tlOpen();attachAlt()}
-async function attachAlt(){const TE0=TE;if(!TE0)return;let ch=false;
- for(const bid of Object.keys(TE0)){const B=TE0[bid];if(skipped(bid)||B.pieces.some(p=>p.alt!==undefined))continue;
-  const src=B.pieces.map(p=>{const q=Object.assign({},p);delete q.m;return q});let r;try{r=await api('/api/exact',{bid:bid,pieces:src})}catch(e){continue}
-  if(TE!==TE0||!r||r.error||!r.pieces)continue;const sc=r.pieces.filter(q=>q.src==='s'&&q.speaker>=0&&!q.deleted);if(!sc.length)continue;
-  B.pieces.forEach((p,i)=>{if(p.deleted||p.speaker<0||p.alt!==undefined)return;const e=pend(bid,i);let best=null,bo=0;
-   for(const q of sc){const o=Math.min(e,q.end)-Math.max(p.start,q.start);if(o>bo){bo=o;best=q}}
-   if(best&&bo>0.5*Math.min(e-p.start,best.end-best.start)){const n=x=>String(x).replace(/\s/g,'');if(n(best.text)!==n(p.text)){p.alt=best.text;p.src='h';ch=true}}})}
+async function attachAlt(only){const TE0=TE;if(!TE0)return;let ch=false;
+ for(const bid of (only?[only]:Object.keys(TE0))){const B=TE0[bid];if(!B||skipped(bid))continue;
+  const src=B.pieces.map(p=>{const q=Object.assign({},p);delete q.m;return q});let r;try{r=await api('/api/alts',{bid:bid,pieces:src})}catch(e){continue}
+  if(TE!==TE0||!r||r.error||!r.alts)continue;const n=x=>String(x).replace(/[\s、。，．,.！？!?…・「」『』（）()]/g,'');
+  B.pieces.forEach((p,i)=>{if(p.src==='s'&&p.alt!==undefined&&n(p.alt)===n(p.text)){delete p.alt;delete p.src;ch=true}if(p.src==='s')return;const al=r.alts[i];if(al&&n(al)!==n(p.text)){if(p.alt!==al){p.alt=al;p.src='h';ch=true}}
+   else if(al&&n(al)===n(p.text)){/* the telop already has the script's words: what was really heard is the other choice */
+    const hs=((pieceChips(bid)[i])||[]).map(c=>c.c).join(''),fa=n(hs),fb=n(p.text);
+    if(fa&&fb&&fa!==fb){const A=[...fa],Bc=[...fb],D=Array.from({length:A.length+1},()=>new Array(Bc.length+1).fill(0));for(let x=A.length-1;x>=0;x--)for(let y=Bc.length-1;y>=0;y--)D[x][y]=A[x]===Bc[y]?D[x+1][y+1]+1:Math.max(D[x+1][y],D[x][y+1]);
+     if(D[0][0]>=0.6*Math.max(A.length,Bc.length)&&Math.abs(A.length-Bc.length)<=4){let two=fa;if(p.text.includes('\n')){const bs=wsplit(fa).map(o=>o.e).filter(e=>e>0&&e<A.length);let kk=Math.ceil(A.length/2);if(bs.length)kk=bs.reduce((u,v)=>Math.abs(v-A.length/2)<Math.abs(u-A.length/2)?v:u);two=A.slice(0,kk).join('')+'\n'+A.slice(kk).join('')}if(p.alt!==two){p.alt=two;p.src='s';ch=true}}else if(p.alt!==undefined){delete p.alt;delete p.src;ch=true}}
+    else if(p.alt!==undefined){delete p.alt;delete p.src;ch=true}}
+   else if(p.alt!==undefined){delete p.alt;delete p.src;ch=true}})}
  if(ch&&TE===TE0)renderTelops()}
+let ALTT={};function reAlt(bid){clearTimeout(ALTT[bid]);ALTT[bid]=setTimeout(()=>attachAlt(bid),600)}
 function snap(){UNDO.push(JSON.stringify(TE));if(UNDO.length>80)UNDO.shift()}
 async function exactBlock(bid){snap();const r=await api('/api/exact',{bid:bid,pieces:TE[bid].pieces});if(r.error){alert(r.error);return}TE[bid].pieces=r.pieces;dirty();renderTelops()}
 function swapBlock(bid){snap();TE[bid].pieces.forEach(p=>{if(p.speaker===0)p.speaker=1;else if(p.speaker===1)p.speaker=0});dirty();renderTelops()}
@@ -1998,10 +2206,19 @@ function undo(){if(!UNDO.length)return;TE=JSON.parse(UNDO.pop());dirty();renderT
 function dirty(){EDIT=true;document.getElementById('tmsg').textContent='';clearTimeout(saveT);saveT=setTimeout(()=>tsave(true),700)}
 let HEARD=[],EDTROW=null;
 function moraW(c){if('ゃゅょャュョぁぃぅぇぉ'.includes(c))return .3;if('っッ'.includes(c))return .7;if(/[\u4e00-\u9fff0-9]/.test(c))return 2;if('、。，．,.!！?？…・「」'.includes(c))return .2;return 1}
-function wsplit(t){const out=[];if(window.Intl&&Intl.Segmenter){const sg=new Intl.Segmenter('ja',{granularity:'word'});for(const s of sg.segment(t)){if(/^\s+$/.test(s.segment))continue;out.push({w:s.segment,i:s.index,e:s.index+s.segment.length})}}else{for(let i=0;i<t.length;i+=3)out.push({w:t.slice(i,i+3),i,e:Math.min(i+3,t.length)})}
- const PUN=/^[、。！？!?…・「」~ー]+$/,KAN=/^[\u4e00-\u9fff々]+$/;const m=[];
- for(const o of out){const L=m.length?m[m.length-1]:null;
-  if(L&&(PUN.test(o.w)||(KAN.test(L.w)&&L.w.length===1&&KAN.test(o.w))||(KAN.test(o.w)&&o.w.length===1&&KAN.test(L.w)&&L.e===o.i))){L.w+=o.w;L.e=o.e}else m.push(o)}
+const WW=['っていう','ということ','という','ところ','から','けど','ので','のに','ない','ます','ました','です','でした','たい','たら','って','ている','ていた','てる','てた','より','まで','ばかり','だけ','みたい','ように','らしい','なんか','ちゃん','じゃ','では','には','とか','でも','もう','まぁ','そう','こと','もの','ため','ほど','たの','んだ','いや','はい'].sort((x,y)=>y.length-x.length);
+const CKC={};let CKQ=new Set(),CKT=null;
+function wsplit(t){const c=CKC[t];if(c)return c.map(x=>({w:t.slice(x[0],x[1]),i:x[0],e:x[1]}));if(!(t in CKC)&&/\S/.test(t)){CKQ.add(t);clearTimeout(CKT);CKT=setTimeout(ckFlush,30)}return wsplit0(t)}
+function ckFlush(){const ts=[...CKQ];CKQ.clear();if(!ts.length)return;ts.forEach(t=>{CKC[t]=false});api('/api/chunks',{texts:ts}).then(j=>{if(!j||!j.chunks)return;j.chunks.forEach((c,k)=>{CKC[ts[k]]=c});HC={};if(TE)renderTelops()}).catch(()=>{})}
+function wsplit0(t){const out=[],cls=c=>/[\u4e00-\u9fff々〇]/.test(c)?'k':/[ぁ-ゖ]/.test(c)?'h':/[ァ-ヺー]/.test(c)?'a':/[A-Za-z0-9０-９]/.test(c)?'e':/\s/.test(c)?'s':'p';
+ let k=0;const n=t.length;while(k<n){const c=cls(t[k]);if(c==='s'){k++;continue}let e=k+1;
+  if(c==='k'||c==='a'||c==='e'){while(e<n&&(cls(t[e])===c||(c==='e'&&/[-'.]/.test(t[e]))||(c==='a'&&t[e]==='ー')))e++;
+   if(c==='k'){if(e-k>=3&&e<n&&cls(t[e])==='h'&&!/[はがをにへともの]/.test(t[e])){out.push({w:t.slice(k,e-1),i:k,e:e-1});k=e-1}let m=0;while(e<n&&m<3&&cls(t[e])==='h'&&!/[はがをにへともの]/.test(t[e])){e++;m++}}}
+  else if(c==='h'){let hit=null;for(const w of WW)if(t.startsWith(w,k)){hit=w;break}
+   if(hit)e=k+hit.length;else{while(e<n&&cls(t[e])==='h'&&!/[はがをにへでともの]/.test(t[e-1])&&!WW.some(w=>t.startsWith(w,e)))e++}}
+  out.push({w:t.slice(k,e),i:k,e});k=e}
+ const PUN=/^[、。！？!?…・「」~ー]+$/;const m=[];
+ for(const o of out){const L=m.length?m[m.length-1]:null;if(L&&PUN.test(o.w)){L.w+=o.w;L.e=o.e}else m.push(o)}
  return m}
 function chipsHtml(bid,i,p,e){const t=p.text||'';const cum=[0];let tw=0;for(const c of t){tw+=(c==='\n'?0:moraW(c));cum.push(tw)}tw=tw||1;const T=x=>p.start+(e-p.start)*cum[x]/tw;
  return wsplit(t).map((o,k)=>'<span class="wc'+(t[o.i-1]==='\n'?' nl':'')+'" data-t0="'+T(o.i).toFixed(3)+'" data-t1="'+T(o.e).toFixed(3)+'" data-i0="'+o.i+'" data-i1="'+o.e+'" onclick="chipClick(event,\''+bid+'\','+i+')" ondblclick="chipDbl(\''+bid+'\','+i+')">'+esc(o.w)+'<b class="wx" onclick="chipDel(event,\''+bid+'\','+i+',this)">×</b></span>').join('')}
@@ -2017,10 +2234,10 @@ function pieceChips(bid){if(HC[bid])return HC[bid];const b=TE[bid],ps=b.pieces;c
  let cur=-1;for(let x=0;x<n;x++){const tm=(H[x].cs+H[x].ce)/2;let tp=-1;for(let q=0;q<ps.length;q++)if(ps[q].speaker>=0&&!(ps[q].text||'').startsWith('※')&&ps[q].start<=tm+0.02)tp=q;
  if(own[x]>=0){cur=Math.max(cur,own[x]);own[x]=cur}else{if(tp<0)tp=D[0].i;cur=Math.max(cur,tp);own[x]=cur}}
  H.forEach((h,x)=>res[own[x]].push(h));return HC[bid]=res}
-function heardHtml(bid,i,p,e){const cs=(pieceChips(bid)[i])||[];if(!cs.length)return '<span class="hc" style="cursor:pointer" title="クリックでこの位置へ（そのまま再生で聞けます）" onclick="seek(TE[\''+bid+'\'].pieces['+i+'].start+0.01)">聞き取りなし</span>';
+function heardHtml(bid,i,p,e){const cs=(pieceChips(bid)[i])||[];if(!cs.length&&(p.text||'').replace(/\s/g,'').length>0)return chipsHtml(bid,i,p,e);if(!cs.length)return '<span class="hc" style="cursor:pointer" title="クリックでこの位置へ（そのまま再生で聞けます）" onclick="nochipSel(event,\''+bid+'\','+i+')"></span>';
  const sub=cs.map(c=>c.c).join('');return wsplit(sub).map(o=>{const a=cs[o.i],z=cs[Math.min(cs.length-1,o.e-1)];return '<span class="wc" data-t0="'+a.cs.toFixed(3)+'" data-t1="'+z.ce.toFixed(3)+'" onclick="chipClick(event,\''+bid+'\','+i+')" ondblclick="chipDbl(\''+bid+'\','+i+')">'+esc(o.w)+'<b class="wx" onclick="chipDel(event,\''+bid+'\','+i+',this)">×</b></span>'}).join('')}
 let CHIPCUR=null;
-function chipClick(ev,bid,i){const el=ev.currentTarget,r=el.getBoundingClientRect(),left=(ev.clientX-r.left)<r.width/2;seek(left?+el.dataset.t0:+el.dataset.t1);
+function chipClick(ev,bid,i){SEL=new Set();NOCHIP=null;document.querySelectorAll('.trow.sel').forEach(x=>x.classList.remove('sel'));const el=ev.currentTarget,r=el.getBoundingClientRect(),left=(ev.clientX-r.left)<r.width/2;seek(left?+el.dataset.t0:+el.dataset.t1);
  document.querySelectorAll('.wc.cl,.wc.cr').forEach(x=>x.classList.remove('cl','cr'));el.classList.add(left?'cl':'cr');CHIPCUR={bid,i,left,t:left?+el.dataset.t0:+el.dataset.t1,idx:[...el.parentNode.querySelectorAll('.wc')].indexOf(el)}}
 function cutSnap(t){/* a cut made on a word boundary lands where the next word really begins (the word times run a little early) */
  try{if(!AB)return t;const sr=AB.sampleRate,d=AB.getChannelData(0),hop=Math.max(Math.round(sr*0.005),1),win=Math.round(sr*0.01);const a=Math.max(0,t-0.15),n=Math.floor(0.45/0.005);const E=[];
@@ -2030,16 +2247,29 @@ function cutSnap(t){/* a cut made on a word boundary lands where the next word r
   return Math.round((a+k*0.005-0.01)*100)/100}catch(e){return t}}
 function chipSplit(){const c=CHIPCUR;if(!c)return false;const row=document.getElementById('row_'+c.bid+'_'+c.i);if(!row)return false;const chips=[...row.querySelectorAll('.heardrow .wc')];
  const n=c.left?c.idx:c.idx+1;if(n<=0||n>=chips.length)return false;const P=TE[c.bid].pieces,p=P[c.i];const flat=p.text.replace(/\n/g,'');
- let pos=0,okk=true;for(let q=0;q<n;q++){const w=chips[q].firstChild.textContent.replace(/[、。,.！？!?\s]/g,'');if(!w)continue;const j=flat.indexOf(w,pos);if(j<0){okk=false;break}pos=j+w.length}
- if(!okk){const tot=chips.reduce((a,x)=>a+x.firstChild.textContent.length,0),pre=chips.slice(0,n).reduce((a,x)=>a+x.firstChild.textContent.length,0);pos=Math.round(pre/Math.max(tot,1)*flat.length)}
+ const hs=chips.map(x=>x.firstChild.textContent.replace(/[、。,.！？!?\s]/g,''));const heard=hs.join(''),bd=hs.slice(0,n).join('').length;
+ /* line the heard letters up with the telop letters (longest common run), then carry the chip boundary across */
+ const fold=s=>[...s.normalize('NFKC').replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-96))];
+ const A=fold(heard),B=fold(flat),D=Array.from({length:A.length+1},()=>new Array(B.length+1).fill(0));
+ for(let x=A.length-1;x>=0;x--)for(let y=B.length-1;y>=0;y--)D[x][y]=A[x]===B[y]?D[x+1][y+1]+1:Math.max(D[x+1][y],D[x][y+1]);
+ const mp=new Array(A.length).fill(-1);{let x=0,y=0;while(x<A.length&&y<B.length){if(A[x]===B[y]){mp[x]=y;x++;y++}else if(D[x+1][y]>=D[x][y+1])x++;else y++}}
+ /* the boundary sits between heard letters bd-1 and bd: carry it across through the nearest matched letters on both sides */
+ let px=-1,py=-1,nx=A.length,ny=B.length;for(let x=bd-1;x>=0;x--)if(mp[x]>=0){px=x;py=mp[x];break}for(let x=bd;x<A.length;x++)if(mp[x]>=0){nx=x;ny=mp[x];break}
+ const gl=py+1,gr=ny,sl=px+1,sr=nx;let pos=gl;if(gr>gl){pos=sr>sl?Math.round(gl+(bd-sl)/(sr-sl)*(gr-gl)):gl}
  if(pos<=0||pos>=flat.length)return false;let kk=0,cnt=0;while(kk<p.text.length&&cnt<pos){if(p.text[kk]!=='\n')cnt++;kk++}
- const e=pend(c.bid,c.i),t=cutSnap(c.t);const ok=doSplit(c.bid,c.i,kk);if(!ok)return false;const q=TE[c.bid].pieces[c.i+1];if(t>p.start+0.05&&t<e-0.05){q.start=Math.round(t*100)/100}CHIPCUR=null;dirty();renderTelops([c.bid,c.i+1,0]);return true}
+ const e=pend(c.bid,c.i),t=fr30(cutSnap(c.t));const ok=doSplit(c.bid,c.i,kk);if(!ok)return false;const q=TE[c.bid].pieces[c.i+1];if(t>p.start+0.05&&t<e-0.05){q.start=r3(t)}CHIPCUR=null;dirty();renderTelops([c.bid,c.i+1,0]);return true}
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing||!CHIPCUR)return;const tg=(e.target&&e.target.tagName)||'';if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;if(chipSplit())e.preventDefault()});
 document.addEventListener('keydown',e=>{if((e.key!=='Delete'&&e.key!=='Backspace')||e.isComposing||!CHIPCUR)return;const tg=(e.target&&e.target.tagName)||'';if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;
  const c=CHIPCUR,row=document.getElementById('row_'+c.bid+'_'+c.i);if(!row)return;const chips=row.querySelectorAll('.heardrow .wc'),P=TE[c.bid].pieces;
- if(c.left&&c.idx===0&&c.i>0){e.preventDefault();CHIPCUR=null;const L=P[c.i-1].text.replace(/\n/g,'').length;tmerge(c.bid,c.i-1,[c.bid,c.i-1,L])}
- else if(!c.left&&c.idx===chips.length-1&&c.i+1<P.length){e.preventDefault();CHIPCUR=null;const L=P[c.i].text.replace(/\n/g,'').length;tmerge(c.bid,c.i,[c.bid,c.i,L])}});
-document.addEventListener('keydown',e=>{if((e.key!=='b'&&e.key!=='B')||!(e.metaKey||e.ctrlKey)||e.shiftKey||e.altKey||e.isComposing||!TE)return;e.preventDefault();if(findAct(au.currentTime))splitHere();else addHere()});
+ if(c.left&&c.idx===0&&c.i>0){e.preventDefault();CHIPCUR=null;const k=tnext(P,c.i,-1);if(k>=0){const L=P[k].text.replace(/\n/g,'').length;tmerge(c.bid,k,[c.bid,k,L],c.i)}}
+ else if(!c.left&&c.idx===chips.length-1){const j=tnext(P,c.i,1);if(j>=0){e.preventDefault();CHIPCUR=null;const L=P[c.i].text.replace(/\n/g,'').length;tmerge(c.bid,c.i,[c.bid,c.i,L],j)}}});
+document.addEventListener('keydown',e=>{if((e.key!=='b'&&e.key!=='B')||!(e.metaKey||e.ctrlKey)||e.shiftKey||e.altKey||e.isComposing||!TE)return;e.preventDefault();splitHere()});
+let NOCHIP=null;
+function nochipSel(ev,bid,i){seek(TE[bid].pieces[i].start+0.01);NOCHIP={bid,i};CHIPCUR=null;document.querySelectorAll('.hc.sel,.wc.cl,.wc.cr').forEach(x=>x.classList.remove('sel','cl','cr'));ev.currentTarget.classList.add('sel')}
+document.addEventListener('keydown',e=>{if((e.key!=='Delete'&&e.key!=='Backspace')||e.isComposing||!NOCHIP)return;const tg=(e.target&&e.target.tagName)||'';if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;
+ const {bid,i}=NOCHIP,P=TE[bid]&&TE[bid].pieces;NOCHIP=null;if(!P||!P[i])return;e.preventDefault();snap();
+ if(e.shiftKey){P[i].deleted=true;P[i].cut=true;dirty();renderTelops();return}
+ const k=tnext(P,i,-1);if(k>=0){const L=P[k].text.replace(/\n/g,'').length;tmerge(bid,k,[bid,k,L],i)}else{P.splice(i,1);dirty();renderTelops()}});
 function chipDbl(bid,i){DSEL=[bid,i];D2A=null;renderTelops()}
 function chipDel(ev,bid,i,x){ev.stopPropagation();const ch=x.parentNode,w0=ch.firstChild.textContent;const P=TE[bid].pieces,p=P[i];const e=pend(bid,i);
  let t0=+ch.dataset.t0,t1=+ch.dataset.t1;if(!(t1-t0>0.05))return;snap();
@@ -2078,7 +2308,7 @@ document.addEventListener('mousemove',e=>{if(!DR)return;const b=TE[DR.bid],rows=
  if(DR.edge==='top'){if(v>=(it.kind==='note'?o.end:o.end)-0.2||v===o.start)return;o.start=v}else{if(v<=o.start+(it.kind==='laugh'?0.25:0.2)||v===o.end)return;o.end=v}
  if(DR.last===o.start+'_'+o.end)return;DR.last=o.start+'_'+o.end;renderTelops()},true);
 document.addEventListener('mouseup',()=>{if(DR){DR=null;document.body.style.cursor='';dirty()}},true);
-function fastBadge(p,e){if(p.speaker<0||p.deleted)return '';let m=0;for(const c of (p.text||'').replace(/\n/g,''))if(!/[\swｗ、。,.！？!?]/.test(c))m+=(typeof moraW==='function'?moraW(c):1);if(m<3)return '';const r=(e-p.start)/m;if(r<0.065)return '<div class="fb" title="1拍'+(r*1000|0)+'ms：人間ではありえない速さです。頭か次の頭がずれているかも">速すぎ？</div>';return (r>0.45&&e-p.start>1.6)?'<div class="fb" title="1拍'+(r*1000|0)+'ms：文字数のわりに長すぎます。次の頭か終わりがずれているかも">長すぎ？</div>':''}
+function fastBadge(p,e){return ''}
 function ovInfo(bid,i,p){const ps=TE[bid].pieces;const note=(p.text||'').replace(/\n/g,'').startsWith('※');if(p.speaker>=0&&!note&&!p.ov)return '';
  let hit=null;for(let j=0;j<ps.length;j++){if(j===i||ps[j].speaker<0||(ps[j].text||'').startsWith('※'))continue;const e=pend(bid,j);if(p.start>=ps[j].start-0.001&&p.start<e){hit=ps[j];break}}
  const kind=note?'※':(p.ov?'重ね':'www');return hit?('「'+hit.text.replace(/\n/g,'').slice(0,12)+'」('+fmt(hit.start)+')と重なり'):'単独（'+kind+'）'}
@@ -2088,9 +2318,9 @@ function renderTelops(focus){if(!TE)return;HC={};LB={};LBN=0;const y=window.scro
   if(_t)TLSEL=[_tb,TE[_tb].pieces.indexOf(_t)];if(_d)DSEL=[_db,TE[_db].pieces.indexOf(_d)];SEL=new Set(_s.filter(([b,p])=>p).map(([b,p])=>b+'_'+TE[b].pieces.indexOf(p)))}
 const unh={};((S&&S.report)?S.report.blocks:[]).forEach(b=>unh[b.id]=b.unheard||[]);const cue={};((S&&S.report)?S.report.blocks:[]).forEach(b=>cue[b.id]=b.cue);
  let h='';for(const bid of Object.keys(TE).sort()){const b=TE[bid];b.pieces.sort((x,y)=>x.start-y.start);
-  if(skipped(bid)){h+='<div class="tb"><h4>'+esc(bid)+'　<span class="small">不使用ブロック</span> <button class="ib" onclick="toggleSkip(\''+bid+'\')">復元</button></h4></div>';continue}
-  h+='<div class="tb"><h4>'+esc(bid)+'　<span class="small">'+esc(cue[bid]||'')+'</span> <button class="ib" title="このブロックのチ・ホを入れ替える" onclick="swapBlock(\''+bid+'\')">⇄ 話者入替</button> <button class="ib" title="このブロックの文字を台本どおりに置き換える" onclick="exactBlock(\''+bid+'\')">台本どおり</button></h4>';
-  (unh[bid]||[]).forEach(u=>{h+='<div class="unh">聞き取れず？ '+fmt(u[0])+'〜'+fmt(u[1])+' <button class="ib" onclick="playRange('+u[0]+','+u[1]+')">▶</button> <button class="ib" onclick="tadd(\''+bid+'\','+u[0]+')">ここにテロップを追加</button></div>'});
+  if(skipped(bid)){h+='<div class="tb"><h4>'+esc(bname(bid))+'　<span class="small">不使用ブロック</span> <button class="ib" onclick="toggleSkip(\''+bid+'\')">復元</button></h4></div>';continue}
+  h+='<div class="tb"><h4>'+esc(bname(bid))+'　<span class="small">'+esc(cue[bid]||'')+'</span> <button class="ib" title="このブロックのチ・ホを入れ替える" onclick="swapBlock(\''+bid+'\')">⇄ 話者入替</button> <button class="ib" title="このブロックの文字を台本どおりに置き換える" onclick="exactBlock(\''+bid+'\')">台本どおり</button></h4>';
+  (PK?tlGhosts(bid):(unh[bid]||[])).forEach(u=>{h+='<div class="unh">（？） '+fmt(u[0])+'〜'+fmt(u[1])+' <button class="ib" onclick="playRange('+u[0]+','+u[1]+')">▶</button> <button class="ib" onclick="tghost(\''+bid+'\','+u[0]+','+u[1]+')">テロップ化</button></div>'});
   b.pieces.forEach((p,i)=>{if(p.cut)return;const e=pend(bid,i);
    const ov=ovInfo(bid,i,p);
    h+='<div class="trow sp'+p.speaker+(ov?' lane2':'')+(EDTROW===bid+'_'+i?' edt':'')+(p.deleted?' del':'')+(SEL.has(bid+'_'+i)?' sel':'')+'" id="row_'+bid+'_'+i+'"><div class="ttime" onclick="selRow(event,\''+bid+'\','+i+')"><b>'+fmt(p.start)+'</b>'+(e-p.start).toFixed(1)+'秒'+fastBadge(p,e)+(p.deleted?'<button class="ib" onclick="event.stopPropagation();tdel(\''+bid+'\','+i+')">復元</button>':'')+'</div>'+(ov?'<div class="l2b">2列目 ↳ '+esc(ov)+'</div>':'')
@@ -2113,14 +2343,16 @@ function tset(bid,i,v){snap();TE[bid].pieces[i].start=parseFloat(v)||0;dirty();r
 function tnudge(bid,i,d){snap();const p=TE[bid].pieces[i];p.start=Math.round((p.start+d)*100)/100;dirty();renderTelops();tplay(bid,i)}
 function doSplit(bid,i,k){snap();const p=TE[bid].pieces[i],t=p.text;
  if(!(k>0&&k<t.length)){return false}
- const e=pend(bid,i),n0=t.slice(0,k).replace(/\n/g,'').length,frac=n0/Math.max(t.replace(/\n/g,'').length,1);
- const q={start:Math.round((p.start+(e-p.start)*frac)*100)/100,end:p.end,text:t.slice(k).replace(/^\n/,''),speaker:p.speaker};
- p.text=t.slice(0,k).replace(/\n$/,'');TE[bid].pieces.splice(i+1,0,q);dirty();renderTelops([bid,i+1,0]);return true}
+ const e=pend(bid,i),mw=x=>[...x.replace(/\n/g,'')].reduce((a,c)=>a+(typeof moraW==='function'?moraW(c):1),0),frac=mw(t.slice(0,k))/Math.max(mw(t),1);
+ let ts=p.start+(e-p.start)*frac;   /* where the second half starts: by the sounds said, then to the nearest place where the voice starts again */
+ if(PK){let best=null;for(const o of tlOnsets()){if(o<ts-0.35)continue;if(o>ts+0.35)break;if(o<=p.start+0.12||o>=e-0.12)continue;if(best===null||Math.abs(o-ts)<Math.abs(best-ts))best=o}if(best!==null)ts=best-0.01}ts=fr30(ts);if(ts<=p.start+0.03||ts>=e-0.03)ts=Math.min(Math.max(ts,p.start+0.04),e-0.04);
+ const q={start:r3(ts),end:p.end,text:t.slice(k).replace(/^\n/,''),speaker:p.speaker};
+ p.text=t.slice(0,k).replace(/\n$/,'');TE[bid].pieces.splice(i+1,0,q);reAlt(bid);dirty();renderTelops([bid,i+1,0]);return true}
 function tsplit(bid,i){const ta=document.getElementById('ta_'+bid+'_'+i);if(!doSplit(bid,i,ta.selectionStart))alert('分けたい文字の間をクリックしてから「分割」を押してください')}
 function tkey(e,bid,i){const ta=e.target;
  if(e.key==='Enter'&&!e.altKey&&!e.isComposing){/* a plain Enter is a line break inside the telop (no split): the browser inserts it */}
  else if((e.key==='Backspace'||e.key==='Delete')&&ta.value===''&&!e.isComposing){e.preventDefault();tdel(bid,i)}
- else if(e.key==='Backspace'&&ta.selectionStart===0&&ta.selectionEnd===0&&i>0&&!e.isComposing){const k=tnext(TE[bid].pieces,i,-1);if(k>=0){e.preventDefault();const L=TE[bid].pieces[k].text.replace(/\n/g,'').length;tmerge(bid,k,[bid,k,L])}}
+ else if(e.key==='Backspace'&&ta.selectionStart===0&&ta.selectionEnd===0&&i>0&&!e.isComposing){const k=tnext(TE[bid].pieces,i,-1);if(k>=0){e.preventDefault();const L=TE[bid].pieces[k].text.replace(/\n/g,'').length;tmerge(bid,k,[bid,k,L],i)}}
  else if(e.key==='Delete'&&ta.selectionStart===ta.value.length&&ta.selectionEnd===ta.value.length&&!e.isComposing&&tnext(TE[bid].pieces,i,1)>=0){e.preventDefault();const L=ta.value.replace(/\n/g,'').length;tmerge(bid,i,[bid,i,L])}
  else if(e.key==='ArrowUp'&&ta.selectionStart===0&&!e.isComposing){const n=document.getElementById('ta_'+bid+'_'+(i-1));if(n){e.preventDefault();n.focus();n.setSelectionRange(n.value.length,n.value.length)}}
  else if(e.key==='ArrowDown'&&ta.selectionStart===ta.value.length&&!e.isComposing){const n=document.getElementById('ta_'+bid+'_'+(i+1));if(n){e.preventDefault();n.focus();n.setSelectionRange(0,0)}}
@@ -2128,27 +2360,48 @@ function tkey(e,bid,i){const ta=e.target;
  else if((e.metaKey||e.ctrlKey)&&e.key==='Backspace'){e.preventDefault();tdel(bid,i)}
  else if(e.key===' '&&e.ctrlKey){e.preventDefault();togglePlay()}
  else if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}}
-function addHere(){const t=Math.round(au.currentTime*100)/100;if(!TE)return;let bid=null,bd=1e9;for(const k in TE){const b=TE[k],a0=(b.a0!==undefined?b.a0:(b.pieces[0]?b.pieces[0].start:0));const d=t<a0?a0-t:(t>b.a1?t-b.a1:0);if(d<bd){bd=d;bid=k}}
+function addHere(){const t=r3(fr30(curT()));if(!TE)return;let bid=null,bd=1e9;for(const k in TE){const b=TE[k],a0=(b.a0!==undefined?b.a0:(b.pieces[0]?b.pieces[0].start:0));const d=t<a0?a0-t:(t>b.a1?t-b.a1:0);if(d<bd){bd=d;bid=k}}
  if(bid===null)return;snap();const ps=TE[bid].pieces;let at=0;for(let i=0;i<ps.length;i++){if(ps[i].start<=t)at=i+1}
  let sp=0;for(let i=at-1;i>=0;i--){if(ps[i].speaker>=0){sp=ps[i].speaker;break}}
  let nx=TE[bid].a1;for(let i=at;i<ps.length;i++){if(ps[i].speaker>=0){nx=ps[i].start;break}}
  ps.splice(at,0,{start:t,end:Math.max(Math.min(nx,t+1.2),t+0.3),text:'',speaker:sp});dirty();renderTelops([bid,at,0])}
-function splitHere(){snap();const t=au.currentTime,ac=findAct(t);if(!ac){alert('テロップが出ている位置で押してください');return}
- const [bid,i]=ac,p=TE[bid].pieces[i],e=pend(bid,i),frac=Math.min(Math.max((t-p.start)/Math.max(e-p.start,0.01),0.05),0.95);
- const L=p.text.replace(/\n/g,'');const k=Math.max(1,Math.min(L.length-1,Math.round(L.length*frac)));
- const q={start:Math.round(t*100)/100,end:p.end,text:L.slice(k),speaker:p.speaker};p.text=L.slice(0,k);TE[bid].pieces.splice(i+1,0,q);dirty();renderTelops([bid,i,k])}
+function charTimes(bid,i){/* the time of every letter boundary of a telop: from what was heard where it matches, the rest spread by the sounds */
+ const P=TE[bid].pieces,p=P[i],e=pend(bid,i),flat=[...(p.text||'').replace(/\n/g,'')],n=flat.length,T=new Array(n+1).fill(null);T[0]=p.start;T[n]=e;
+ const cs=(pieceChips(bid)[i])||[];
+ if(cs.length&&n){const fold=x=>[...x.normalize('NFKC').replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-96))];const A=cs.map(c=>fold(c.c)[0]||''),B=fold(flat.join('')),D=Array.from({length:A.length+1},()=>new Array(B.length+1).fill(0));
+  for(let x=A.length-1;x>=0;x--)for(let y=B.length-1;y>=0;y--)D[x][y]=A[x]===B[y]?D[x+1][y+1]+1:Math.max(D[x+1][y],D[x][y+1]);
+  let x=0,y=0;while(x<A.length&&y<B.length){if(A[x]===B[y]){if(T[y]===null||y>0)T[y]=(y===0?T[0]:cs[x].cs);T[y+1]=(y+1===n?T[n]:cs[x].ce);x++;y++}else if(D[x+1][y]>=D[x][y+1])x++;else y++}
+  T[0]=p.start;T[n]=e}
+ let k=0;while(k<n){if(T[k]!==null){k++;continue}let j=k;while(j<=n&&T[j]===null)j++;const a=T[k-1],z=T[j],mw=c=>typeof moraW==='function'?moraW(c):1;let tot=0;for(let q=k-1;q<j;q++)tot+=mw(flat[q]||'あ');let acc=0;for(let q=k;q<j;q++){acc+=mw(flat[q-1]||'あ');T[q]=a+(z-a)*acc/Math.max(tot,1e-6)}k=j+1}
+ for(let q=1;q<=n;q++)if(T[q]<T[q-1])T[q]=T[q-1];
+ return T}
+function splitHere(){const ta=document.activeElement;
+ if(ta&&ta.tagName==='TEXTAREA'&&/^ta_/.test(ta.id||'')){const m=ta.id.match(/^ta_(.+)_(\d+)$/);if(m){const bid=m[1],i=+m[2];if(TE[bid]&&TE[bid].pieces[i]){const k=ta.selectionStart;if(k>0&&k<ta.value.length){const P=TE[bid].pieces[i];P.text=ta.value;if(doSplit(bid,i,k))return true}}}}
+ const t=fr30(curT());let hit=null;
+ for(const bid in TE){const ps=TE[bid].pieces;for(let i=0;i<ps.length;i++){const p=ps[i];if(p.deleted||p.cut||p.speaker<0||p.ov||(p.text||'').startsWith('※'))continue;const e=pend(bid,i);if(t>=p.start-0.001&&t<e+0.001){if(!hit||p.start>hit[2])hit=[bid,i,p.start,e]}}}
+ if(!hit){document.getElementById('tmsg').textContent='ここにはテロップがありません';return false}
+ snap();const [bid,i]=hit,p=TE[bid].pieces[i],e=hit[3];const tt=Math.min(Math.max(t,p.start+0.04),e-0.04);if(tt<=p.start||tt>=e){document.getElementById('tmsg').textContent='この位置では切れません';return false}
+ const flat=(p.text||'').replace(/\n/g,''),L=[...flat];let k=0;
+ if(L.length>=2){const T=charTimes(bid,i);const ch=wsplit(flat);const bs=[];for(const o of ch){if(o.i>0&&o.i<L.length)bs.push(o.i)}
+  let best=null;for(const b of bs){const d=Math.abs(T[b]-tt);if(best===null||d<best[0])best=[d,b]}
+  /* only where the sounds really say so: the nearest word boundary within a quarter second */
+  if(best&&best[0]<=0.25)k=best[1]}
+ const nt=r3(fr30(tt)>p.start?fr30(tt):tt);const q={start:nt,end:p.end,text:k?L.slice(k).join(''):'',speaker:p.speaker,m:1};if(k)p.text=L.slice(0,k).join('');
+ TE[bid].pieces.splice(i+1,0,q);reAlt(bid);dirty();renderTelops([bid,k?i:i+1,k||0]);if(!k)document.getElementById('tmsg').textContent='切れ目が分からないため、文字は左に残しました';return true}
 function tnext(ps,i,d){for(let j=i+d;j>=0&&j<ps.length;j+=d){const q=ps[j];if(q.speaker>=0&&!q.ov&&!q.deleted&&!q.cut&&!(q.text||'').startsWith('※'))return j}return -1}
-function tmerge(bid,i,focus){const ps=TE[bid].pieces,j=tnext(ps,i,1);if(j<0)return;snap();const a=ps[i],b=ps[j];a.text=a.text.replace(/\n/g,'')+b.text.replace(/\n/g,'');a.end=Math.max(a.end||0,b.end||0);a.m=1;ps.splice(j,1);dirty();renderTelops(focus)}
+function tmerge(bid,i,focus,jj){const ps=TE[bid].pieces,j=jj!==undefined?jj:tnext(ps,i,1);if(j<0)return;snap();const a=ps[i],b=ps[j];a.text=a.text.replace(/\n/g,'')+b.text.replace(/\n/g,'');a.end=Math.max(a.end||0,b.end||0);a.m=1;delete a.alt;delete a.src;ps.splice(j,1);reAlt(bid);dirty();renderTelops(focus)}
 function tdel(bid,i){snap();const p=TE[bid].pieces[i];if(p.deleted){p.deleted=false}else{TE[bid].pieces.splice(i,1)}dirty();renderTelops()}
+async function fillGap(bid,at){const ps=TE[bid].pieces,p=ps[at];if(!p||(p.text||'')!=='（？）')return;try{const src=ps.map(q=>{const o=Object.assign({},q);delete o.m;return o});const r=await api('/api/gap',{bid:bid,k:at,pieces:src});if(r&&r.text&&ps[at]===p&&p.text==='（？）'){snap();p.text=r.text;p.m=1;reAlt(bid);dirty();renderTelops([bid,at,0]);tlDraw()}}catch(e){}}
+function tghost(bid,a,b){snap();const ps=TE[bid].pieces;let at=0;for(let i=0;i<ps.length;i++)if(ps[i].start<=a)at=i+1;ps.splice(at,0,{start:r3(fr30(a)),end:r3(fr30(b)),text:'（？）',speaker:0,m:1});dirty();renderTelops([bid,at,0]);fillGap(bid,at)}
 function tadd(bid,t){snap();TE[bid].pieces.push({start:Math.round(t*100)/100,end:t+1,text:'',speaker:0});dirty();renderTelops()}
-async function tsave(quiet){clearTimeout(saveT);if(!TE||!EDIT)return;await api('/api/telops',{data:TE});document.getElementById('tmsg').textContent=quiet?'保存済み':'保存しました'}
-let RARM=0;async function treset(){const bt=document.getElementById('rbtn');if(!RARM){RARM=1;if(bt)bt.textContent='リセットを確定';setTimeout(()=>{RARM=0;if(bt)bt.textContent='リセット'},3000);return}RARM=0;if(bt)bt.textContent='リセット';await api('/api/telops',{reset:true});run('analyze');setTimeout(loadTelops,500)}
-document.addEventListener('keydown',e=>{const tg=e.target.tagName;if((e.key==='Delete'||e.key==='Backspace')&&tg!=='TEXTAREA'&&tg!=='INPUT'&&tg!=='SELECT'&&SEL.size){e.preventDefault();delSel(e.shiftKey);return}if((e.metaKey||e.ctrlKey)&&e.key==='z'&&e.target.tagName!=='TEXTAREA'){e.preventDefault();undo();return}const t=e.target.tagName;if(e.code==='Space'&&t!=='TEXTAREA'&&t!=='INPUT'&&t!=='SELECT'&&TE){e.preventDefault();togglePlay()}});
+async function tsave(quiet){clearTimeout(saveT);if(!TE||!EDIT)return;const sr=await api('/api/telops',{data:TE,gen:TGEN});if(sr&&sr.stale){EDIT=false;await loadTelops();return}document.getElementById('tmsg').textContent=quiet?'保存済み':'保存しました'}
+let RARM=0;async function treset(){const bt=document.getElementById('rbtn');if(!RARM){RARM=1;if(bt)bt.textContent='もう一度タップでリセット';setTimeout(()=>{RARM=0;if(bt)bt.textContent='リセット'},3000);return}RARM=0;if(bt)bt.textContent='リセット';await api('/api/telops',{reset:true});run('analyze');setTimeout(loadTelops,500)}
+document.addEventListener('keydown',e=>{const tg=e.target.tagName;if((e.key==='Delete'||e.key==='Backspace')&&tg!=='TEXTAREA'&&tg!=='INPUT'&&tg!=='SELECT'&&SEL.size&&!CHIPCUR&&!NOCHIP){e.preventDefault();delSel(e.shiftKey);return}if((e.metaKey||e.ctrlKey)&&e.key==='z'&&e.target.tagName!=='TEXTAREA'){e.preventDefault();undo();return}const t=e.target.tagName;if(e.code==='Space'&&t!=='TEXTAREA'&&t!=='INPUT'&&t!=='SELECT'&&TE){e.preventDefault();togglePlay()}});
 au.addEventListener('ended',pauseNow);
 refresh();setInterval(()=>refresh(),1200);
 let TLUH=0;try{TLUH=parseInt(localStorage.getItem('tluh')||'0')||0}catch(e){}
-let TLZ=90,TLSEL=null,TLDRAG=null,TLON=false,TLRAF=0,TLHOV=null,TLONS=null,TLH={ruler:22,wave:52,lane:40,lane2:22,gap:4};
-function fitDock(){const dk=document.getElementById('dock'),vw=document.getElementById('vwrap');if(!dk||!vw||dk.style.display==='none')return;const av=Math.max(200,window.innerHeight-100-(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tlh'))||0));const root=document.documentElement;root.style.setProperty('--vwh','420px');const rest=dk.scrollHeight-vw.offsetHeight;const h=Math.max(70,Math.min(420,av-rest-14));root.style.setProperty('--vwh',h+'px')}
+let TLMX=null,TLSK=0,TLZ=90,TLSEL=null,TLDRAG=null,TLON=false,TLRAF=0,TLHOV=null,TLONS=null,TLH={ruler:22,wave:52,lane:40,lane2:22,gap:4};try{const q=parseInt(localStorage.getItem('tllane')||'0');if(q>=26&&q<=76){TLH.lane=q;TLH.lane2=Math.round(q*0.55)}}catch(e){}
+let FITK='';function fitDock(){const dk=document.getElementById('dock'),vw=document.getElementById('vwrap');if(!dk||!vw||dk.style.display==='none')return;const tlh=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tlh'))||0,k=window.innerHeight+'_'+tlh;if(k===FITK)return;FITK=k;const av=Math.max(200,window.innerHeight-100-tlh);const rest=Math.max(dk.scrollHeight-vw.offsetHeight,120);const h=Math.max(70,Math.min(640,av-rest-14));document.documentElement.style.setProperty('--vwh',h+'px')}
 window.addEventListener('resize',()=>fitDock());
 function tlLH(ln){return ln===2?TLH.lane2:TLH.lane}
 function tlWaveTop(){return TLH.ruler+8+2*(TLH.lane+TLH.gap)+TLH.lane2+TLH.gap+8}
@@ -2159,6 +2412,12 @@ function tlLayout(){const L=[];let x=12;for(const g of segs()){const w=(g.a1-g.a
 function tlX(t,Lo){for(const s of Lo.L){if(t>=s.a0-1e-6&&t<=s.a1+1e-6)return s.x0+(t-s.a0)*TLZ}let b=Lo.L[0];for(const s of Lo.L){if(t>=s.a0)b=s}return b?b.x0+Math.max(0,Math.min(t-b.a0,b.a1-b.a0))*TLZ:0}
 function tlT(x,Lo){for(const s of Lo.L){if(x>=s.x0-11&&x<=s.x0+s.w+11)return s.a0+Math.max(0,Math.min((x-s.x0)/TLZ,s.a1-s.a0))}return null}
 function tlOnsets(){if(TLONS||!PK)return TLONS||[];const p=PK.peaks,r=PK.rate,o=[],n=p.length,db=new Float32Array(n);for(let k=0;k<n;k++)db[k]=20*Math.log10(Math.max(p[k]*p[k],1e-7));const top=Array.from(db).sort((a,b)=>a-b)[Math.floor(n*0.99)]||0,sil=top+4.4-42,lo=top+4.4-40;for(let k=8;k<n-3;k++){const cur=Math.max(db[k],db[k+1],db[k+2]);if(cur<lo)continue;let base=0;base=1e9;for(let j=1;j<=8;j++)if(db[k-j]<base)base=db[k-j];if(cur-base>=10&&db[k-1]<cur-6){o.push(k/r);k+=8}}let q=0;for(let k=6;k<n;k++){if(db[k]>sil){if(q>=6)o.push(k/r);q=0}else q++}o.sort((a,b)=>a-b);const u=[];for(const v of o)if(!u.length||v-u[u.length-1]>0.012)u.push(v);TLONS=u;return u}
+let TLVS=null;
+function tlVoiced(){if(TLVS||!PK)return TLVS||[];const p=PK.peaks,r=PK.rate,n=p.length,db=new Float32Array(n);for(let k=0;k<n;k++)db[k]=20*Math.log10(Math.max(p[k]*p[k],1e-7));const top=Array.from(db).sort((x,y)=>x-y)[Math.floor(n*0.99)]||0,th=top+4.4-40;const o=[];let s=-1,l=-1;
+ for(let k=0;k<n;k++){if(db[k]>th){if(s<0)s=k;l=k}else if(s>=0&&k-l>12){if((l-s)/r>=0.2)o.push([s/r,(l+1)/r]);s=-1}}if(s>=0&&(l-s)/r>=0.2)o.push([s/r,(l+1)/r]);return TLVS=o}
+function tlGhosts(bid){const b=TE[bid];if(!b||!PK)return [];const lo=b.c0!==undefined?b.c0:b.a0,hi=b.c1!==undefined?b.c1:b.a1,cov=[];
+ b.pieces.forEach((p,i)=>{if(p.deleted||p.cut)return;const e=pend(bid,i),ch=(p.text||'').replace(/\s/g,'').length;cov.push([p.start-0.1,Math.min(e,p.start+0.3+ch*0.2)+0.05])});
+ const out=[];for(const [s,e] of tlVoiced()){if(e<=lo||s>=hi)continue;let cur=Math.max(s,lo);const z=Math.min(e,hi);const cs=cov.filter(c=>c[1]>cur&&c[0]<z).sort((x,y)=>x[0]-y[0]);for(const c of cs){if(c[0]-cur>=0.2)out.push([cur,c[0]]);cur=Math.max(cur,c[1])}if(z-cur>=0.2)out.push([cur,z])}return out}
 async function tlWaveFit(){if(!TE)return;let bias=0;try{const r=await api('/api/wavebias');if(typeof r.bias==='number')bias=r.bias}catch(e){}if(!PK){document.getElementById('tmsg').textContent='波形なし';return}TLONS=null;const on=tlOnsets();if(!on.length)return;snap();let cnt=0;
  for(const bid of Object.keys(TE)){const b=TE[bid],ps=b.pieces,lo=b.c0!==undefined?b.c0:b.a0;
   for(let i=0;i<ps.length;i++){const p=ps[i];if(p.deleted||p.cut||p.m||p.ov||p.speaker<0||(p.text||'').startsWith('※'))continue;
@@ -2169,11 +2428,11 @@ async function tlWaveFit(){if(!TE)return;let bias=0;try{const r=await api('/api/
  if(cnt){dirty();renderTelops();if(TLON)tlDraw()}document.getElementById('tmsg').textContent='波形調整 '+cnt+'件'}
 function tlBuild(){const el=document.getElementById('tl');
  el.innerHTML=''
-  +'<div id="tlgrip"></div>'
+  +'<div id="tlgrip"><input type="range" id="tlth" min="26" max="76" step="2"></div>'
   +'<div class="tlscroll" id="tls"><div id="tlspc"></div><canvas id="tlc"></canvas></div>'
   +'';
- const gp=document.getElementById('tlgrip');gp.onpointerdown=e=>{gp.setPointerCapture(e.pointerId);gp._d=1};gp.onpointermove=e=>{if(!gp._d)return;TLUH=Math.round(Math.max(150,Math.min(window.innerHeight-220,window.innerHeight-e.clientY)));tlDraw()};gp.onpointerup=gp.onpointercancel=()=>{gp._d=0;try{localStorage.setItem('tluh',String(TLUH))}catch(e){}};gp.ondblclick=()=>{TLUH=0;try{localStorage.removeItem('tluh')}catch(e){}tlDraw()};
- const c=document.getElementById('tlc');c.onpointerdown=tlDown;c.onpointermove=tlMove;c.onpointerup=tlUp;c.onpointercancel=tlUp;c.onpointerleave=()=>{if(!TLDRAG){TLHOV=null}};
+ const th=document.getElementById('tlth');th.value=TLH.lane;th.oninput=()=>{TLH.lane=parseInt(th.value);TLH.lane2=Math.round(TLH.lane*0.55);try{localStorage.setItem('tllane',String(TLH.lane))}catch(er){}tlDraw()};th.onpointerdown=e=>e.stopPropagation();const gp=document.getElementById('tlgrip');gp.onpointerdown=e=>{gp.setPointerCapture(e.pointerId);gp._d=1};gp.onpointermove=e=>{if(!gp._d)return;TLUH=Math.round(Math.max(150,Math.min(window.innerHeight-220,window.innerHeight-e.clientY)));tlDraw()};gp.onpointerup=gp.onpointercancel=()=>{gp._d=0;try{localStorage.setItem('tluh',String(TLUH))}catch(e){}};gp.ondblclick=()=>{TLUH=0;try{localStorage.removeItem('tluh')}catch(e){}tlDraw()};
+ const c=document.getElementById('tlc');c.ondblclick=e=>{const h=tlHit(e);if(h.bid&&h.i!==undefined&&!h.note)chipDbl(h.bid,h.i)};c.onpointerdown=tlDown;c.onpointermove=tlMove;c.onpointerup=tlUp;c.onpointercancel=tlUp;c.onpointerleave=()=>{if(!TLDRAG){TLHOV=null;TLMX=null;if(au.paused){try{vid().currentTime=Math.max(au.currentTime+OFF,0)}catch(er){}}}};
  const sc=document.getElementById('tls');sc.onscroll=()=>tlDraw();sc.onwheel=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();tlZoomAt(Math.exp(-e.deltaY*0.012),e.clientX)}};let z0=0;el.addEventListener('gesturestart',e=>{e.preventDefault();z0=TLZ});el.addEventListener('gesturechange',e=>{e.preventDefault();tlZoomTo(z0*e.scale,window.innerWidth/2)});tlDraw()}
 function tlZoomTo(z,cx){const sc=document.getElementById('tls'),Lo=tlLayout(),r=sc.getBoundingClientRect(),t=tlT(sc.scrollLeft+cx-r.left,Lo);TLZ=Math.max(30,Math.min(1200,z));tlDraw();if(t!==null)sc.scrollLeft=Math.max(0,tlX(t,tlLayout())-(cx-r.left));tlDraw()}
 function tlZoomAt(f,cx){tlZoomTo(TLZ*f,cx)}
@@ -2192,14 +2451,14 @@ function tlDraw(follow){const c=document.getElementById('tlc'),sc=document.getEl
  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.fillStyle='#101014';g.fillRect(0,0,cw,H);g.translate(-sx,0);
  const laneY=k=>TLH.ruler+8+Math.min(k,2)*(TLH.lane+TLH.gap);
  for(const s of Lo.L){if(s.x0+s.w<sx-20||s.x0>sx+cw+20)continue;
-  g.fillStyle='#1a1b21';g.fillRect(s.x0,TLH.ruler,s.w,H-TLH.ruler);g.font='600 12px -apple-system,sans-serif';g.fillStyle='#9aa0ae';g.fillText(s.bid,s.x0+8,13);g.fillStyle='rgba(255,214,10,.85)';g.fillRect(s.x0-1,0,4,TLH.ruler);g.fillRect(s.x0+s.w-3,0,4,TLH.ruler);g.fillStyle='#9aa0ae';
+  g.fillStyle='#1a1b21';g.fillRect(s.x0,TLH.ruler,s.w,H-TLH.ruler);g.font='600 12px -apple-system,sans-serif';g.fillStyle='#9aa0ae';g.fillText(bname(s.bid),s.x0+8,13);g.fillStyle='rgba(255,214,10,.85)';g.fillRect(s.x0-1,0,4,TLH.ruler);g.fillRect(s.x0+s.w-3,0,4,TLH.ruler);g.fillStyle='#9aa0ae';
   if(TLZ>=90){const f0=Math.max(Math.ceil(s.a0*30),Math.floor((sx-s.x0-20)/TLZ*30+s.a0*30)),f1=Math.min(Math.floor(s.a1*30),Math.ceil((sx+cw-s.x0+20)/TLZ*30+s.a0*30));for(let f=f0;f<=f1;f++){const x=Math.round(s.x0+(f/30-s.a0)*TLZ)+.5,m5=f%5===0;g.fillStyle=m5?'#4a4d5a':'#32343d';g.fillRect(x,TLH.ruler-(m5?9:4),1,m5?9:4)}}
   const sf=TLZ>=500?5:(TLZ>=200?15:(TLZ>=60?30:150));for(let f=Math.ceil(s.a0*30/sf)*sf;f<=s.a1*30;f+=sf){const u=f/30,x=Math.round(s.x0+(u-s.a0)*TLZ)+.5;g.fillStyle='#4a4d5a';g.fillRect(x,TLH.ruler-10,1,10);if((TLZ>=60||Math.abs(u%10)<1e-6)&&x-s.x0>46){g.fillStyle='#8b91a0';g.font='10px ui-monospace,Menlo,monospace';g.fillText(TLZ>=200?tcf(u):fmt(u).replace(/\.00$/,''),x+3,TLH.ruler-12)}}
   if(PK){const r=PK.rate,wt=tlWaveTop(),mid=wt+TLH.wave-2,hh=TLH.wave-6,x0=Math.max(0,sx-s.x0-2),x1=Math.min(s.w,sx+cw-s.x0+2),sw=1/dpr;
    g.fillStyle='#1f3157';g.fillRect(s.x0,wt,s.w,TLH.wave);
    const xs=Math.floor(x0*dpr),xe=Math.ceil(x1*dpr),N=Math.max(0,xe-xs),A=new Float32Array(N),R=new Uint8Array(N);
-   for(let i=0;i<N;i++){const xx=(xs+i)/dpr,ta=s.a0+xx/TLZ,tb=s.a0+(xx+sw)/TLZ;let m=0;for(let k=Math.floor(ta*r);k<=Math.floor(tb*r);k++){const v=PK.peaks[k];if(v>m)m=v}
-    const lin=m*m;A[i]=Math.max(0,Math.min(1,(20*Math.log10(Math.max(lin,1e-5))+44)/44));R[i]=lin>=0.96?1:0}
+   for(let i=0;i<N;i++){const xx=(xs+i)/dpr,ta=s.a0+xx/TLZ,tb=s.a0+(xx+sw)/TLZ;let m=0;for(let k=Math.floor(ta*r);k<=Math.floor(tb*r);k++){const v=(PKD||PK).peaks[k];if(v>m)m=v}
+    const lin=m*m;A[i]=Math.max(0,Math.min(1,(20*Math.log10(Math.max(lin,1e-6))+60)/60));R[i]=lin>=0.96?1:0}
    const B=new Float32Array(N),K=[1,3,5,3,1];for(let i=0;i<N;i++){let t=0,w=0;for(let j=-2;j<=2;j++){const q=i+j;if(q>=0&&q<N){t+=A[q]*K[j+2];w+=K[j+2]}}B[i]=Math.max(t/w,A[i]*0.92)}
    const path=(mask)=>{g.beginPath();let on=false,x0_=0;const flush=(i)=>{if(on){g.lineTo(s.x0+(xs+i)/dpr,mid);g.lineTo(s.x0+x0_/dpr,mid);g.closePath();on=false}};
     for(let i=0;i<N;i++){const ok=!mask||R[i]||(i>0&&R[i-1])||(i<N-1&&R[i+1]);if(!ok){flush(i);continue}if(!on){on=true;x0_=xs+i;g.moveTo(s.x0+(xs+i)/dpr,mid)}g.lineTo(s.x0+(xs+i)/dpr,mid-B[i]*hh)}flush(N)};
@@ -2212,15 +2471,18 @@ function tlDraw(follow){const c=document.getElementById('tlc'),sc=document.getEl
   TE[s.bid].pieces.forEach((p,i)=>{if(p.deleted||p.cut)return;const e=pend(s.bid,i);const x1=tlX(p.start,Lo),x2=Math.max(tlX(e,Lo),x1+3);if(x2<sx-5||x1>sx+cw+5)return;const ln=tlLane(p),y=laneY(ln);
    const col=ln===2&&!p.ov?'#a08e4c':(p.speaker===1?'#3f7fd0':'#d85f86');const lh=tlLH(ln);g.fillStyle=col;g.fillRect(x1,y,x2-x1-1,lh);
    const sel=TLSEL&&TLSEL[0]===s.bid&&TLSEL[1]===i;if(sel){g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(x1+1,y+1,x2-x1-3,lh-2)}
-   g.save();g.beginPath();g.rect(x1,y,x2-x1-1,lh);g.clip();g.fillStyle='#fff';g.font='600 13px -apple-system,"Hiragino Sans",sans-serif';const tx=(p.text||'').split('\n');g.fillText(tx[0]||'',x1+6,ln===2?y+20:y+18);if(tx[1]&&ln!==2)g.fillText(tx[1],x1+6,y+35);g.restore()});
+   g.save();g.beginPath();g.rect(x1,y,x2-x1-1,lh);g.clip();g.fillStyle='#fff';g.font='600 13px -apple-system,"Hiragino Sans",sans-serif';const tx=(p.text||'').split('\n');{const two=!!tx[1]&&ln!==2&&lh>=36;g.fillText(two?tx[0]:tx.join(''),x1+6,two?y+lh/2-3:y+lh/2+5);if(two)g.fillText(tx[1],x1+6,y+lh/2+14)}g.restore()});
+  {const y=laneY(2),lh=tlLH(2);g.save();g.setLineDash([4,3]);g.strokeStyle='#d8c46a';g.lineWidth=1;g.font='600 11px -apple-system,"Hiragino Sans",sans-serif';for(const [ga,gb] of tlGhosts(s.bid)){const x1=tlX(ga,Lo),x2=Math.max(tlX(gb,Lo),x1+4);if(x2<sx-5||x1>sx+cw+5)continue;g.fillStyle='rgba(216,196,106,.16)';g.fillRect(x1,y,x2-x1-1,lh);g.strokeRect(x1+.5,y+.5,x2-x1-2,lh-1);g.fillStyle='#d8c46a';if(x2-x1>26)g.fillText('（？）',x1+4,y+lh/2+4)}g.restore()}
   lv.forEach(([p,i],k)=>{const x=tlX(p.start,Lo),hot=(TLHOV&&TLHOV[0]===s.bid&&TLHOV[1]===i)||(TLDRAG&&TLDRAG.bid===s.bid&&TLDRAG.i===i)||(TLSEL&&TLSEL[0]===s.bid&&TLSEL[1]===i);
    g.fillStyle=hot?'#ffd60a':'rgba(255,255,255,.55)';g.fillRect(Math.round(x),TLH.ruler,hot?3:1,H-TLH.ruler);
    if(hot&&k>0){const pr=lv[k-1][0],yp=laneY(tlLane(pr)),yc=laneY(tlLane(p));g.fillStyle='#ffd60a';g.fillRect(Math.round(x)-9,yp,9,3);g.fillRect(Math.round(x)-9,yp+TLH.lane-3,9,3);g.fillRect(Math.round(x),yc,9,3);g.fillRect(Math.round(x),yc+TLH.lane-3,9,3)}})}
- g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.moveTo(cx,0);g.lineTo(cx,H);g.stroke();
+ if(TLMX!==null&&!TLDRAG){g.fillStyle='rgba(255,255,255,.5)';g.fillRect(Math.round(TLMX),0,1,H)}
+ g.strokeStyle='#ffd60a';g.lineWidth=2;g.beginPath();g.moveTo(cx,0);g.lineTo(cx,H);g.stroke();
  if(TLDRAG&&TLDRAG.blk&&TLDRAG.pend!==null){g.strokeStyle='#ffd60a';g.lineWidth=2;g.beginPath();g.moveTo(TLDRAG.px,0);g.lineTo(TLDRAG.px,H);g.stroke();}
  if(TLDRAG&&TLDRAG.bid&&TLDRAG.i!==undefined){const p=TE[TLDRAG.bid].pieces[TLDRAG.i],x=tlX(p.start,Lo),df=Math.round(((TLDRAG.kind==='e'?p.end:p.start)-TLDRAG.t0)*30);}
  }
 function tlHit(e){const c=document.getElementById('tlc'),sc=document.getElementById('tls'),r=c.getBoundingClientRect(),x=e.clientX-r.left+sc.scrollLeft,y=e.clientY-r.top,Lo=tlLayout();
+ {const y2=TLH.ruler+8+2*(TLH.lane+TLH.gap);if(y>=y2&&y<=y2+TLH.lane2){for(const s of Lo.L)for(const [ga,gb] of tlGhosts(s.bid)){const x1=tlX(ga,Lo),x2=Math.max(tlX(gb,Lo),x1+4);if(x>=x1&&x<=x2){let free=true;for(const q of TE[s.bid].pieces){if(q.deleted||q.cut||tlLane(q)!==2)continue;const q1=tlX(q.start,Lo),q2=tlX(pend(s.bid,TE[s.bid].pieces.indexOf(q)),Lo);if(Math.abs(x-q1)<=7||Math.abs(x-q2)<=7)free=false}if(free)return {ghost:true,bid:s.bid,a:ga,b:gb,x,Lo}}}}}
  if(y<TLH.ruler){for(const s of Lo.L){if(Math.abs(x-s.x0)<=8)return {blk:s.bid,side:'l',x,Lo};if(Math.abs(x-(s.x0+s.w))<=8)return {blk:s.bid,side:'r',x,Lo}}}
  if(y>=TLH.ruler){const y2=TLH.ruler+8+2*(TLH.lane+TLH.gap);if(y>=y2&&y<=y2+TLH.lane2){for(const s of Lo.L){const ps=TE[s.bid].pieces;for(let i=0;i<ps.length;i++){const p=ps[i];if(p.deleted||p.cut||tlLane(p)!==2)continue;const x1=tlX(p.start,Lo),x2=tlX(pend(s.bid,i),Lo);if(Math.abs(x-x1)<=7)return {bid:s.bid,i,edge:true,kind:'s',x,Lo};if(Math.abs(x-x2)<=7)return {bid:s.bid,i,edge:true,kind:'e',x,Lo}}}
   for(const s of Lo.L){const ns=TE[s.bid].notes||[];for(let ni=0;ni<ns.length;ni++){const n=ns[ni];if(n.deleted)continue;const x1=tlX(n.start,Lo),x2=tlX(n.end,Lo);if(Math.abs(x-x1)<=7)return {note:1,bid:s.bid,ni,part:'s',x,Lo};if(Math.abs(x-x2)<=7)return {note:1,bid:s.bid,ni,part:'e',x,Lo};if(x>x1&&x<x2)return {note:1,bid:s.bid,ni,part:'b',x,Lo}}}}
@@ -2229,10 +2491,10 @@ function tlHit(e){const c=document.getElementById('tlc'),sc=document.getElementB
   const ps=TE[s.bid].pieces;for(let i=0;i<ps.length;i++){const p=ps[i];if(p.deleted||p.cut)continue;const ln=tlLane(p),y0=TLH.ruler+8+Math.min(ln,2)*(TLH.lane+TLH.gap);if(y<y0||y>y0+tlLH(ln))continue;const x1=tlX(p.start,Lo),x2=Math.max(tlX(pend(s.bid,i),Lo),x1+3);if(x>=x1&&x<=x2)return {bid:s.bid,i,edge:false,x,Lo}}}}
  return {x,Lo,y}}
 let TLNS=null;
-function tlDown(e){const h=tlHit(e);if(!h.note)TLNS=null;if(h.note){const n=TE[h.bid].notes[h.ni];TLSEL=null;TLNS=[h.bid,h.ni];snap();if(au.paused&&h.part==='b')seek(n.start+0.01);TLDRAG={note:true,bid:h.bid,ni:h.ni,part:h.part,x0:h.x,s0:n.start,e0:n.end}}else if(h.blk){const b=TE[h.blk];TLDRAG={blk:h.blk,side:h.side,Lo:h.Lo,seg:h.Lo.L.find(q=>q.bid===h.blk),pend:null}}else if(h.bid){const was=!!(TLSEL&&TLSEL[0]===h.bid&&TLSEL[1]===h.i);TLSEL=[h.bid,h.i];const p=TE[h.bid].pieces[h.i];if(h.edge){snap();TLDRAG={bid:h.bid,i:h.i,Lo:h.Lo,t0:h.kind==='e'?pend(h.bid,h.i):p.start,kind:h.kind,was:was,p0:p.start,e0:p.end}}else{if(au.paused)seek(p.start+0.01);if(p.speaker>=0&&!(p.text||'').startsWith('※'))TLDRAG={lane:true,bid:h.bid,i:h.i,Lo:h.Lo,y0:e.clientY,moved:false,was:was,p0:p.start,sp0:p.speaker,x0:h.x,s0:p.start,e0:p.end};else{snap();TLDRAG={move:true,bid:h.bid,i:h.i,Lo:h.Lo,x0:h.x,s0:p.start,e0:pend(h.bid,h.i)}}}}
+function tlDown(e){const h=tlHit(e);if(h.ghost){snap();const ps=TE[h.bid].pieces;let at=0;for(let i=0;i<ps.length;i++)if(ps[i].start<=h.a)at=i+1;const np={start:r3(fr30(h.a)),end:r3(fr30(h.b)),text:'（？）',speaker:0,m:1};ps.splice(at,0,np);TLSEL=[h.bid,at];dirty();renderTelops([h.bid,at,0]);tlDraw();fillGap(h.bid,at);return}if(!h.note)TLNS=null;if(h.note){const n=TE[h.bid].notes[h.ni];TLSEL=null;TLNS=[h.bid,h.ni];snap();if(au.paused&&h.part==='b')seek(n.start+0.01);TLDRAG={note:true,bid:h.bid,ni:h.ni,part:h.part,x0:h.x,s0:n.start,e0:n.end}}else if(h.blk){const b=TE[h.blk];TLDRAG={blk:h.blk,side:h.side,Lo:h.Lo,seg:h.Lo.L.find(q=>q.bid===h.blk),pend:null}}else if(h.bid){const was=!!(TLSEL&&TLSEL[0]===h.bid&&TLSEL[1]===h.i);TLSEL=[h.bid,h.i];const p=TE[h.bid].pieces[h.i];if(h.edge){snap();TLDRAG={bid:h.bid,i:h.i,Lo:h.Lo,t0:h.kind==='e'?pend(h.bid,h.i):p.start,kind:h.kind,was:was,p0:p.start,e0:p.end}}else{if(au.paused)seek(p.start+0.01);if(p.speaker>=0&&!(p.text||'').startsWith('※'))TLDRAG={lane:true,bid:h.bid,i:h.i,Lo:h.Lo,y0:e.clientY,moved:false,was:was,p0:p.start,sp0:p.speaker,x0:h.x,s0:p.start,e0:p.end};else{snap();TLDRAG={move:true,bid:h.bid,i:h.i,Lo:h.Lo,x0:h.x,s0:p.start,e0:pend(h.bid,h.i)}}}}
  else{const t=tlT(h.x,h.Lo);if(t!==null){seek(t);TLDRAG={scrub:true,Lo:h.Lo}}}e.target.setPointerCapture(e.pointerId);tlDraw()}
 function tlMove(e){const c=document.getElementById('tlc'),sc=document.getElementById('tls'),r=c.getBoundingClientRect(),x=e.clientX-r.left+sc.scrollLeft;
- if(!TLDRAG){const h=tlHit(e);TLHOV=h.bid&&h.edge&&!h.kind?[h.bid,h.i]:null;c.style.cursor=(h.bid&&h.edge)||h.blk||(h.note&&h.part!=='b')?'col-resize':'default';return}
+ if(!TLDRAG){TLMX=x;if(au.paused){const tt=tlT(x,tlLayout());if(tt!==null&&Date.now()-TLSK>70){TLSK=Date.now();try{vid().currentTime=Math.max(tt+OFF,0)}catch(er){}}}const h=tlHit(e);TLHOV=h.bid&&h.edge&&!h.kind?[h.bid,h.i]:null;c.style.cursor=(h.bid&&h.edge)||h.blk||(h.note&&h.part!=='b')?'col-resize':'default';return}
  if(TLDRAG.note){const bid=TLDRAG.bid,n=TE[bid].notes[TLDRAG.ni],d=(x-TLDRAG.x0)/TLZ,lv=tlLive(bid),B=lv.map(([q])=>q.start);if(lv.length){const lp=lv[lv.length-1][1];B.push(pend(bid,lp))}
  const near=t=>{let k=0,bd=1e9;B.forEach((v,j)=>{const dd=Math.abs(v-t);if(dd<bd){bd=dd;k=j}});return k};
  if(B.length>1){if(TLDRAG.part==='s'){const k=Math.min(near(TLDRAG.s0+d),near(n.end)-1);n.start=B[Math.max(0,k)]}else if(TLDRAG.part==='e'){const k=Math.max(near(TLDRAG.e0+d),near(n.start)+1);n.end=B[Math.min(B.length-1,k)]}
@@ -2261,7 +2523,9 @@ function tlNorm(bid){const b=TE[bid];if(b.c0===undefined&&b.c1===undefined)retur
 function tlAround(){const p=tlSel();if(!p)return;playRange(p.start-1.2,p.start+1.2)}
 function tlText(v){const p=tlSel();if(!p)return;p.text=v.replace(/↵/g,'\n');dirty();tlDraw()}
 function tlSpk(v){const p=tlSel();if(!p)return;snap();p.speaker=parseInt(v);dirty();tlDraw()}
-function tlDel(cut){const p=tlSel();if(!p)return;snap();if(cut)p.deleted=true;else{const a=TE[TLSEL[0]].pieces;a.splice(TLSEL[1],1)}TLSEL=null;dirty();renderTelops();tlDraw()}
+function tlDel(cut){const p=tlSel();if(!p)return;const bid=TLSEL[0],i=TLSEL[1],ps=TE[bid].pieces;if(cut){snap();p.deleted=true;TLSEL=null;dirty();renderTelops();tlDraw();return}
+ if(p.speaker>=0&&!p.ov&&!(p.text||'').startsWith('※')){const k=tnext(ps,i,-1);if(k>=0){tmerge(bid,k,undefined,i);TLSEL=[bid,k];tlDraw();return}}
+ snap();ps.splice(i,1);TLSEL=null;dirty();renderTelops();tlDraw()}
 
 </script><div class="btov" id="bt"></div><div class="btov" id="wd"></div><div class="tlov" id="tl"></div>
 <script>
@@ -2287,7 +2551,7 @@ function btRender(){const el=document.getElementById('bt');if(!BT)return;const n
  if(BT.k>=n){el.innerHTML='<h2>終了</h2><div class="btbar"><button class="p" onclick="btClose()">✕</button></div>';return}
  let src='';BT.chars.forEach((c,i)=>{src+='<span class="btc">'+esc(c)+'</span>';if(i<BT.chars.length-1){const m=BT.marks[i];src+='<span class="btg g'+m+'" onclick="btTog('+i+')">'+(m===1?'↵':(m===2?'┃':''))+'</span>'}});
  const prev=btTelops().map(t=>'<div class="btcard">'+t.map(esc).join('<br>')+'</div>').join('');
- el.innerHTML='<h2>改行テスト　'+(BT.k+1)+' / '+n+'</h2><div class="btsrc">'+src+'</div><div class="btprev">'+prev+'</div><div class="btbar"><button class="p" onclick="btNext(true)">決定</button><button onclick="btNext(false)">スキップ</button><button onclick="btLoad()">リセット</button><button onclick="btClose()">✕</button></div>'}
+ el.innerHTML='<h2>改行テスト　'+(BT.k+1)+' / '+n+'</h2><div class="btsrc">'+src+'</div><div class="btprev">'+prev+'</div><div class="btbar"><button class="p" onclick="btNext(true)">決定</button><button onclick="btNext(false)">スキップ</button><button onclick="btClose()">✕</button></div>'}
 async function btNext(save){if(!BT)return;if(save){await api('/api/breaktest',{telops:btTelops()});BT.saved++}BT.k++;btLoad()}
 document.addEventListener('keydown',e=>{if(!BT)return;if(e.key==='Escape'){btClose()}else if(e.key==='Enter'&&!e.isComposing){e.preventDefault();if(BT.k<BT.items.length)btNext(true);else btClose()}},true);
 </script>

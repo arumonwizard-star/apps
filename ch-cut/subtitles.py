@@ -167,7 +167,7 @@ class Speakers:
         if speech.sum() >= 40:
             c, a = kmeans_1d(d[speech])
             sizes = [(a == 0).mean(), (a == 1).mean()]
-            if abs(c[1] - c[0]) >= 5.0 and min(sizes) >= 0.08:
+            if abs(c[1] - c[0]) >= 5.0 and min(sizes) >= 0.08 and os.environ.get("CHCUT_CHANNELS") == "1":   # the level difference of the two channels is not used: the voice itself decides
                 self.mode, thr = "channels", float(c.mean())
                 lab = np.where(d >= thr, 0, 1)                   # larger L-R = speaker 1
                 try:
@@ -440,7 +440,7 @@ def _cut_piece(p, cut, speakers=None):
 _WORDS = ["遊んでいき", "遊んでいく", "遊んでい", "落ち着いて", "おちついて", "落ち着い", "大事なことを", "大事なこと", "やっぱり", "やっぱ",
           "思ってもみなかった", "思っても見なかった", "もらって", "もらっ", "思ってもみな", "繰り返す", "繰り返し", "繰り返", "よろしく", "ありがとう", "じゃあ", "ちゃんと", "だから", "けど", "から", "ので", "のに", "ため", "こと", "もの",
           "ほど", "ない", "ます", "です", "てる", "てた", "とか", "って", "ように", "みたい", "ばかり", "なんで", "どう", "そう",
-          "ちょう", "めっちゃ", "やっぱ", "でも", "まぁ", "もう", "けない", "いけ", "なきゃ", "いうか", "ってい", "って感", "んだな", "罰ゲーム", "ゲーム", "ありえ", "ねえ", "えんだ", "じゃね", "んだよ", "歯磨き", "やめ", "最新話", "かった", "んじゃ", "だった", "めちゃくちゃ", "めちゃ", "かっこよすぎ", "かっこよかった", "カッコよかった", "かっこよ", "カッコよ", "いいね", "フォロー", "完結", "決断", "ピンチ", "として", "ては", "たら", "だと", "なら", "ので", "ている", "ていた", "いつ", "わかっ", "なんで", "どこ", "くなかっ", "くない", "くなっ", "だった", "とはね"]
+          "ちょう", "めっちゃ", "やっぱ", "でも", "まぁ", "もう", "けない", "いけ", "なきゃ", "いうか", "っていう", "ってい", "という", "ところ", "らしい", "派生", "みたいな", "って感", "んだな", "罰ゲーム", "ゲーム", "ありえ", "ねえ", "えんだ", "じゃね", "んだよ", "歯磨き", "やめ", "最新話", "かった", "んじゃ", "だった", "めちゃくちゃ", "めちゃ", "かっこよすぎ", "かっこよかった", "カッコよかった", "かっこよ", "カッコよ", "いいね", "フォロー", "完結", "決断", "ピンチ", "として", "ては", "たら", "だと", "なら", "ので", "ている", "ていた", "いつ", "わかっ", "なんで", "どこ", "くなかっ", "くない", "くなっ", "だった", "とはね"]
 
 
 _LEAD_ADV = ("また", "やっぱ", "やっぱり", "ちょっと", "まず", "でも", "だから", "じゃあ", "ほんと", "本当に", "絶対", "全然", "結構", "多分", "たぶん", "マジで", "めっちゃ", "さっき")
@@ -469,6 +469,64 @@ def _char_class2(ch):
 _PREV_BOTTOM = [False]      # the telop just before was bottom-heavy (user: then keep bottom-heavy, for readability)
 
 
+_JPB = {}
+_JPBAD = {}
+
+
+def _jp_bounds(text):
+    """Places inside text where a word ends (jp_seg): a line is only broken there.  None when the splitter is not available."""
+    if text in _JPB:
+        return _JPB[text]
+    try:
+        import jp_seg
+        info = jp_seg.chunk_info(text)
+        r = {e for _s, e, _p in info if 0 < e < len(text)}
+        _JPBAD[text] = {s_ for s_, _e, p in info if p in ("助詞", "助動詞") and s_ > 0}      # a line does not start with a particle
+    except Exception:   # noqa: BLE001
+        r = None
+    if len(_JPB) > 5000:
+        _JPB.clear()
+    _JPB[text] = r
+    return r
+
+
+def fix_word_cuts(pieces, maxmove=4):
+    """Two telops in a row are never cut inside a word ("話し合いがで|きない"): the letters between the cut and the nearest
+    word boundary go over to the other telop, and the head of the second moves by the time those letters take."""
+    sp = sorted((p for p in pieces if p.get("speaker", 0) >= 0 and (p.get("text") or "").strip() and p["text"] != "www"
+                 and not p["text"].startswith("※") and not p.get("ov") and not p.get("m")), key=lambda p: p["start"])
+
+    def mo(t):
+        return max(sum(_mora_w(c) for c in t if not c.isspace()), 0.5)
+    for i in range(len(sp) - 1):
+        a, b = sp[i], sp[i + 1]
+        ta, tb = a["text"].replace("\n", ""), b["text"].replace("\n", "")
+        if a.get("speaker") != b.get("speaker") or len(ta) < 2 or len(tb) < 2 or ta[-1] in "！？!?。" or b["start"] - a["start"] > 6:
+            continue
+        whole, bd = ta + tb, len(ta)
+        bs = _jp_bounds(whole)
+        if not bs or bd in bs:
+            continue
+        cand = [x for x in bs if 2 <= x <= len(whole) - 2 and abs(x - bd) <= maxmove]
+        if not cand:
+            continue
+        nb = min(cand, key=lambda x: (abs(x - bd), x))
+        new_a, new_b = whole[:nb], whole[nb:]
+        end_b = b.get("end") or (sp[i + 2]["start"] if i + 2 < len(sp) else b["start"] + 1.0)
+        frac = mo(new_a) / mo(whole)
+        ns = a["start"] + (end_b - a["start"]) * frac
+        ns = min(max(ns, a["start"] + 0.12), end_b - 0.12)
+        a["text"], b["text"] = _split_two_lines(new_a), _split_two_lines(new_b)
+        for q_ in (a, b):
+            q_.pop("alt", None)
+            q_.pop("src", None)
+        b["start"] = round(ns, 3)
+        if "s0" in b:
+            b["s0"] = b["start"]
+        a["end"] = b["start"]
+    return pieces
+
+
 def _split_two_lines(text):
     if "\n" not in text and text in _EX["telop"]:
         return "\n".join(_EX["telop"][text])            # broken by hand in the "改行テスト": the same sentence is broken the same way
@@ -483,72 +541,78 @@ def _split_two_lines(text):
     # user rule: top-heavy first; equal halves only when nothing else works; after a bottom-heavy telop stay bottom-heavy
     want = (len(text) + (-1.0 if _PREV_BOTTOM[0] else max(RULES["first_line_longer_by"], 1.0))) / 2.0
     learned = {c: n for c, n in (RULES.get("break_after") or {}).items() if (n >= 2 or c in PARTICLES) and c in "でがはをにのともやてたるだねよかなじ"}
+    bset = _jp_bounds(text)
     best, best_d = None, 1e9
-    for i in range(2, len(text) - 1):
-        prev, nxt = text[i - 1], text[i]
-        if i in banned:
-            continue
-        if nxt in "ぁぃぅぇぉゃゅょん" or prev == "っ" or (i + 1 < len(text) and text[i + 1] in "ゃゅょ"):
-            continue                         # never inside a word's ending ("なっ|ちゃ", "もん|じゃ")
-        if text[i - 2:i] in ("ちゃ", "じゃ", "しゃ", "きゃ", "ひゃ", "にゃ", "みゃ") and nxt in "うえおいんっあ":
-            continue                         # "なっちゃ|う"
-        if _char_class(prev) == _char_class(nxt) and _char_class(prev) in "ka":
-            continue                         # not inside a katakana word or a number
-        bonus = 0.0
-        if prev in PARTICLES:
-            bonus = 1.5
-        if prev in learned:
-            bonus = max(bonus, 1.5 + min(learned[prev], 3) * 0.2)
-        if prev in "！？!?":
-            bonus = 3
-        if text[:i] in _LEAD_ADV or (text[:2] in ("お前", "俺は", "みんな"[:2]) and text[2:i] in _LEAD_ADV) or (text[:3] == "みんな" and text[3:i] in _LEAD_ADV):
-            bonus += 3.0                     # "また / 動画消されんだろ": a short opening adverb stands alone
-        if text[i:i + 2] in ("って", "という", "みたい") or text[i:i + 3] == "ていう":
-            bonus += 3.0                     # "…やるんだな / って感じ"
-        bonus += _pair_bonus(prev, nxt)
-        kp, kn = _char_class2(prev), _char_class2(nxt)
-        if kp == "kanji" and kn == "hira" and nxt not in "はがをにでのとも":
-            bonus -= 4.0                     # the kana tail of a word ("好|きだった")
-        if text[max(i - 2, 0):i] in ("さん", "くん", "ちゃん", "先輩", "社長") and kn != "hira" or (text[max(i - 2, 0):i] in ("さん", "くん") and nxt not in "はがをにでのともへ"):
-            bonus += 10.0                    # "林原さん|いい声"
-        if kp == "hira" and kn == "hira" and prev in "いしだ" and nxt not in "はがをにでのともへねよかな":
-            bonus -= 5.0                     # "い|い声", "し|てる": these endings are not break points on their own
-        if text[max(i - 2, 0):i] == "たら" and nxt not in "はがをにでのともへ":
-            bonus += 3.0                     # "増えたら|一緒に": the end of an if-clause
-        if text[i:i + 2] in ("どこ", "どう", "なに", "なん", "いつ") and i >= 4:
-            bonus += 2.5
-        if text[max(i - 2, 0):i] == "いつ" and nxt not in "はがをにでのともへ":
-            bonus += 3.5                     # "お前いつ|わかってんだよ", "いつ|気づいてんだよ"
-        if text[i:i + 3] == "だった" and kp == "kanji":
-            bonus += 4.0                     # "まさか堺雅人|だったとはね"
-        if text[i:i + 2] == "とは":
-            bonus -= 4.0
-        if kp == "hira" and text[i:i + 2] in ("れる", "れた", "れて", "れば", "れま", "せる", "せた", "せて", "ない", "たい", "ます", "まし", "ちゃ", "てる", "てた", "ている", "ていた") and prev not in PARTICLES:
-            bonus -= 6.0                     # "撃た|れる": a verb's ending stays with its stem
-        if nxt == "誰":
-            bonus += 2.5                     # "登場人物|誰好き"
-        if nxt in "方人目回中的性化者達版話" and kn == "kanji":
-            bonus -= 3.0                     # a suffix ("言い|方")
-        if kp == "hira" and kn in ("kanji", "kata"):
-            bonus += 1.0                     # a new content word starts
-        if kp == "kanji" and kn == "kanji":
-            bonus -= 2.5                     # inside a kanji word ("堺雅|人")
-        if kp == "hira" and kn == "hira" and prev not in PARTICLES and prev not in learned:
-            bonus -= 6.0                     # inside a kana word ("い|い声", "かっこ|よすぎ")
-        if kp == "hira" and kn == "hira" and prev in "てで" and nxt not in "はがをにのともへ":
-            bonus -= 4.0                     # "見て|ねえ", "言って|る": the te-form goes on
-        if kp == "hira" and kn == "hira" and nxt in "っーんてたでだ" and prev not in "ねよ":
-            bonus -= 5.0                     # "わか|って", "い|ない": the next kana is part of the word before it
-        if nxt in "ぁぃぅぇぉっゃゅょんー！？!?、。":
-            bonus -= 3                       # never start a line with a small kana or a mark
-        score = 1.5 * abs(i - want) - bonus
-        if i * 2 == len(text):
-            score += 2.5                     # same number of characters above and below
-        elif (len(text) - i > i) != _PREV_BOTTOM[0] and abs(len(text) - 2 * i) <= 2 and not _PREV_BOTTOM[0]:
-            score += 0.8                     # bottom-heavy only a little: top-heavy is preferred
-        score += 3.0 * (max(i - LINE_LIMIT, 0) + max(len(text) - i - LINE_LIMIT, 0))      # a line longer than 10 characters
-        if score < best_d:
-            best, best_d = i, score
+    for restrict in ((True, False) if bset else (False,)):
+        for i in range(2, len(text) - 1):
+            prev, nxt = text[i - 1], text[i]
+            if i in banned or (restrict and i not in bset):
+                continue
+            if nxt in "ぁぃぅぇぉゃゅょん" or prev == "っ" or (i + 1 < len(text) and text[i + 1] in "ゃゅょ"):
+                continue                         # never inside a word's ending ("なっ|ちゃ", "もん|じゃ")
+            if text[i - 2:i] in ("ちゃ", "じゃ", "しゃ", "きゃ", "ひゃ", "にゃ", "みゃ") and nxt in "うえおいんっあ":
+                continue                         # "なっちゃ|う"
+            if _char_class(prev) == _char_class(nxt) and _char_class(prev) in "ka":
+                continue                         # not inside a katakana word or a number
+            bonus = 0.0
+            if prev in PARTICLES:
+                bonus = 1.5
+            if prev in learned:
+                bonus = max(bonus, 1.5 + min(learned[prev], 3) * 0.2)
+            if prev in "！？!?":
+                bonus = 3
+            if text[:i] in _LEAD_ADV or (text[:2] in ("お前", "俺は", "みんな"[:2]) and text[2:i] in _LEAD_ADV) or (text[:3] == "みんな" and text[3:i] in _LEAD_ADV):
+                bonus += 3.0                     # "また / 動画消されんだろ": a short opening adverb stands alone
+            if text[i:i + 2] in ("って", "という", "みたい") or text[i:i + 3] == "ていう":
+                bonus += 3.0                     # "…やるんだな / って感じ"
+            bonus += _pair_bonus(prev, nxt)
+            kp, kn = _char_class2(prev), _char_class2(nxt)
+            if kp == "kanji" and kn == "hira" and nxt not in "はがをにでのとも":
+                bonus -= 4.0                     # the kana tail of a word ("好|きだった")
+            if text[max(i - 2, 0):i] in ("さん", "くん", "ちゃん", "先輩", "社長") and kn != "hira" or (text[max(i - 2, 0):i] in ("さん", "くん") and nxt not in "はがをにでのともへ"):
+                bonus += 10.0                    # "林原さん|いい声"
+            if kp == "hira" and kn == "hira" and prev in "いしだ" and nxt not in "はがをにでのともへねよかな":
+                bonus -= 5.0                     # "い|い声", "し|てる": these endings are not break points on their own
+            if text[max(i - 2, 0):i] == "たら" and nxt not in "はがをにでのともへ":
+                bonus += 3.0                     # "増えたら|一緒に": the end of an if-clause
+            if text[i:i + 2] in ("どこ", "どう", "なに", "なん", "いつ") and i >= 4:
+                bonus += 2.5
+            if text[max(i - 2, 0):i] == "いつ" and nxt not in "はがをにでのともへ":
+                bonus += 3.5                     # "お前いつ|わかってんだよ", "いつ|気づいてんだよ"
+            if text[i:i + 3] == "だった" and kp == "kanji":
+                bonus += 4.0                     # "まさか堺雅人|だったとはね"
+            if text[i:i + 2] == "とは":
+                bonus -= 4.0
+            if kp == "hira" and text[i:i + 2] in ("れる", "れた", "れて", "れば", "れま", "せる", "せた", "せて", "ない", "たい", "ます", "まし", "ちゃ", "てる", "てた", "ている", "ていた") and prev not in PARTICLES:
+                bonus -= 6.0                     # "撃た|れる": a verb's ending stays with its stem
+            if nxt == "誰":
+                bonus += 2.5                     # "登場人物|誰好き"
+            if nxt in "方人目回中的性化者達版話" and kn == "kanji":
+                bonus -= 3.0                     # a suffix ("言い|方")
+            if kp == "hira" and kn in ("kanji", "kata"):
+                bonus += 1.0                     # a new content word starts
+            if kp == "kanji" and kn == "kanji":
+                bonus -= 2.5                     # inside a kanji word ("堺雅|人")
+            if kp == "hira" and kn == "hira" and prev not in PARTICLES and prev not in learned:
+                bonus -= 6.0                     # inside a kana word ("い|い声", "かっこ|よすぎ")
+            if kp == "hira" and kn == "hira" and prev in "てで" and nxt not in "はがをにのともへ":
+                bonus -= 4.0                     # "見て|ねえ", "言って|る": the te-form goes on
+            if kp == "hira" and kn == "hira" and nxt in "っーんてたでだ" and prev not in "ねよ":
+                bonus -= 5.0                     # "わか|って", "い|ない": the next kana is part of the word before it
+            if nxt in "ぁぃぅぇぉっゃゅょんー！？!?、。":
+                bonus -= 3                       # never start a line with a small kana or a mark
+            if bset and i in _JPBAD.get(text, ()):
+                bonus -= 4.0                     # nor with a particle: it belongs to the word before it
+            score = 1.5 * abs(i - want) - bonus
+            if i * 2 == len(text):
+                score += 2.5                     # same number of characters above and below
+            elif (len(text) - i > i) != _PREV_BOTTOM[0] and abs(len(text) - 2 * i) <= 2 and not _PREV_BOTTOM[0]:
+                score += 0.8                     # bottom-heavy only a little: top-heavy is preferred
+            score += 3.0 * (max(i - LINE_LIMIT, 0) + max(len(text) - i - LINE_LIMIT, 0))      # a line longer than 10 characters
+            if score < best_d:
+                best, best_d = i, score
+        if best is not None:
+            break
     if best is None:
         return text
     return text[:best] + "\n" + text[best:]
@@ -743,6 +807,30 @@ def _loud_onset(speakers, t0, t1):
     return None
 
 
+def _split_heard_prefix(pieces):
+    """The script wording was put on the phrase that follows, but its first half was heard in the phrase before
+    ("なんか荒い記事を意味する" | "P-jeanっていう…"): that half belongs to the earlier phrase, not to both."""
+    for k in range(1, len(pieces)):
+        P, X = pieces[k - 1], pieces[k]
+        if P.get("_uidx") is not None or P.get("_missing") or X.get("_uidx") is None:
+            continue
+        T, h = X["text"], ps_norm(P["text"])
+        if len(h) < 4 or len(T) < 8 or X["s0"] - P["s1"] > 0.7:
+            continue
+        best = None
+        for L in range(3, len(T) - 2):
+            r = _match_ratio(ps_norm(T[:L]), h)
+            if r >= 0.65 and (best is None or r > best[0]):
+                best = (r, L)
+        if best:
+            L = best[1]
+            P["text"], X["text"] = T[:L], T[L:]
+            P["_uidx"] = X["_uidx"]
+            P.pop("ct", None)
+            X.pop("ct", None)
+    return pieces
+
+
 def _fill_missing_lines(pieces, lines, speakers, a0, a1):
     """A script line that no phrase carries but where there is talking between its neighbours was said
     (Whisper dropped or mis-heard it, e.g. a quiet "そうだな"): put the script's wording there."""
@@ -797,6 +885,35 @@ def _fill_missing_lines(pieces, lines, speakers, a0, a1):
             if un and n == un and pi not in where.values():
                 where[ui] = pi
                 break
+    for ui in range(len(units)):                # a line that was heard badly ("粗い生地" -> "荒い記事"): it is that line, not a missing one
+        if ui in where or len(norms[ui]) < 4:
+            continue
+        taken = set(where.values())
+        best = None
+        for j in range(len(pieces)):
+            if j in taken or pieces[j].get("_missing"):
+                continue
+            for m in (1, 2, 3):
+                run = pieces[j:j + m]
+                if len(run) < m or any((j + q) in taken or run[q].get("_missing") for q in range(m)):
+                    break
+                r = _match_ratio(norms[ui], "".join(ps_norm(x["text"]) for x in run))
+                if r >= 0.6 and (best is None or r > best[0]):
+                    best = (r, j, m)
+        if best:
+            _, j, m = best
+            first, last = pieces[j], pieces[j + m - 1]
+            first["text"] = units[ui]
+            first["end"] = last["end"]
+            first["s1"] = last.get("s1", last["end"])
+            first.pop("ct", None)
+            first["_uidx"] = ui
+            del pieces[j + 1:j + m]
+            where = {}
+            for pi, p_ in enumerate(pieces):
+                for u_ in (p_.get("_uidxs") or [p_.get("_uidx")]):
+                    if u_ is not None and u_ not in where:
+                        where[u_] = pi
     missing = [ui for ui in range(len(units)) if ui not in where and len(norms[ui]) >= 2]
     if not missing or getattr(speakers, "env", None) is None:
         return pieces
@@ -1392,7 +1509,7 @@ def _pace_fix(speech, speakers, a1):
         m = moras(speech[i])
         return (end(i) - speech[i]["start"]) / m if m else 9.0
 
-    FAST, SLACK = 0.035, 0.115          # only the impossible ones: a quicker-than-human phrase beside a slow one
+    FAST, SLACK = 0.05, 0.115          # only the impossible ones: a quicker-than-human phrase beside a slow one
 
     def who(q):
         try:
@@ -1428,6 +1545,249 @@ def _pace_fix(speech, speakers, a1):
             speech[tgt]["start"] = nb
             if os.environ.get("CHCUT_DEBUG"):
                 print("PACEFIX", q["text"][:8], round(old, 3), "->", round(nb, 3), file=sys.stderr)
+
+
+def snap_to_onsets(pieces, onsets, win=0.15):
+    """A telop starts where a mountain of the waveform starts: the head of every phrase goes to the nearest onset within
+    `win` seconds (minus one frame's worth of lead, as in the hand-made edits)."""
+    import bisect
+    sp = sorted((p for p in pieces if p.get("speaker", 0) >= 0 and not p.get("_fixed") and (p.get("text") or "").strip()),
+                key=lambda p: p["start"])
+    for i, p in enumerate(sp):
+        s0 = p["start"]
+        k = bisect.bisect_left(onsets, s0 - win)
+        cand = [o for o in onsets[k:k + 12] if abs(o - s0) <= win]
+        if not cand:
+            continue
+        ns = min(cand, key=lambda o: abs(o - s0)) - 0.01
+        lo = sp[i - 1]["start"] + 0.12 if i else -1e9
+        hi = p.get("end", s0 + 1) - 0.12
+        if lo < ns < hi and abs(ns - s0) > 0.005:
+            p["start"] = round(ns, 3)
+            if "s0" in p:
+                p["s0"] = round(ns, 3)
+    return pieces
+
+
+def silence_ends(env, min_sil=0.1, margin=18.0):
+    """Moments (s) where the voice comes back after a silence of at least min_sil: env is the level (dB) every 10 ms."""
+    if env is None or len(env) < 100:
+        return []
+    floor = float(np.percentile(env, 10))
+    voiced = env > floor + margin
+    out, q = [], 0
+    need = int(round(min_sil * 100))
+    for k in range(len(voiced)):
+        if voiced[k]:
+            if q >= need:
+                out.append(round(k / 100.0, 3))
+            q = 0
+        else:
+            q += 1
+    return out
+
+
+def align_starts(pieces, onsets, a0, a1, back=0.5, fwd=1.0, w_move=0.9, w_free=None, hard=None, env=None):
+    """Every phrase begins where the voice starts after a silence (the head of a mountain of the waveform).  Each head
+    may move to one of the onsets near it; the whole line of heads is chosen together (dynamic programming) so that a
+    phrase keeps enough time for its letters and a head that already sits on an onset stays put.
+    The laughter ("www") begins at the first onset after the words before it could have been said."""
+    import bisect
+    if w_free is None:
+        w_free = float(os.environ.get("CHCUT_WFREE", "0.3"))
+    if not onsets:
+        return pieces
+    hard = hard if hard is not None else onsets          # the moments the voice comes back after a silence
+    sp = sorted((p for p in pieces if p.get("speaker", 0) >= 0 and (p.get("text") or "").strip() and p["text"] != "www"
+                 and not p["text"].startswith("※") and not p.get("_fixed")), key=lambda p: p["start"])
+    n = len(sp)
+
+    def moras(p):
+        return max(sum(_mora_w(c) for c in p["text"] if not c.isspace() and c not in "wｗ"), 1.0)
+
+    def near_on(t, tol=0.03):
+        k = bisect.bisect_left(onsets, t - tol)
+        return k < len(onsets) and onsets[k] <= t + tol
+    if n >= 2:
+        C = []
+        for i, p in enumerate(sp):
+            S = p["start"]
+            if i == 0 or S <= a0 + 0.3:
+                C.append([(S, 0.0)])
+                continue
+            c = [(S, 0.0 if near_on(S + 0.01) else w_free)]
+            k = bisect.bisect_left(hard, S - back)
+            for o in hard[k:k + 40]:
+                if o > S + fwd:
+                    break
+                t = round(o - 0.01, 3)
+                if abs(t - S) > 0.02:
+                    c.append((t, w_move * abs(t - S)))
+            C.append(c)
+        INF = 1e9
+        M = [moras(p) for p in sp]
+        dp = [[INF] * len(c) for c in C]
+        bk = [[-1] * len(c) for c in C]
+        for k, (t, cost) in enumerate(C[0]):
+            dp[0][k] = cost
+        for i in range(1, n):
+            for k, (t, cost) in enumerate(C[i]):
+                for j, (tp, _c) in enumerate(C[i - 1]):
+                    if dp[i - 1][j] >= INF:
+                        continue
+                    d = t - tp
+                    m = M[i - 1]
+                    if d < max(0.1, 0.045 * m):
+                        continue
+                    r = d / m
+                    pen = (0.07 - r) * m * 5 if (m >= 2 and r < 0.07) else 0.0
+                    v = dp[i - 1][j] + cost + pen
+                    if v < dp[i][k]:
+                        dp[i][k] = v
+                        bk[i][k] = j
+        # the last phrase has to fit before the end of the block
+        best, bi = INF, -1
+        for k, (t, cost) in enumerate(C[n - 1]):
+            if dp[n - 1][k] < INF and (a1 - t) >= 0.05 * M[n - 1] * 0.5 and dp[n - 1][k] < best:
+                best, bi = dp[n - 1][k], k
+        if bi >= 0:
+            path = [0] * n
+            k = bi
+            for i in range(n - 1, -1, -1):
+                path[i] = k
+                k = bk[i][k]
+            olds = [p["start"] for p in sp]
+            for i, p in enumerate(sp):
+                t = C[i][path[i]][0]
+                if abs(t - p["start"]) > 0.005:
+                    p["start"] = round(t, 3)
+                    if "s0" in p:
+                        p["s0"] = round(t, 3)
+            for i, p in enumerate(sp):          # the end follows the next head where it did before
+                nxt = sp[i + 1]["start"] if i + 1 < n else None
+                if nxt is not None and abs(p.get("end", 0) - olds[i + 1]) < 0.03:
+                    p["end"] = nxt
+    # laughter: it starts at the first onset after the words in front of it could have been said
+    for w in pieces:
+        if w.get("text") != "www" or w.get("_fixed"):
+            continue
+        S = w["start"]
+        prev = [p for p in sp if p["start"] < S - 0.05]
+        low = prev[-1]["start"] + max(0.3, 0.06 * moras(prev[-1])) if prev else S - 0.3
+        if env is not None and S >= low - 0.05:
+            # a weak bump (a breath) sits where the laughter is said to begin, and the real laughter rises soon after it
+            i0, i1 = int(S * 100), min(int((S + 0.9) * 100), len(env) - 5)
+            if i1 - i0 > 30:
+                sm_ = np.convolve(env, np.ones(3) / 3.0, mode="same")
+                pk_ = float(np.max(sm_[i0:i1]))
+                j_ = i0
+                while j_ < i1 and float(np.max(sm_[j_:j_ + 12])) < pk_ - 12.0:
+                    j_ += 1
+                if j_ - i0 >= 8 and float(np.max(sm_[i0:i0 + 12])) < pk_ - 12.0 and w.get("end", S + 9) - j_ / 100.0 > 0.2:
+                    w["start"] = round(j_ / 100.0 - 0.02, 3)
+                    continue
+        if near_on(S + 0.01, 0.05) and S >= low:
+            continue
+        k = bisect.bisect_left(hard, max(low, S - 0.3))
+        cand = [o for o in hard[k:k + 30] if o <= S + 1.0 and o >= low]
+        if cand:
+            t = round(min(cand, key=lambda o: abs(o - S)) - 0.01, 3)
+            if t < w.get("end", t + 1) - 0.15:
+                w["start"] = t
+    return pieces
+
+
+def _force_pace(speech, a1, fast=0.05, want=0.065):
+    """Last guard: a phrase still impossibly fast takes time from its neighbour that can spare it (any speaker)."""
+    n = len(speech)
+
+    def moras(q):
+        return sum(_mora_w(c) for c in q["text"] if not c.isspace() and c not in "wｗ")
+
+    def end(i):
+        return speech[i + 1]["start"] if i + 1 < n else a1
+    for i in range(n):
+        m = moras(speech[i])
+        if m < 3 or re.search(r"[wｗ]{2}", speech[i]["text"]):
+            continue
+        d = end(i) - speech[i]["start"]
+        if d / m >= fast:
+            continue
+        need = want * m - d
+        if i > 0:
+            pm = moras(speech[i - 1])
+            spare = (speech[i]["start"] - speech[i - 1]["start"]) - 0.07 * max(pm, 1)
+            take = min(need, max(spare, 0.0))
+            if take > 0.02:
+                speech[i]["start"] = round(speech[i]["start"] - take, 3)
+                need -= take
+        if need > 0.02 and i + 1 < n:
+            nm = moras(speech[i + 1])
+            spare = (end(i + 1) - speech[i + 1]["start"]) - 0.07 * max(nm, 1)
+            take = min(need, max(spare, 0.0))
+            if take > 0.02:
+                speech[i + 1]["start"] = round(speech[i + 1]["start"] + take, 3)
+
+
+def _chain_pace(speech, speakers, a1, fast=0.075, slow=0.2):
+    """A line cannot be said faster than people speak (about 13 mora a second).  When one is, the lines of the same
+    speaker that run on from it are timed again at one even pace over their common span, every cut moved to the nearest
+    voice onset.  What is wrong is then the whole chain, not only one edge."""
+    n = len(speech)
+    if n < 2:
+        return
+
+    def moras(q):
+        return sum(_mora_w(c) for c in q["text"] if not c.isspace() and c not in "wｗ")
+
+    def end(i):
+        return speech[i + 1]["start"] if i + 1 < n else a1
+
+    def who(q):
+        try:
+            return speakers.who(q.get("s0", q["start"]), max(q.get("s1", q["start"] + 0.3), q.get("s0", q["start"]) + 0.3))
+        except Exception:   # noqa: BLE001
+            return None
+
+    def ok(i):
+        q = speech[i]
+        return not q.get("_fixed") and not re.search(r"[wｗ]{2}", q["text"]) and moras(q) > 0
+    done = set()
+    for i in range(n):
+        q = speech[i]
+        m = moras(q)
+        if i in done or m < 4 or not ok(i) or (end(i) - q["start"]) / m >= fast:
+            continue
+        lo = hi = i
+        while lo > 0 and ok(lo - 1) and who(speech[lo - 1]) == who(q) and i - lo < 3:
+            lo -= 1
+        while hi + 1 < n and ok(hi + 1) and who(speech[hi + 1]) == who(q) and hi - i < 3:
+            hi += 1
+        # do not borrow time from a line that is itself slow because of a pause: use the span as it is
+        t0, t1 = speech[lo]["start"], end(hi)
+        mm = [moras(speech[j]) for j in range(lo, hi + 1)]
+        tot = sum(mm)
+        if lo == hi or tot == 0 or (t1 - t0) / tot < 0.05:
+            continue
+        cuts, acc = [], 0
+        for k in range(lo, hi):
+            acc += mm[k - lo]
+            bs = t0 + (t1 - t0) * acc / tot
+            ro = _rise_onset(speakers, bs, 0.2, 0.2, rise_db=8.0)
+            cuts.append(((ro - 0.02) if ro is not None else bs))
+        prev = t0
+        good = True
+        for c in cuts:
+            if c < prev + 0.2:
+                good = False
+            prev = c
+        if not good or t1 - prev < 0.2:
+            continue
+        for k, c in zip(range(lo + 1, hi + 1), cuts):
+            if os.environ.get("CHCUT_DEBUG"):
+                print("CHAINPACE", speech[k]["text"][:8], round(speech[k]["start"], 3), "->", round(c, 3), file=sys.stderr)
+            speech[k]["start"] = c
+        done.update(range(lo, hi + 1))
 
 
 def _snap_start(speakers, s0, s1, k):
@@ -2097,6 +2457,16 @@ def make_pieces(a0, a1, segs, tokens, block, speakers, runs=None, until=None, ma
                 out_.append(dict(p, text=m_.group(2), _fixed=True))
             else:
                 # the head is part of the heard phrase: the body starts where the sound dips and rises again
+                drawn_ = False
+                if getattr(speakers, "env", None) is not None:
+                    # the head is drawn out ("いやー"): its voice ends in a silence and the body begins where the voice returns
+                    sp_ = _voiced_spans(speakers, ps0 - 0.1, ps1 + 0.05, margin_db=10.0, min_len=0.08, join=0.1)
+                    sp_ = [s_ for s_ in sp_ if s_[1] > ps0 + 0.15]
+                    if len(sp_) >= 2 and sp_[1][0] - sp_[0][1] >= 0.15 and ps0 + 0.25 <= sp_[1][0] - 0.02 <= ps1 - 0.3 and sp_[0][1] - max(sp_[0][0], ps0) >= 0.25:
+                        tm_ = sp_[1][0] - 0.02
+                        drawn_ = True
+                        c2 = [tm_ + (ps1 - tm_) * (x + 0.5) / len(c2) for x in range(len(c2))]
+                        c1 = [ps0 + (tm_ - ps0) * (x + 0.5) / max(len(c1), 1) for x in range(len(c1))] if c1 else [ps0]
                 ro_ = _rise_onset(speakers, ps0 + 0.42, 0.24, 0.28) if ("ー" in m_.group(1) and getattr(speakers, "env", None) is not None) else None
                 if ro_ is not None and ps0 + 0.18 <= ro_ <= ps0 + 0.75 and ro_ < ps1 - 0.2:
                     tm_ = ro_ - 0.03
@@ -2108,7 +2478,8 @@ def make_pieces(a0, a1, segs, tokens, block, speakers, runs=None, until=None, ma
                     ro2_ = _rise_onset(speakers, ps0 + 0.2, 0.2, 0.3, rise_db=10.0)
                     if ro2_ is not None and ps0 + 0.05 < ro2_ < ps0 + 0.5 and ro2_ + 0.45 < ps1:
                         hs_ = ro2_ - 0.02
-                        tm_ = hs_ + 0.2
+                        if not drawn_:
+                            tm_ = hs_ + 0.2
                         c2 = [tm_ + (ps1 - tm_) * (x + 0.5) / len(c2) for x in range(len(c2))]
                         c1 = [hs_ + (tm_ - hs_) * (x + 0.5) / max(len(c1), 1) for x in range(len(c1))] if c1 else [hs_]
                 if hs_ is not None:
@@ -2121,14 +2492,23 @@ def make_pieces(a0, a1, segs, tokens, block, speakers, runs=None, until=None, ma
     if os.environ.get('CHCUT_DEBUG'):
         print('HEAD', [(round(q.get('s0',q['start']),3), round(q.get('s1',q['end']),3), q['text'], len(q.get('ct') or [])) for q in pieces][:4], file=sys.stderr)
     pieces = out_
+    pieces = _split_heard_prefix(pieces)
     pieces = _fill_missing_lines(pieces, lines, speakers, a0, a1)
     if RULES.get("pause_cut"):                 # off: a pause inside a word (っ etc.) made too many wrong cuts
         pieces = [q for q in (_cut_at_pause(p, speakers) for p in pieces) for q in q]
     # drop a phrase that only repeats the end of the one before (same speaker)
     keep = []
+    scr_ = "".join((l.get("norm") or "") for l in (lines or []))
     for p in pieces:
         if keep and speakers.at(p["start"]) == speakers.at(keep[-1]["start"]) and \
-                ps_norm(p["text"]) and ps_norm(p["text"]) in ps_norm(keep[-1]["text"]):
+                ps_norm(p["text"]) and ps_norm(p["text"]) in ps_norm(keep[-1]["text"]) \
+                and not (len(ps_norm(p["text"])) >= 2 and ps_norm(p["text"]) * 2 in scr_):
+            continue
+        if keep and ps_norm(p["text"]) and ps_norm(p["text"]) == ps_norm(keep[-1]["text"]) \
+                and len(ps_norm(p["text"])) >= 2 and ps_norm(p["text"]) * 2 in scr_ and p["start"] - keep[-1]["start"] < 1.5:
+            keep[-1]["text"] += p["text"]                  # the script says it twice ("言い過ぎ言い過ぎ"): once, written twice, on one telop
+            if p.get("s1"):
+                keep[-1]["s1"] = p["s1"]
             continue
         keep.append(p)
     pieces = keep
@@ -2271,6 +2651,9 @@ def make_pieces(a0, a1, segs, tokens, block, speakers, runs=None, until=None, ma
             p["start"] = ro_ - 0.02
     _tr("postlaugh")
     _pace_fix(speech, speakers, a1)
+    _force_pace(speech, a1)
+    if os.environ.get("CHCUT_CHAIN") != "0":     # only the impossible ones (over ~18 mora a second)
+        _chain_pace(speech, speakers, a1, fast=0.055)
     _tr("pace")
     for i, p in enumerate(speech):
         p["end"] = speech[i + 1]["start"] if i + 1 < len(speech) else a1
@@ -2293,12 +2676,14 @@ def make_pieces(a0, a1, segs, tokens, block, speakers, runs=None, until=None, ma
         _alternate_speakers(pieces, lines, speakers)
     except Exception:   # noqa: BLE001
         pass
+    if os.environ.get("CHCUT_KEYS"):
+        for p in pieces:
+            print("KEYS", round(p["start"], 2), p["text"][:8].replace("\n", ""), {k: (round(v, 2) if isinstance(v, float) else v) for k, v in p.items() if k not in ("text", "start", "end")}, file=sys.stderr)
     return [p for p in pieces if p["end"] - p["start"] > 0.05 or p["text"] == "www"]
 
 
-def _voice_labels(mono, m, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
-    """Two voices in one channel: the spectral shape of each 0.3 s stretch (MFCC) is clustered into two groups.
-    The group with the lower voice is speaker 0.  None when the two groups are not clearly there."""
+def _voice_feats(mono, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
+    """The spectral shape (MFCC) and the pitch of each 0.3 s stretch of speech: (frame indexes, features, log pitch)."""
     hop, win = int(hop_s * SR), int(win_s * SR)
     f = np.fft.rfftfreq(win, 1.0 / SR)
     mel = lambda h: 2595 * np.log10(1 + h / 700.0)
@@ -2320,10 +2705,28 @@ def _voice_labels(mono, m, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
         p = pitch(mono, c0 / SR, (c0 + win) / SR)
         f0.append(np.log(p) if p else np.nan)
         idx.append(i)
+    return np.array(idx), (np.array(feats)[:, 1:] if feats else np.zeros((0, nc - 1))), np.array(f0)
+
+
+VOICEPRINT_FILE = Path(__file__).resolve().parent / "presets" / "voiceprints.json"
+
+
+def _voiceprints():
+    try:
+        d = json.loads(Path(os.environ.get("CHCUT_VP") or VOICEPRINT_FILE).read_text(encoding="utf-8"))
+        return [np.array(d["0"]), np.array(d["1"])]
+    except Exception:   # noqa: BLE001
+        return None
+
+
+def _voice_labels(mono, m, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
+    """Two voices in one channel: the spectral shape of each 0.3 s stretch (MFCC) is clustered into two groups.
+    Which group is チ (speaker 0) and which is ホ (speaker 1) is decided by the stored voiceprints (presets/voiceprints.json,
+    learned from what the person corrected); without them the lower voice is speaker 0.  None when the two groups are not clearly there."""
+    idx, F, f0 = _voice_feats(mono, speech, hop_s, win_s, nm, nc)
     if len(idx) < 60:
         return None
-    X = np.array(feats)[:, 1:]
-    X = (X - X.mean(0)) / (X.std(0) + 1e-9)
+    X = (F - F.mean(0)) / (F.std(0) + 1e-9)
     best = None
     for sd in range(8):
         r = np.random.RandomState(sd)
@@ -2340,10 +2743,18 @@ def _voice_labels(mono, m, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
     a = best[1]
     if min((a == 0).mean(), (a == 1).mean()) < 0.15:
         return None
-    f0 = np.array(f0)
-    m0, m1 = np.nanmean(f0[a == 0]), np.nanmean(f0[a == 1])
-    if np.isfinite(m0) and np.isfinite(m1) and m0 > m1:
-        a = 1 - a                                   # the lower voice is speaker 0
+    vp = _voiceprints()
+    if vp is not None:
+        mu = [F[a == j].mean(0) for j in (0, 1)]
+        d_keep = np.linalg.norm(mu[0] - vp[0]) + np.linalg.norm(mu[1] - vp[1])
+        d_swap = np.linalg.norm(mu[0] - vp[1]) + np.linalg.norm(mu[1] - vp[0])
+        if d_swap < d_keep:
+            a = 1 - a
+    else:
+        f0 = np.array(f0)
+        m0, m1 = np.nanmean(f0[a == 0]), np.nanmean(f0[a == 1])
+        if np.isfinite(m0) and np.isfinite(m1) and m0 > m1:
+            a = 1 - a                                   # the lower voice is speaker 0
     lab = np.full(m, -1)
     lab[np.array(idx)] = a
     return lab
@@ -2535,11 +2946,23 @@ def find_unheard(a0, a1, segs, runs, extra_min=0.15):
 def unheard_pieces(pieces, a0, a1, segs, runs, speakers, min_len=0.45):
     """A voice that Whisper did not hear at all and that no telop covers (a mumble, a word it dropped): a telop "（？）"
     for the stretch, so that the sound does not pass without a mark.  [{start, end, text, speaker}]"""
-    cover = []
-    for sg in segs:
-        cover.append((sg["start"] - 0.15, sg["end"] + 0.15))
+    import os as _os
+    cover = []                       # only what the telops show covers a sound: a long Whisper segment may hold voices it never wrote down
     for p in pieces:
-        cover.append((p["start"] - 0.15, p.get("end", p["start"] + 0.5) + 0.15))
+        ct_ = p.get("ct") or []
+        ev = ct_[-1] if ct_ else p.get("s1", p.get("end", p["start"] + 0.5))
+        ev = min(max(ev, p["start"] + 0.2), p.get("end", ev) + 0.05)
+        if p.get("text") != "www" and (p.get("text") or "").strip():      # Whisper's times run early: the tail of the phrase is still its own voice
+            mo_ = sum(_mora_w(c) for c in p["text"] if not c.isspace() and c not in "wｗ")
+            if _os.environ.get("CHCUT_DEBUG"):
+                print("TAILSPANS", p["text"][:4], round(ev, 2), _voiced_spans(speakers, ev - 0.1, ev + 1.0, margin_db=12.0, min_len=0.05, join=0.25), file=sys.stderr)
+            for x_, y_ in _voiced_spans(speakers, ev - 0.1, ev + 1.0, margin_db=12.0, min_len=0.05, join=0.25):
+                if x_ - 0.25 <= ev <= y_ and 0 < y_ - ev <= 1.0:
+                    ev = max(ev, min(y_, p["start"] + 0.2 * mo_ + 0.2, p.get("end", y_) + 0.05))
+                    break
+        cover.append((p["start"] - 0.12, ev + 0.08))
+        if _os.environ.get("CHCUT_DEBUG"):
+            print("COVER", p["text"][:6], round(p["start"], 2), round(cover[-1][1], 2), p.get("ct") and p["ct"][-1], p.get("s1"), file=sys.stderr)
     cover.sort()
     merged = []
     for x, y in cover:
@@ -2564,11 +2987,20 @@ def unheard_pieces(pieces, a0, a1, segs, runs, speakers, min_len=0.45):
             gaps.append((cur, y))
         for g0, g1 in gaps:
             if g1 - g0 >= min_len:
-                try:
-                    sp = speakers.who(g0, g1) if speakers is not None else 0
-                except Exception:   # noqa: BLE001
-                    sp = 0
-                out.append({"start": round(g0, 3), "end": round(g1, 3), "text": "（？）", "speaker": sp if sp in (0, 1) else 0})
+                parts = [(g0, g1)]
+                if g1 - g0 >= 0.9 and getattr(speakers, "env", None) is not None:      # one （？） for every swell of the voice
+                    try:
+                        parts = [(max(a_, g0), min(b_, g1)) for a_, b_ in _voiced_spans(speakers, g0, g1, margin_db=8.0, min_len=0.12, join=0.12)] or parts
+                    except Exception:   # noqa: BLE001
+                        parts = [(g0, g1)]
+                for h0, h1 in parts:
+                    if h1 - h0 < 0.15:
+                        continue
+                    try:
+                        sp = speakers.who(h0, h1) if speakers is not None else 0
+                    except Exception:   # noqa: BLE001
+                        sp = 0
+                    out.append({"start": round(h0, 3), "end": round(h1, 3), "text": "（？）", "speaker": sp if sp in (0, 1) else 0})
     return out
 
 
@@ -2674,20 +3106,60 @@ def add_titles(parent, pieces, effect_ids, speakers_cfg, to_video, fps, counter,
         for prm in cfg.get("params", []):                        # the template's own settings
             ET.SubElement(t, "param", **prm)
         te = ET.SubElement(t, "text")
-        st = ET.SubElement(te, "text-style", ref=ts)
-        st.text = p["text"]
-        d = ET.SubElement(t, "text-style-def", id=ts)
-        if cfg.get("style"):                                    # copied from a finished project
-            sty = dict(cfg["style"])
-            e = ET.SubElement(d, "text-style", **sty)
-            if sty.get("kerning"):
-                pm = ET.SubElement(e, "param", name="MotionSimpleValues", key="MotionTextStyle:SimpleValues")
-                ET.SubElement(pm, "param", name="motionTextTracking", key="tracking", value=str(sty["kerning"]))
-        elif cfg.get("plain"):                                  # the template decides the look
-            ET.SubElement(d, "text-style", alignment="center")
+        txt = p["text"]
+        kern = bool(cfg.get("style") and cfg["style"].get("kerning"))
+        # Letter spacing as in the finished projects: on every letter except the line breaks and the very last letter
+        # (so the text stays exactly centred); with kerning_even each gap is evened out by the shape of the letters.
+        runs = []                                              # (text, kerning or None)
+        if kern and len(txt) > 1:
+            base = float(cfg["style"]["kerning"])
+            size = float(cfg["style"].get("fontSize", 100))
+            mode = os.environ.get("CHCUT_KERN", "metrics")       # metrics | optical | mono
+            even = mode in ("optical", "mono")
+            lines_ = txt.split("\n")
+            for i, ln in enumerate(lines_):
+                last = i == len(lines_) - 1
+                if i:
+                    runs.append(("\n", None))
+                ks = [base] * len(ln)
+                if even and len(ln) > 1:
+                    try:
+                        import kerning_even as _ke
+                        ks = (_ke.mono_kerning if mode == "mono" else _ke.even_kerning)(ln, size, base, cfg["style"].get("font", ""))
+                        if not last:
+                            ks[-1] = base
+                    except Exception:   # noqa: BLE001
+                        ks = [base] * len(ln)
+                if last and ks:
+                    ks[-1] = None
+                for ch_, k_ in zip(ln, ks):
+                    if runs and runs[-1][1] == k_ and runs[-1][0] != "\n":
+                        runs[-1] = (runs[-1][0] + ch_, k_)
+                    else:
+                        runs.append((ch_, k_))
         else:
-            ET.SubElement(d, "text-style", font=cfg.get("font", "Hiragino Sans"), fontSize=str(cfg.get("size", 70)),
-                          fontFace=cfg.get("face", "W6"), fontColor=cfg.get("color", "1 1 1 1"), alignment="center")
+            runs = [(txt, cfg["style"].get("kerning") if cfg.get("style") else None)]
+        defs_ = {}
+        for rt, kv in runs:
+            if kv not in defs_:
+                defs_[kv] = ts if not defs_ else "%sk%d" % (ts, len(defs_))
+            st = ET.SubElement(te, "text-style", ref=defs_[kv])
+            st.text = rt
+        for kv, rid in defs_.items():
+            d = ET.SubElement(t, "text-style-def", id=rid)
+            if cfg.get("style"):                                # copied from a finished project
+                sty = {k_: v_ for k_, v_ in cfg["style"].items() if k_ != "kerning"}
+                if kv is not None:
+                    sty["kerning"] = ("%g" % kv)
+                e = ET.SubElement(d, "text-style", **sty)
+                if kv is not None:
+                    pm = ET.SubElement(e, "param", name="MotionSimpleValues", key="MotionTextStyle:SimpleValues")
+                    ET.SubElement(pm, "param", name="motionTextTracking", key="tracking", value="%g" % kv)
+            elif cfg.get("plain"):                              # the template decides the look
+                ET.SubElement(d, "text-style", alignment="center")
+            else:
+                ET.SubElement(d, "text-style", font=cfg.get("font", "Hiragino Sans"), fontSize=str(cfg.get("size", 70)),
+                              fontFace=cfg.get("face", "W6"), fontColor=cfg.get("color", "1 1 1 1"), alignment="center")
     if notes_in is not None:                       # notes as set by hand in the app (range = start..end in time)
         notes = []
         for n in notes_in:
