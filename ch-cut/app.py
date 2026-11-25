@@ -625,60 +625,45 @@ def job_main(stage):
 
 
 FCP_LIB = "外出CH"
+FCP_LIB_PATHS = ["/Volumes/編集用/外出CH.fcpbundle", "~/Movies/外出CH.fcpbundle"]
 
 
 def fcp_import(path, library=FCP_LIB):
-    """Open the exported file in Final Cut Pro so it appears in the library as a project, without asking: the import
-    sheet's library is set to `library` and its button pressed."""
+    """Open the exported file in Final Cut Pro so that it appears in the library 外出CH as a project without asking:
+    the library is opened first (an import goes into the open library); if Final Cut still asks which library, the
+    row of 外出CH is chosen and 選択 is pressed."""
     if platform.system() != "Darwin":
         return
     try:
+        lib = next((str(Path(x).expanduser()) for x in FCP_LIB_PATHS if Path(x).expanduser().exists()), None)
+        if lib:
+            subprocess.run(["open", "-a", "Final Cut Pro", lib], timeout=30)
+            time.sleep(6)
         subprocess.run(["open", "-a", "Final Cut Pro", str(path)], timeout=30)
         scr = r'''
 on run argv
   set libName to item 1 of argv
   set done to false
-  repeat 60 times
+  repeat 40 times
     delay 0.5
     try
       tell application "System Events"
         tell process "Final Cut Pro"
-          repeat with w in windows
-            set els to {}
-            try
-              set els to entire contents of w
-            end try
-            set hasPop to false
-            repeat with e in els
+          if exists (window "ライブラリを開く") then
+            set w to window "ライブラリを開く"
+            set rowsL to rows of table 1 of scroll area 1 of w
+            repeat with r in rowsL
               try
-                if role of e is "AXPopUpButton" then set hasPop to true
+                if (value of text field 1 of r) is libName then
+                  select r
+                  exit repeat
+                end if
               end try
             end repeat
-            if hasPop then
-              repeat with e in els
-                try
-                  if role of e is "AXPopUpButton" then
-                    if (value of e as text) is not libName then
-                      click e
-                      delay 0.3
-                      click (first menu item of menu 1 of e whose name is libName)
-                      delay 0.3
-                    end if
-                  end if
-                end try
-              end repeat
-              repeat with e in els
-                try
-                  if role of e is "AXButton" and (name of e is in {"読み込む", "読み込み", "Import", "OK"}) then
-                    click e
-                    set done to true
-                    exit repeat
-                  end if
-                end try
-              end repeat
-            end if
-            if done then exit repeat
-          end repeat
+            delay 0.3
+            click button "選択" of w
+            set done to true
+          end if
         end tell
       end tell
     end try
@@ -688,9 +673,9 @@ on run argv
 end run
 '''
         r = subprocess.run(["osascript", "-e", scr, library], capture_output=True, text=True, timeout=60)
-        log("Final Cut への読み込み: %s %s" % ((r.stdout or "").strip(), (r.stderr or "").strip()[:200]))
+        print("[書き出し] Final Cut への読み込み: dialog=%s %s" % ((r.stdout or "").strip(), (r.stderr or "").strip()[:200]), flush=True)
     except Exception as ex:   # noqa: BLE001
-        log("Final Cut への読み込みはできませんでした: %s" % ex)
+        print("[書き出し] Final Cut への読み込みはできませんでした: %s" % ex, flush=True)
 
 
 def wave_onsets(pk):
