@@ -4,8 +4,8 @@
  <key>CFBundleName</key><string>Gmail</string>
  <key>CFBundleDisplayName</key><string>Gmail</string>
  <key>CFBundleIdentifier</key><string>jp.yuito.gmail</string>
- <key>CFBundleShortVersionString</key><string>1.4</string>
- <key>CFBundleVersion</key><string>4</string>
+ <key>CFBundleShortVersionString</key><string>1.5</string>
+ <key>CFBundleVersion</key><string>5</string>
  <key>CFBundlePackageType</key><string>APPL</string>
  <key>CFBundleExecutable</key><string>Gmail</string>
  <key>CFBundleIconFile</key><string>AppIcon</string>
