@@ -13,7 +13,7 @@ let bundleID = "jp.yuito.gmail"
 let home = FileManager.default.homeDirectoryForCurrentUser
 let homeURL = URL(string: "https://mail.google.com/mail/u/0/#inbox")!
 let safariUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Safari/605.1.15"
-let logURL = home.appendingPathComponent("Library/Logs/Gmail.log")
+let logURL = home.appendingPathComponent("Applications/.apps-updater/gmail.log")
 let oldSafariApp = home.appendingPathComponent("Applications/.apps-updater/old/Gmail-safari.app")
 
 func log(_ s: String) {
@@ -62,6 +62,34 @@ let pageScript = """
 })();
 """
 
+// 未読の確認（画面を閉じていてもページに頼らず、アプリ自身で取得する）
+final class AtomParser: NSObject, XMLParserDelegate {
+    var count = 0, sawCount = false
+    var entries: [[String: Any]] = []
+    private var stack: [String] = []
+    private var text = ""
+    private var cur: [String: Any]?
+    func parser(_ p: XMLParser, didStartElement name: String, namespaceURI: String?, qualifiedName q: String?, attributes a: [String: String] = [:]) {
+        stack.append(name); text = ""
+        if name == "entry" { cur = [:] }
+        if name == "link", cur != nil, let h = a["href"], (cur!["link"] as? String) == nil { cur!["link"] = h }
+    }
+    func parser(_ p: XMLParser, foundCharacters s: String) { text += s }
+    func parser(_ p: XMLParser, didEndElement name: String, namespaceURI: String?, qualifiedName q: String?) {
+        let parent = stack.count >= 2 ? stack[stack.count - 2] : ""
+        switch name {
+        case "fullcount": count = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0; sawCount = true
+        case "entry": if let c = cur { entries.append(c) }; cur = nil
+        case "title" where cur != nil: cur!["title"] = text
+        case "summary" where cur != nil: cur!["summary"] = text
+        case "id" where cur != nil: cur!["id"] = text
+        case "name" where cur != nil && parent == "author": cur!["author"] = text
+        default: break
+        }
+        _ = stack.popLast(); text = ""
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate,
                          WKScriptMessageHandler, UNUserNotificationCenterDelegate, WKDownloadDelegate {
     var window: NSWindow!
@@ -76,6 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
     let runningVersion = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "0"
     var feedOK = false, lastFeedOK = Date.distantPast, firstFeed = true
+    var lastCount = -1
+    let hadSeen = !((UserDefaults.standard.stringArray(forKey: "seen") ?? []).isEmpty)
     var titleCount = -1, lastBridgeNotify = Date.distantPast
     var seen: [String] = UserDefaults.standard.stringArray(forKey: "seen") ?? []
     var updatePendingSince: Date?
@@ -85,6 +115,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     func applicationDidFinishLaunching(_ n: Notification) {
         let background = CommandLine.arguments.contains("--background")
         log("起動 版\(runningVersion)\(background ? "（ログイン時）" : "")")
+        if let a = try? FileManager.default.attributesOfItem(atPath: logURL.path), (a[.size] as? Int ?? 0) > 200_000,
+           let d = try? Data(contentsOf: logURL) { try? Data(d.suffix(100_000)).write(to: logURL) }
+        setBadge(UserDefaults.standard.integer(forKey: "badge"))   // 入れ替えや再起動でも前回の数を保つ
         NSApp.appearance = NSAppearance(named: .darkAqua)
         setupIcon()
         buildMenu()
@@ -102,7 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         if !background { showWindow() }
 
         Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.checkFeed() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in self?.checkFeed() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.checkFeed() }
         Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in self?.checkUpdate() }
     }
 
@@ -122,6 +155,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
     func windowShouldClose(_ w: NSWindow) -> Bool {
         w.orderOut(nil)   // 閉じても裏で受信を続ける
+        log("画面を閉じた（裏で継続）")
+        setBadge(UserDefaults.standard.integer(forKey: "badge"))
         return false
     }
 
@@ -285,12 +320,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
     // MARK: 未読の数と新着
     func checkFeed() {
-        guard let u = webView.url, u.host == "mail.google.com" else { return }
-        webView.evaluateJavaScript("window.__gmCheck && window.__gmCheck(); 0", completionHandler: nil)
+        webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
+            guard let self = self else { return }
+            let host = "mail.google.com"
+            let use = cookies.filter { c in
+                let d = c.domain.hasPrefix(".") ? String(c.domain.dropFirst()) : c.domain
+                return host == d || host.hasSuffix("." + d)
+            }
+            guard !use.isEmpty else { DispatchQueue.main.async { self.feedFailed("ログイン情報なし") }; return }
+            var r = URLRequest(url: URL(string: "https://mail.google.com/mail/u/0/feed/atom")!,
+                               cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+            r.httpShouldHandleCookies = false
+            r.setValue(use.map { "\($0.name)=\($0.value)" }.joined(separator: "; "), forHTTPHeaderField: "Cookie")
+            r.setValue(safariUA, forHTTPHeaderField: "User-Agent")
+            URLSession.shared.dataTask(with: r) { data, resp, err in
+                DispatchQueue.main.async {
+                    let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                    guard let data = data, code == 200 else {
+                        self.feedFailed("status \(code) \(err?.localizedDescription ?? "")"); return
+                    }
+                    let ps = AtomParser(), x = XMLParser(data: data)
+                    x.delegate = ps
+                    guard x.parse(), ps.sawCount else { self.feedFailed("読み取れない"); return }
+                    self.applyFeed(count: ps.count, entries: ps.entries)
+                }
+            }.resume()
+        }
+    }
+
+    func feedFailed(_ why: String) {
+        if feedOK || firstFeed { log("未読の確認に失敗（\(why)）") }
+        feedOK = false
+        // アプリ自身での取得ができないときだけ、ページ経由で確認する
+        if let u = webView.url, u.host == "mail.google.com" {
+            webView.evaluateJavaScript("window.__gmCheck && window.__gmCheck(); 0", completionHandler: nil)
+        }
     }
 
     func setBadge(_ n: Int) {
         NSApp.dockTile.badgeLabel = n > 0 ? (n > 999 ? "999+" : "\(n)") : nil
+        UserDefaults.standard.set(n, forKey: "badge")
+    }
+
+    func applyFeed(count: Int, entries: [[String: Any]]) {
+        if !feedOK { log("未読の確認が有効（\(count)件）") }
+        feedOK = true; lastFeedOK = Date()
+        if count != lastCount { log("未読 \(lastCount) → \(count)"); lastCount = count }
+        setBadge(count)
+        var fresh: [[String: Any]] = []
+        for e in entries {
+            guard let id = e["id"] as? String, !id.isEmpty else { continue }
+            if !seen.contains(id) { fresh.append(e); seen.append(id) }
+        }
+        if seen.count > 600 { seen.removeFirst(seen.count - 600) }
+        UserDefaults.standard.set(seen, forKey: "seen")
+        if firstFeed { firstFeed = false; if !hadSeen { return } }   // 初めての起動のときだけ、既存の分は知らせない
+        if fresh.count > 3 {
+            post(title: appName, subtitle: "", body: "新着メール \(fresh.count)件", link: nil, id: "many-\(Date().timeIntervalSince1970)")
+        } else {
+            for e in fresh.reversed() {
+                let author = (e["author"] as? String) ?? ""
+                let subject = (e["title"] as? String) ?? ""
+                post(title: author.isEmpty ? appName : author,
+                     subtitle: subject.isEmpty ? "（件名なし）" : subject,
+                     body: (e["summary"] as? String) ?? "",
+                     link: e["link"] as? String, id: (e["id"] as? String) ?? UUID().uuidString)
+            }
+        }
     }
 
     var feedTimer: Timer?
@@ -301,14 +397,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         if let r = t.range(of: #"\((\d+)\)"#, options: .regularExpression) {
             n = Int(t[r].dropFirst().dropLast()) ?? 0; hasCount = true
         }
-        let frag = webView.url?.fragment ?? ""
-        let list = frag.isEmpty || frag == "inbox" || frag.hasPrefix("inbox?")
-        if hasCount || list { setBadge(n) }   // 既読・新着をすぐ反映
+        if hasCount { setBadge(n) }   // 数が見えるときはすぐ反映（0 になったときは直後の確認で反映）
         // 少し待ってから、正確な数を確認
         feedTimer?.invalidate()
         feedTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: false) { [weak self] _ in self?.checkFeed() }
         // 確認が使えないときだけ、見出しの数の増加で新着を知らせる
-        guard !(feedOK && Date().timeIntervalSince(lastFeedOK) < 180), hasCount || list else { return }
+        guard !(feedOK && Date().timeIntervalSince(lastFeedOK) < 180), hasCount else { return }
         if titleCount >= 0 && n > titleCount {
             let before = titleCount
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
@@ -322,35 +416,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
         guard let d = m.body as? [String: Any], let type = d["type"] as? String else { return }
         if type == "feed" {
-            guard (d["ok"] as? Bool) == true else {
-                if feedOK || firstFeed { log("未読の確認に失敗: \(d["error"] ?? "")") }
-                feedOK = false; return
-            }
-            if !feedOK { log("未読の確認が有効") }
-            feedOK = true; lastFeedOK = Date()
+            guard (d["ok"] as? Bool) == true else { feedFailed("ページ経由: \(d["error"] ?? "")"); return }
             let count = (d["count"] as? Int) ?? (d["count"] as? NSNumber)?.intValue ?? 0
-            setBadge(count)
-            let entries = (d["entries"] as? [[String: Any]]) ?? []
-            var fresh: [[String: Any]] = []
-            for e in entries {
-                guard let id = e["id"] as? String, !id.isEmpty else { continue }
-                if !seen.contains(id) { fresh.append(e); seen.append(id) }
-            }
-            if seen.count > 600 { seen.removeFirst(seen.count - 600) }
-            UserDefaults.standard.set(seen, forKey: "seen")
-            if firstFeed { firstFeed = false; return }   // 起動直後の分は知らせない
-            if fresh.count > 3 {
-                post(title: appName, subtitle: "", body: "新着メール \(fresh.count)件", link: nil, id: "many-\(Date().timeIntervalSince1970)")
-            } else {
-                for e in fresh.reversed() {
-                    let author = (e["author"] as? String) ?? ""
-                    let subject = (e["title"] as? String) ?? ""
-                    post(title: author.isEmpty ? appName : author,
-                         subtitle: subject.isEmpty ? "（件名なし）" : subject,
-                         body: (e["summary"] as? String) ?? "",
-                         link: e["link"] as? String, id: (e["id"] as? String) ?? UUID().uuidString)
-                }
-            }
+            applyFeed(count: count, entries: (d["entries"] as? [[String: Any]]) ?? [])
         } else if type == "notify" {
             // 確認が使えないときだけ、ページからの通知を出す
             guard !(feedOK && Date().timeIntervalSince(lastFeedOK) < 180) else { return }
