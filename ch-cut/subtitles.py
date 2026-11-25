@@ -167,7 +167,7 @@ class Speakers:
         if speech.sum() >= 40:
             c, a = kmeans_1d(d[speech])
             sizes = [(a == 0).mean(), (a == 1).mean()]
-            if abs(c[1] - c[0]) >= 5.0 and min(sizes) >= 0.08 and os.environ.get("CHCUT_CHANNELS") == "1":   # the level difference of the two channels is not used: the voice itself decides
+            if abs(c[1] - c[0]) >= 5.0 and min(sizes) >= 0.08 and os.environ.get("CHCUT_CHANNELS") != "0":   # a real stereo recording: the level difference helps (and is fused with the voice); a mono one is told by the voice alone
                 self.mode, thr = "channels", float(c.mean())
                 lab = np.where(d >= thr, 0, 1)                   # larger L-R = speaker 1
                 try:
@@ -2732,6 +2732,15 @@ def _voice_labels(mono, m, speech, hop_s=0.1, win_s=0.3, nm=26, nc=13):
     idx, F, f0 = _voice_feats(mono, speech, hop_s, win_s, nm, nc)
     if len(idx) < 60:
         return None
+    try:                                              # the model of the two voices, learned from what the person corrected
+        import learn_voice as _lv
+        a_ = _lv.labels(F, f0, idx)
+        if a_ is not None:
+            lab_ = np.full(m, -1)
+            lab_[np.array(idx)] = a_
+            return lab_
+    except Exception:   # noqa: BLE001
+        pass
     X = (F - F.mean(0)) / (F.std(0) + 1e-9)
     best = None
     for sd in range(8):

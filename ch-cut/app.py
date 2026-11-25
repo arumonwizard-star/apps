@@ -852,6 +852,11 @@ def start_job(stage):
         import learn_edits
         learn_edits.update(PROJECTS)
         learn_edits.update_cuts(PROJECTS)
+        try:
+            import learn_voice
+            threading.Thread(target=lambda: learn_voice.update(PROJECTS), daemon=True).start()
+        except Exception:   # noqa: BLE001
+            pass
     except Exception:   # noqa: BLE001
         pass
     with LOCK:
