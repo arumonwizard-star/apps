@@ -503,6 +503,12 @@ def fix_word_cuts(pieces, maxmove=4):
         ta, tb = a["text"].replace("\n", ""), b["text"].replace("\n", "")
         if a.get("speaker") != b.get("speaker") or len(ta) < 2 or len(tb) < 2 or ta[-1] in "！？!?。" or b["start"] - a["start"] > 6:
             continue
+        try:
+            import scriptcuts as _sc
+            if _sc.is_cut(ta, tb):
+                continue                        # the script has a 、 or 。 here: the telop is cut here
+        except ImportError:
+            pass
         whole, bd = ta + tb, len(ta)
         bs = _jp_bounds(whole)
         if not bs or bd in bs:

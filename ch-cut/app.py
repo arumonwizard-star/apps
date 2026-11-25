@@ -1446,6 +1446,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "台本どおりにできませんでした: %s" % e_})
         if path == "/api/run":
             return self._json(start_job(body.get("stage", "all")))
+        if path == "/api/cl":
+            print("[画面] " + str(body.get("m"))[:300], flush=True)
+            return self._json({"ok": True})
         if path == "/api/reveal":
             f = body.get("path")
             if f and Path(f).exists() and platform.system() == "Darwin":
@@ -2036,14 +2039,14 @@ function ensureAC(){if(AC)return;try{AC=new (window.AudioContext||window.webkitA
  const mk=AC.createGain();mk.gain.value=1.6;const lim=AC.createDynamicsCompressor();lim.threshold.value=-3;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.001;lim.release.value=0.08;
  const wet=AC.createGain(),dry=AC.createGain();
  hp.connect(pr);pr.connect(lp);lp.connect(pre);pre.connect(comp);comp.connect(mk);mk.connect(lim);lim.connect(wet);wet.connect(AC.destination);dry.connect(AC.destination);fxSrc=n=>{n.connect(hp);n.connect(dry)};
- FXN={wet,dry,pre};fxToggle();fxLevel()}catch(e){AC=null}}
+ FXN={wet,dry,pre};AC.onstatechange=()=>cl('AC '+AC.state);fxToggle();fxLevel()}catch(e){AC=null}}
 function fxInit(){ensureAC()}
 function fxToggle(){const on=document.getElementById('fx').checked;if(FXN){FXN.wet.gain.value=on?1:0;FXN.dry.gain.value=on?0:1}}
 function fxLevel(){if(!FXN||!PK)return;const v=PK.peaks.filter(x=>x>0.25).map(x=>x*x).sort((a,b)=>a-b);if(!v.length)return;const med=v[Math.floor(v.length*0.6)];FXN.pre.gain.value=Math.min(Math.max(0.3/med,1),40)}
 let AUFALL=false;
 async function audFallback(why){if(AUFALL)return false;AUFALL=true;const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生用に変換しています…（'+why+'）';const r=await api('/api/need_audio',{});if(r.error){if(m)m.textContent=r.error;return false}au.src='/media/audio2?'+Date.now();if(m)m.textContent='';return true}
 let GAPOK=false;
-function playNow(){if(!stopAt){if(au.paused&&TLMX!==null&&!TLDRAG){const tt=curT();if(Math.abs(tt-au.currentTime)>0.01)seek(tt)}const sg=segs(),t0=au.currentTime;GAPOK=!!sg.length&&!sg.some(g=>t0>=g.a0-0.001&&t0<g.a1-0.05)}fxInit();if(AC&&AC.state!=='running'){try{AC.resume()}catch(e){}if(AC.state==='interrupted'||AC.state==='closed'){resetAC()}}au.play().catch(async e=>{if(e&&(e.name==='NotSupportedError'||(au.error&&au.error.code>=3))&&await audFallback(e.name)){au.play().catch(()=>{});return}const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生できません: '+(e&&e.name)+' / '+(e&&e.message)+' / エラー番号 '+(au.error?au.error.code:'なし')+' / 読み込み状態 '+au.readyState});try{vid().play().catch(()=>{})}catch(e){}document.getElementById('pp').textContent='❚❚ 停止';acCheck()}
+function playNow(){if(ACFAIL&&ABKEEP&&AC&&AC.state==='running'&&au.paused){AB=ABKEEP;ACFAIL=false;cl('音声をAC方式に復帰')}if(!stopAt){if(au.paused&&TLMX!==null&&!TLDRAG){const tt=curT();if(Math.abs(tt-au.currentTime)>0.01)seek(tt)}const sg=segs(),t0=au.currentTime;GAPOK=!!sg.length&&!sg.some(g=>t0>=g.a0-0.001&&t0<g.a1-0.05)}fxInit();if(AC&&AC.state!=='running'){try{AC.resume()}catch(e){}if(AC.state==='interrupted'||AC.state==='closed'){resetAC()}}au.play().catch(async e=>{if(e&&(e.name==='NotSupportedError'||(au.error&&au.error.code>=3))&&await audFallback(e.name)){au.play().catch(()=>{});return}const m=document.getElementById('vmsg');if(m)m.textContent='音声を再生できません: '+(e&&e.name)+' / '+(e&&e.message)+' / エラー番号 '+(au.error?au.error.code:'なし')+' / 読み込み状態 '+au.readyState});try{vid().play().catch(()=>{})}catch(e){}document.getElementById('pp').textContent='❚❚ 停止';acCheck()}
 function pauseNow(){if(typeof LFAST!=='undefined'&&LFAST){LFAST=0;setRate(1)}au.pause();try{vid().pause()}catch(e){}stopAt=0;document.getElementById('pp').textContent='▶ 再生'}
 function togglePlay(){(au.paused&&vid().paused)?playNow():pauseNow()}
 const fr30=t=>Math.round(t*30)/30,r3=v=>Math.round(v*1000)/1000;
@@ -2052,12 +2055,17 @@ function playRange(a,b){pauseNow();JUMP=false;seek(Math.max(a-0.05,0));stopAt=b+
 function takePlay(a,b){let s=a-0.05;try{const o=tlOnsets().find(x=>x>=a-0.1&&x<b);if(o!==undefined)s=Math.max(o-0.12,a-0.05)}catch(e){}playRange(s+0.05,b)}
 function playBlock(bid){const b=S.report.blocks.find(x=>x.id===bid);if(!b||!b.takes.length)return;takePlay(Math.min(...b.takes.map(t=>t.start)),Math.max(...b.takes.map(t=>t.end)))}
 function resetAC(){try{const pos=au.currentTime,was=!au.paused;abStop(false);try{AC&&AC.close()}catch(e){}AC=null;FXN=null;fxSrc=null;ensureAC();if(AC&&AC.state==='suspended')AC.resume();if(was){ABPOS=pos;if(AB)abStart(pos)}}catch(e){}}
-function acCheck(){if(au.paused||!AB||!AC)return;const c0=AC.currentTime;setTimeout(()=>{try{if(!au.paused&&AB&&AC&&AC.currentTime-c0<0.15)resetAC()}catch(e){}},500)}
+let AFIX=0,ACFAIL=false,ABKEEP=null,CLN=0;
+function cl(m){try{if(CLN++<500)api('/api/cl',{m:m})}catch(e){}}
+function toAud(){if(!AB)return false;const pos=au.currentTime,was=!au.paused;abStop(false);ABKEEP=AB;AB=null;ACFAIL=true;cl('音声をプレーヤー方式に切替 pos='+pos.toFixed(2));try{aud.currentTime=pos;aud.playbackRate=ABRATE;if(was)aud.play().catch(()=>{})}catch(e){}return true}
+function acCheck(){if(au.paused||!AB||!AC)return;const c0=AC.currentTime;setTimeout(()=>{try{if(au.paused||!AB||!AC)return;if(AC.currentTime-c0>=0.15){AFIX=0;return}AFIX++;cl('音が進まない state='+AC.state+' 回'+AFIX);if(AFIX===1){AC.resume().catch(()=>{});acCheck()}else if(AFIX===2){resetAC();acCheck()}else{AFIX=0;toAud()}}catch(e){}},500)}
 document.addEventListener('pointerdown',()=>{try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}},true);document.addEventListener('keydown',()=>{try{if(AC&&AC.state!=='running')AC.resume()}catch(e){}},true);
 let LASTT=-1,LASTM=0,STALL=0;
+setInterval(()=>{try{cl('♥ AC='+(AC?AC.state+' '+AC.currentTime.toFixed(1):'なし')+' 再生='+!au.paused+' 方式='+(AB?'AC':'プレーヤー')+' 隠れ='+document.hidden)}catch(e){}},60000);
+window.addEventListener('error',e=>cl('エラー '+(e.message||'')+' '+(e.lineno||'')));aud.addEventListener('error',()=>cl('プレーヤー異常 '+(aud.error?aud.error.code:'')));
 const acBack=()=>{try{if(!AC)return;AC.resume();setTimeout(()=>{try{if(AC&&AC.state!=='running')resetAC();else if(AC&&!au.paused)acCheck()}catch(e){}},300)}catch(e){}};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)acBack()});window.addEventListener('focus',acBack);window.addEventListener('pageshow',acBack);
-setInterval(()=>{try{if(AC&&AC.state==='suspended'&&!au.paused)AC.resume();if(au.paused){LASTT=-1;return}const t=au.currentTime,n=Date.now();if(Math.abs(t-LASTT)>0.001){LASTT=t;LASTM=n;STALL=0;return}if(n-LASTM>900&&!au.seeking){LASTM=n;STALL++;if(STALL>=2&&AB){STALL=0;resetAC();return}if(AC&&AC.state!=='running')AC.resume();au.play().catch(()=>{});try{vid().play().catch(()=>{})}catch(e){}}}catch(e){}},400);
+setInterval(()=>{try{if(AC&&AC.state==='suspended'&&!au.paused)AC.resume();if(au.paused){LASTT=-1;return}const t=au.currentTime,n=Date.now();if(Math.abs(t-LASTT)>0.001){LASTT=t;LASTM=n;STALL=0;return}if(n-LASTM>900&&!au.seeking){LASTM=n;STALL++;if(STALL>=2&&AB){STALL=0;acCheck();return}if(AC&&AC.state!=='running')AC.resume();au.play().catch(()=>{});try{vid().play().catch(()=>{})}catch(e){}}}catch(e){}},400);
 function pend(bid,i){const b=TE[bid],ps=b.pieces;if(ps[i].speaker<0||ps[i].ov)return Math.min(ps[i].end,(b.c1!==undefined?b.c1:b.a1));for(let j=i+1;j<ps.length;j++)if(ps[j].speaker>=0&&!ps[j].ov&&!ps[j].deleted)return ps[j].start;return Math.max((b.c1!==undefined?b.c1:b.a1),ps[i].end||0)}
 function isDel(bid,i){return !!TE[bid].pieces[i].deleted}
 function findAct(t){if(!TE)return null;let best=null;for(const bid in TE){const ps=TE[bid].pieces;for(let i=0;i<ps.length;i++){if(ps[i].speaker<0||ps[i].ov)continue;if(t>=ps[i].start-0.001&&t<pend(bid,i)){best=[bid,i]}}}return best}

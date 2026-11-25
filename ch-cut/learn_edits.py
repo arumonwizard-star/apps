@@ -76,6 +76,14 @@ def update_cuts(projects_root, out=CUT_FILE):
     return res
 
 
+def _script_cut(a, b):
+    try:
+        import scriptcuts
+        return scriptcuts.is_cut(a, b)
+    except ImportError:
+        return False
+
+
 def apply_cuts(pieces, path=CUT_FILE):
     """Cut and join the automatic telops where the person did it by hand before."""
     try:
@@ -91,6 +99,7 @@ def apply_cuts(pieces, path=CUT_FILE):
         q = out[-1] if out else None
         if q is not None and jo_k and q.get("speaker", 0) >= 0 and q.get("speaker") == p.get("speaker") and p["text"] != "www" and q["text"] != "www" \
                 and not q.get("_fixed_by_user") and not p.get("_fixed_by_user") and 0 <= p["start"] - q.get("end", p["start"]) < 0.15 \
+                and not _script_cut(q["text"], p["text"]) \
                 and _key(_n(q["text"]) + _n(p["text"]), len(_n(q["text"]))) in jo_k and len(_n(q["text"]) + _n(p["text"])) <= 24:
             q["text"] = q["text"].rstrip("\n") + p["text"]
             q["end"] = p.get("end", q.get("end"))

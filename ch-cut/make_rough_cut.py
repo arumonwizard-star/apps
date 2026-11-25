@@ -718,13 +718,21 @@ def merge_user_edits(auto, edited):
                 best, bo = i, o
         if best is None:
             continue
-        used.add(best)
         a = auto[best]
+        if "x" in fl:
+            import difflib as _dl0
+            _na, _ne = nz(a["text"]), nz(e["text"])
+            if not (_na == _ne or _ne in _na or _dl0.SequenceMatcher(None, _na, _ne).ratio() >= 0.8):
+                continue                        # the hand edit is of other words than the new analysis has here: dropped
+        used.add(best)
         if "d" in fl:
             a["_del"] = True
             continue
         if "x" in fl:
-            a["text"] = e["text"]
+            import difflib as _dl
+            na, ne = nz(a["text"]), nz(e["text"])
+            if na == ne or ne in na or _dl.SequenceMatcher(None, na, ne).ratio() >= 0.8:
+                a["text"] = e["text"]           # the same words (line break / a word dropped); other words are not laid over
         if "t" in fl:
             a["start"], a["end"] = e["start"], e["end"]
             if "s0" in a:
@@ -869,7 +877,13 @@ def main():
 
     # 2. takes ------------------------------------------------------------
     with open(args.script, encoding="utf-8") as f:
-        blocks = ps.parse(f.read())
+        _script_txt = f.read()
+    blocks = ps.parse(_script_txt)
+    try:
+        import scriptcuts as _scx
+        _scx.load(_script_txt)
+    except ImportError:
+        pass
     segs = ft.load_segments(args.transcript)
     takes = ft.find_takes(segs, blocks)
     chosen = ft.choose(takes, len(blocks), blocks, ft.parse_picks(args.pick))
@@ -1244,6 +1258,14 @@ def main():
                 pieces = merge_user_edits(pieces, telops_in[bid]["pieces"])
                 merged_blocks.add(bid)
             if is_main:
+                try:        # no telop starts with 、。; a doubled phrase that does not fit the time is written once
+                    import scriptcuts as _scy
+                    for _l_ in (pieces, auto_keep.get(bid) or []):
+                        for x_ in _l_:
+                            if x_.get("speaker", 0) >= 0 and x_["text"] != "www":
+                                x_["text"] = _scy.finalize(_scy.collapse_repeat(x_["text"], x_["end"] - x_["start"]))
+                except ImportError:
+                    pass
                 try:        # the same word written the same way everywhere (表記統一)
                     import words as _wd2
                     for x_ in pieces:
