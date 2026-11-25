@@ -1068,6 +1068,9 @@ def main():
                    "tokens": sb.load_tokens(args.transcript), "n": [0], "sb": sb}
 
     lib = ET.SubElement(root, "library")
+    _libp = Path("/Volumes/編集用/外出CH.fcpbundle")
+    if _libp.exists() and os.environ.get("CHCUT_LIBLOC", "1") != "0":      # the library the projects go into
+        lib.set("location", _libp.as_uri() + "/")
     ev = ET.SubElement(lib, "event", name="CH Cut")
     proj = ET.SubElement(ev, "project", name=(args.title or vpath.stem))
     seq = ET.SubElement(proj, "sequence", format="r1", duration=mf.t(total), tcStart="0s",
