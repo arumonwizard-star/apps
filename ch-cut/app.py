@@ -2137,7 +2137,7 @@ setInterval(skipGaps,15);
 setInterval(()=>tick(false),80);
 (function raf(){if(!au.paused)tick(false);requestAnimationFrame(raf)})();
 let PK=null,PKD=null,WC=0;const WIN=8;
-async function loadPeaks(){const r=await api('/api/peaks');PK=r.peaks&&r.peaks.length?r:null;try{const q=await api('/api/peaks?raw=1');PKD=q.peaks&&q.peaks.length?q:null}catch(e){PKD=null}TLVS=null;TLONS=null;fxLevel();drawWave();if(TE)renderTelops()}
+async function loadPeaks(){const r=await api('/api/peaks');PK=r.peaks&&r.peaks.length?r:null;try{const q=await api('/api/peaks?raw=1');PKD=q.peaks&&q.peaks.length?q:null}catch(e){PKD=null}TLVS=null;VMK=null;HC={};TLONS=null;fxLevel();drawWave();if(TE)renderTelops()}
 function boundaries(){const o=[];if(!TE)return o;for(const bid in TE)TE[bid].pieces.forEach((p,i)=>{if(p.speaker>=0)o.push({bid,i,t:p.start,text:p.text.replace(/\n/g,'')})});return o}
 function drawWave(){const c=document.getElementById('wave');if(!c||!TE)return;const W=c.width,H=c.height,g=c.getContext('2d');g.clearRect(0,0,W,H);
  if(!au.paused)WC=au.currentTime;const t0=WC-WIN/2,px=W/WIN;g.fillStyle='#15161a';g.fillRect(0,0,W,H);
@@ -2231,9 +2231,14 @@ function wsplit0(t){const out=[],cls=c=>/[\u4e00-\u9fff々〇]/.test(c)?'k':/[�
 function chipsHtml(bid,i,p,e){const t=p.text||'';const cum=[0];let tw=0;for(const c of t){tw+=(c==='\n'?0:moraW(c));cum.push(tw)}tw=tw||1;const T=x=>p.start+(e-p.start)*cum[x]/tw;
  return wsplit(t).map((o,k)=>'<span class="wc'+(t[o.i-1]==='\n'?' nl':'')+'" data-t0="'+T(o.i).toFixed(3)+'" data-t1="'+T(o.e).toFixed(3)+'" data-i0="'+o.i+'" data-i1="'+o.e+'" onclick="chipClick(event,\''+bid+'\','+i+')" ondblclick="chipDbl(\''+bid+'\','+i+')">'+esc(o.w)+'<b class="wx" onclick="chipDel(event,\''+bid+'\','+i+',this)">×</b></span>').join('')}
 let HC={};
+let VMK=null;
+function vmask(){if(VMK||!PK)return VMK;const p=PK.peaks,n=p.length,db=new Float32Array(n);for(let k=0;k<n;k++)db[k]=20*Math.log10(Math.max(p[k]*p[k],1e-7));const top=Array.from(db).sort((x,y)=>x-y)[Math.floor(n*0.99)]||0,th=top-35.6;const M=new Uint8Array(n);for(let k=0;k<n;k++)M[k]=db[k]>th?1:0;let last=-1;for(let k=0;k<n;k++){if(M[k]){if(last>=0&&k-last>1&&k-last<=8)for(let q=last+1;q<k;q++)M[q]=1;last=k}}const CS=new Int32Array(n+1);for(let k=0;k<n;k++)CS[k+1]=CS[k]+M[k];return VMK={M,CS,n,r:PK.rate}}
+function voiceMap(s0,s1){const V=vmask();if(!V)return null;const{M,CS,n,r}=V;const snap=t=>{let k=Math.min(Math.max(Math.round(t*r),0),n-1);if(!M[k])return k;for(let d=1;d<=50;d++){if(k-d>=0&&!M[k-d])return k-d;if(k+d<n&&!M[k+d])return k+d}return k};
+ const a=snap(s0),b=snap(s1),tot=CS[b]-CS[a];if(tot<10)return null;
+ return f=>{const T=Math.min(Math.max(f,0),1)*tot;let lo=a,hi=b;while(lo<hi){const m=(lo+hi)>>1;if(CS[m+1]-CS[a]>=T&&(f>0||M[m]))hi=m;else lo=m+1}if(f<=0){while(lo<b&&!M[lo])lo++;return lo/r}return (lo+1)/r}}
 function pieceChips(bid){if(HC[bid])return HC[bid];const b=TE[bid],ps=b.pieces;const skipc=c=>/[、。,.！？!?「」『』（）()\s・…～~"]/.test(c);
  const ok=ps.filter(p=>p.speaker>=0);const lo=ok.length?Math.min(...ok.map(p=>p.start)):0,hi=b.a1;
- const H=[];for(const s of HEARD){const s0=s[0],s1=s[1];if(s1<=lo-0.8||s0>=hi||s1<=s0)continue;const tx=(s[2]||'').replace(/\s+/g,'');const L=tx.length;for(let k=0;k<L;k++){if(skipc(tx[k]))continue;const cs=s0+k/L*(s1-s0),ce=s0+(k+1)/L*(s1-s0);if(ce<=lo-0.8||cs>=hi)continue;H.push({c:tx[k],cs,ce})}}
+ const H=[];for(const s of HEARD){const s0=s[0],s1=s[1];if(s1<=lo-0.8||s0>=hi||s1<=s0)continue;const tx=(s[2]||'').replace(/\s+/g,'');const L=tx.length;const W=[];let WT=0;for(let k=0;k<L;k++){const w=skipc(tx[k])?0:moraW(tx[k]);W.push(w);WT+=w}let wc=0;const vm=voiceMap(s0,s1);for(let k=0;k<L;k++){if(skipc(tx[k]))continue;let cs,ce;if(vm){cs=vm(wc/(WT||1));ce=vm((wc+W[k])/(WT||1))}else{cs=s0+k/L*(s1-s0);ce=s0+(k+1)/L*(s1-s0)}wc+=W[k];if(ce<=lo-0.8||cs>=hi)continue;H.push({c:tx[k],cs,ce})}}
  const D=[];ps.forEach((p,i)=>{if(p.speaker<0||(p.text||'').startsWith('※'))return;for(const c of (p.text||'').replace(/\n/g,''))if(!skipc(c))D.push({c,i})});
  const res=ps.map(()=>[]);if(!H.length||!D.length){return HC[bid]=res}
  const n=H.length,m=D.length,W=m+1,T=new Uint16Array((n+1)*W);
