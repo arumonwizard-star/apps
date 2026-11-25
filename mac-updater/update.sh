@@ -83,9 +83,14 @@ if [ -x "$G/Contents/MacOS/Gmail" ]; then
 fi
 
 # この仕組み自体
-[ -f "$S/mac-updater/update.sh" ] && cp "$S/mac-updater/update.sh" "$D/update.sh.new" && chmod +x "$D/update.sh.new" && mv "$D/update.sh.new" "$D/update.sh"
+SELF=0
+if [ -f "$S/mac-updater/update.sh" ] && ! cmp -s "$S/mac-updater/update.sh" "$D/update.sh"; then
+  cp "$S/mac-updater/update.sh" "$D/update.sh.new" && chmod +x "$D/update.sh.new" && mv "$D/update.sh.new" "$D/update.sh" && SELF=1
+fi
 
 [ $FAIL = 0 ] || { log "一部の反映に失敗（次回やり直し）"; exit 0; }
+# この仕組み自体が新しくなったときは、新しい手順でもう一度取り込む（次回の実行）
+[ $SELF = 1 ] && { log "更新の仕組みを入れ替え（次回あらためて反映）"; exit 0; }
 echo "$SHA" > sha
 log "版 $SHA に更新"
 tail -n 300 update.log > update.log.tmp && mv update.log.tmp update.log
