@@ -675,7 +675,11 @@ on error m
 end run
 '''
         r = subprocess.run(["osascript", "-e", scr, library], capture_output=True, text=True, timeout=60)
-        print("[書き出し] Final Cut への読み込み: dialog=%s %s" % ((r.stdout or "").strip(), (r.stderr or "").strip()[:200]), flush=True)
+        out_ = (r.stdout or "").strip()
+        print("[書き出し] Final Cut への読み込み: dialog=%s %s" % (out_, (r.stderr or "").strip()[:200]), flush=True)
+        if out_.startswith("ERR") and ("補助アクセス" in out_ or "assistive" in out_.lower() or "25211" in out_):
+            print("[書き出し] 画面操作の許可が必要です: システム設定のアクセシビリティで「Python」をオンにしてください", flush=True)
+            subprocess.Popen(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
     except Exception as ex:   # noqa: BLE001
         print("[書き出し] Final Cut への読み込みはできませんでした: %s" % ex, flush=True)
 
