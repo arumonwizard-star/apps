@@ -642,12 +642,12 @@ def fcp_import(path, library=FCP_LIB):
         subprocess.run(["open", "-a", "Final Cut Pro", str(path)], timeout=30)
         scr = r'''
 on run argv
+ try
   set libName to item 1 of argv
   set done to false
   repeat 40 times
     delay 0.5
-    try
-      tell application "System Events"
+    tell application "System Events"
         tell process "Final Cut Pro"
           if exists (window "ライブラリを開く") then
             set w to window "ライブラリを開く"
@@ -655,7 +655,7 @@ on run argv
             repeat with r in rowsL
               try
                 if (value of text field 1 of r) is libName then
-                  select r
+                  set value of attribute "AXSelected" of r to true
                   exit repeat
                 end if
               end try
@@ -665,11 +665,13 @@ on run argv
             set done to true
           end if
         end tell
-      end tell
-    end try
+    end tell
     if done then exit repeat
   end repeat
   return done as text
+on error m
+  return "ERR " & m
+ end try
 end run
 '''
         r = subprocess.run(["osascript", "-e", scr, library], capture_output=True, text=True, timeout=60)
