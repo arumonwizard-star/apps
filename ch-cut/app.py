@@ -625,7 +625,7 @@ def job_main(stage):
 
 
 FCP_LIB = "外出CH"
-FCP_LIB_PATHS = ["/Volumes/編集用/外出CH.fcpbundle", "~/Movies/外出CH.fcpbundle"]
+FCP_LIB_PATHS = ["/Volumes/編集用/外出CH/外出CH.fcpbundle", "~/Movies/外出CH.fcpbundle"]
 
 
 def fcp_import(path, library=FCP_LIB):
