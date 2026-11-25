@@ -722,7 +722,7 @@ def merge_user_edits(auto, edited):
         if "x" in fl:
             import difflib as _dl0
             _na, _ne = nz(a["text"]), nz(e["text"])
-            if not (_na == _ne or _ne in _na or _dl0.SequenceMatcher(None, _na, _ne).ratio() >= 0.8):
+            if not (_na == _ne or _dl0.SequenceMatcher(None, _na, _ne).ratio() >= 0.8):
                 continue                        # the hand edit is of other words than the new analysis has here: dropped
         used.add(best)
         if "d" in fl:
@@ -731,7 +731,7 @@ def merge_user_edits(auto, edited):
         if "x" in fl:
             import difflib as _dl
             na, ne = nz(a["text"]), nz(e["text"])
-            if na == ne or ne in na or _dl.SequenceMatcher(None, na, ne).ratio() >= 0.8:
+            if na == ne or _dl.SequenceMatcher(None, na, ne).ratio() >= 0.8:
                 a["text"] = e["text"]           # the same words (line break / a word dropped); other words are not laid over
         if "t" in fl:
             a["start"], a["end"] = e["start"], e["end"]
@@ -1263,7 +1263,7 @@ def main():
                     for _l_ in (pieces, auto_keep.get(bid) or []):
                         for x_ in _l_:
                             if x_.get("speaker", 0) >= 0 and x_["text"] != "www":
-                                x_["text"] = _scy.finalize(_scy.collapse_repeat(x_["text"], x_["end"] - x_["start"]))
+                                x_["text"] = _scy.finalize(x_["text"])
                 except ImportError:
                     pass
                 try:        # the same word written the same way everywhere (表記統一)
