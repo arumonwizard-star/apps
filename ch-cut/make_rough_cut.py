@@ -704,8 +704,8 @@ def merge_user_edits(auto, edited):
     extra = []
     for e in sorted((x for x in edited if x.get("_u")), key=lambda x: x["start"]):
         fl = e["_u"]
-        if "n" in fl:                                   # added by hand: kept when it does not sit on a new piece
-            if (e.get("text") or "").strip() and not any(a.get("speaker", 0) >= 0 and e.get("speaker", 0) >= 0 and ov(a, e) > 0.3 for a in auto):
+        if ("n" in fl or "x" in fl) and "d" not in fl:  # the person wrote / cut / re-broke this piece: it stands as he made it
+            if (e.get("text") or "").strip():
                 extra.append(dict(e))
             continue
         best, bo = None, 0.4
@@ -713,26 +713,15 @@ def merge_user_edits(auto, edited):
             if i in used or (a.get("speaker", 0) < 0) != (e.get("speaker", 0) < 0):
                 continue
             o = ov(a, e)
-            same = nz(a["text"]) == nz(e["text"]) or ("x" in fl and o > 0.8 and abs(a["start"] - e["start"]) < 0.15 and abs(a["end"] - e["end"]) < 0.15)
-            if same and o > bo:
+            if nz(a["text"]) == nz(e["text"]) and o > bo:
                 best, bo = i, o
         if best is None:
             continue
         a = auto[best]
-        if "x" in fl:
-            import difflib as _dl0
-            _na, _ne = nz(a["text"]), nz(e["text"])
-            if not (_na == _ne or _dl0.SequenceMatcher(None, _na, _ne).ratio() >= 0.8):
-                continue                        # the hand edit is of other words than the new analysis has here: dropped
         used.add(best)
         if "d" in fl:
             a["_del"] = True
             continue
-        if "x" in fl:
-            import difflib as _dl
-            na, ne = nz(a["text"]), nz(e["text"])
-            if na == ne or _dl.SequenceMatcher(None, na, ne).ratio() >= 0.8:
-                a["text"] = e["text"]           # the same words (line break / a word dropped); other words are not laid over
         if "t" in fl:
             a["start"], a["end"] = e["start"], e["end"]
             if "s0" in a:
@@ -742,6 +731,9 @@ def merge_user_edits(auto, edited):
         if "s" in fl:
             a["speaker"] = e["speaker"]
         a["_u"] = fl
+    for a in auto:                                      # a new piece that sits on one the person made by hand gives way to it
+        if any(ov(a, e) > 0.3 and (a.get("speaker", 0) < 0) == (e.get("speaker", 0) < 0) for e in extra):
+            a["_del"] = True
     res = [a for a in auto if not a.get("_del")] + extra
     for x in extra:
         x.setdefault("s0", x["start"])

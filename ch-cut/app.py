@@ -616,10 +616,81 @@ def job_main(stage):
             STATE["job"].update({"state": "done", "result": str(out) if export else None,
                                  "label": "完了" if export else "解析が終わりました", "tick": time.time()})
         log("書き出し完了: %s" % out if export else "解析が終わりました。テロップを見ながら直して、できたら「書き出し」を押してください")
+        if export:
+            threading.Thread(target=fcp_import, args=(str(out),), daemon=True).start()
     except Exception as ex:   # noqa: BLE001
         log("%s" % ex)
         with LOCK:
             STATE["job"].update({"state": "error", "label": "失敗"})
+
+
+FCP_LIB = "外出CH"
+
+
+def fcp_import(path, library=FCP_LIB):
+    """Open the exported file in Final Cut Pro so it appears in the library as a project, without asking: the import
+    sheet's library is set to `library` and its button pressed."""
+    if platform.system() != "Darwin":
+        return
+    try:
+        subprocess.run(["open", "-a", "Final Cut Pro", str(path)], timeout=30)
+        scr = r'''
+on run argv
+  set libName to item 1 of argv
+  set done to false
+  repeat 60 times
+    delay 0.5
+    try
+      tell application "System Events"
+        tell process "Final Cut Pro"
+          repeat with w in windows
+            set els to {}
+            try
+              set els to entire contents of w
+            end try
+            set hasPop to false
+            repeat with e in els
+              try
+                if role of e is "AXPopUpButton" then set hasPop to true
+              end try
+            end repeat
+            if hasPop then
+              repeat with e in els
+                try
+                  if role of e is "AXPopUpButton" then
+                    if (value of e as text) is not libName then
+                      click e
+                      delay 0.3
+                      click (first menu item of menu 1 of e whose name is libName)
+                      delay 0.3
+                    end if
+                  end if
+                end try
+              end repeat
+              repeat with e in els
+                try
+                  if role of e is "AXButton" and (name of e is in {"読み込む", "読み込み", "Import", "OK"}) then
+                    click e
+                    set done to true
+                    exit repeat
+                  end if
+                end try
+              end repeat
+            end if
+            if done then exit repeat
+          end repeat
+        end tell
+      end tell
+    end try
+    if done then exit repeat
+  end repeat
+  return done as text
+end run
+'''
+        r = subprocess.run(["osascript", "-e", scr, library], capture_output=True, text=True, timeout=60)
+        log("Final Cut への読み込み: %s %s" % ((r.stdout or "").strip(), (r.stderr or "").strip()[:200]))
+    except Exception as ex:   # noqa: BLE001
+        log("Final Cut への読み込みはできませんでした: %s" % ex)
 
 
 def wave_onsets(pk):
@@ -2102,14 +2173,15 @@ function swapSrc(p,v){if(!p||p.alt===undefined||(p.src||'s')===v)return;snap();c
 async function setKern(v){await setf('kerning',v);const el=document.getElementById('cap');if(el)el.dataset.h='';const o=document.getElementById('vov');if(o)o.dataset.h='';caption(au.currentTime);overlay(au.currentTime)}
 function capSrc(v){swapSrc(capTarget(),v);const el=document.getElementById('cap');el.dataset.h='';renderTelops();tlDraw();caption(au.currentTime)}
 function rowSrc(bid,i,v){swapSrc(TE[bid].pieces[i],v);renderTelops();tlDraw()}
-function srcSel(bid,i,p){if(!hasAlt(p))return '';const v=p.src||'s';return '<select class="srcsel" onchange="rowSrc(\''+bid+'\','+i+',this.value)"><option value="s"'+(v==='s'?' selected':'')+'>台本</option><option value="h"'+(v==='h'?' selected':'')+'>聞き取り</option></select>'}
+function srcSel(bid,i,p){return ''}
+function srcSel_old(bid,i,p){if(!hasAlt(p))return '';const v=p.src||'s';return '<select class="srcsel" onchange="rowSrc(\''+bid+'\','+i+',this.value)"><option value="s"'+(v==='s'?' selected':'')+'>台本</option><option value="h"'+(v==='h'?' selected':'')+'>聞き取り</option></select>'}
 let KCV=null;const KFONT="'CHPOP','LightNovelPopV2','ラノベPOP','Hiragino Maru Gothic ProN'";
 function kernMode(){const k=(S&&S.project&&S.project.kerning)||'';return {optical:'オプティカル',mono:'和文等幅'}[k]||(['オプティカル','和文等幅'].includes(k)?k:'メトリクス')}
 function kernPos(line,fs,mode){/* x of every letter (px) and the line's width, the way the export sets the kerning */
  if(!KCV)KCV=document.createElement('canvas').getContext('2d');const c=KCV;c.font='400 '+fs+'px '+KFONT;const L=[...line],n=L.length,base=-0.095,adv=[],il=[],ir=[];
  for(const ch of L){const m=c.measureText(ch);adv.push(m.width/fs);il.push(-m.actualBoundingBoxLeft/fs);ir.push(m.actualBoundingBoxRight/fs)}
  const k=new Array(n).fill(base);
- if(mode==='オプティカル'&&n>1){const g=[];for(let q=0;q<n-1;q++)g.push((adv[q]-ir[q])+il[q+1]);const ref=[...g].sort((p,q)=>p-q)[g.length>>1];for(let q=0;q<n-1;q++)k[q]=base+Math.max(-0.075,Math.min(0.075,(ref-g[q])*0.8))}
+ if(mode==='オプティカル'&&n>1){const g=[];for(let q=0;q<n-1;q++)g.push((adv[q]-ir[q])+il[q+1]);const ref=[...g].sort((p,q)=>p-q)[g.length>>1];for(let q=0;q<n-1;q++)k[q]=base+Math.max('、。，．'.includes(L[q])?-0.42:-0.075,Math.min(0.075,(ref-g[q])*0.8))}
  else if(mode==='和文等幅'){for(let q=0;q<n;q++)k[q]=base+Math.max(0,1-adv[q])}
  const xs=[];let x=0;for(let q=0;q<n;q++){xs.push(x);x+=(adv[q]+(q<n-1?k[q]:0))*fs}return {xs,w:x}}
 function capSvg(txt,sp,u){const C=sp===1?['#2f6bff','#0b2a8f']:['#ff2d3d','#7d0014'];const L=String(txt).split('\n'),fs=44,lh=fs*1.1,md=kernMode();const KP=L.map(x=>kernPos(x,fs,md));const W=Math.max(40,Math.max(...KP.map(k=>k.w))+24),H=L.length*lh+34;
@@ -2154,12 +2226,13 @@ let DSEL=null,D2A=null,W2=2.4,D2DRAG=null;
 function dp(){if(!DSEL||!TE||!TE[DSEL[0]])return null;return TE[DSEL[0]].pieces[DSEL[1]]||null}
 function d2html(){return '<div class="d2row" id="d2row"><canvas id="wave2" width="1400" height="300"></canvas><div class="vctl"><button class="nb" onclick="addHere()">＋ここにテロップを追加</button> <button class="nb" onclick="DSEL=null;renderTelops()">✕</button><span id="d2info" class="small"></span></div></div>'}
 function drawDetail(){const p=dp();const c=document.getElementById('wave2');if(!c||!p)return;
- const W=c.width,H=c.height,g=c.getContext('2d'),px=W/W2;if(D2A===null)D2A=p.start;const t0=D2A-W2*0.3;
+ {const rc=c.getBoundingClientRect(),dr=window.devicePixelRatio||1;if(rc.width>20&&rc.height>20){const w=Math.round(rc.width*dr),h=Math.round(rc.height*dr);if(c.width!==w||c.height!==h){c.width=w;c.height=h}}}
+ const W=c.width,H=c.height,g=c.getContext('2d'),px=W/W2,KK=W/Math.max(c.getBoundingClientRect().width,1);if(D2A===null)D2A=p.start;const t0=D2A-W2*0.3;
  g.fillStyle='#15161a';g.fillRect(0,0,W,H);
  g.strokeStyle='#2d3345';g.lineWidth=1;const f0=Math.ceil((t0+OFF)*30),f1=Math.floor((t0+W2+OFF)*30);for(let f=f0;f<=f1;f++){const x=(f/30-OFF-t0)*px;g.beginPath();g.moveTo(x,0);g.lineTo(x,f%30===0?H:H*0.1);g.stroke()}
  if(PK){const r=PK.rate;g.fillStyle='#6f84b8';for(let x=0;x<W;x+=2){const t=t0+x/px,k=Math.floor(t*r);if(k<0||k>=PK.peaks.length)continue;const v=PK.peaks[k]*H*0.42;g.fillRect(x,H*0.5-v,2,v*2)}}
- g.font='26px sans-serif';const all=[];for(const bid in TE)TE[bid].pieces.forEach((q,i)=>{if(q.speaker>=0&&!q.deleted)all.push({q,bid,i})});
- all.forEach(o=>{const x=(o.q.start-t0)*px;if(x<-500||x>W+10)return;const sel=(o.bid===DSEL[0]&&o.i===DSEL[1]);g.strokeStyle=sel?'#ff5a4f':'#e0a23b';g.lineWidth=sel?5:2;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();g.fillStyle=sel?'#ffd7d3':'#f3d9a4';g.fillText(o.q.text.replace(/\n/g,'').slice(0,12),x+10,H-12)});
+ g.font=Math.round(14*KK)+'px -apple-system,"Hiragino Sans",sans-serif';const all=[];for(const bid in TE)TE[bid].pieces.forEach((q,i)=>{if(q.speaker>=0&&!q.deleted)all.push({q,bid,i})});
+ all.forEach(o=>{const x=(o.q.start-t0)*px;if(x<-500||x>W+10)return;const sel=(o.bid===DSEL[0]&&o.i===DSEL[1]);g.strokeStyle=sel?'#ff5a4f':'#e0a23b';g.lineWidth=(sel?3:1.5)*KK;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();g.fillStyle=sel?'#ffd7d3':'#f3d9a4';g.fillText(o.q.text.replace(/\n/g,'').slice(0,12),x+6*KK,H-8*KK)});
  g.strokeStyle='#fff';g.lineWidth=2;const cx=(au.currentTime-t0)*px;g.beginPath();g.moveTo(cx,0);g.lineTo(cx,H);g.stroke();
  const fr=(p.start+OFF)*30,inf=document.getElementById('d2info');if(inf)inf.textContent='開始 '+fmt(p.start)+'（'+Math.floor(fr/30)+'秒'+String(Math.round(fr%30)).padStart(2,'0')+'）'}
 function dnudge(d){const p=dp();if(!p)return;snap();p.start=Math.round((p.start+d)*1000)/1000;p.m=1;dirty();renderTelops();D2A=p.start;if(au.paused)seek(p.start)}
@@ -2460,6 +2533,7 @@ function tlLoop(){if(!TLON)return;tlDraw(true);TLRAF=requestAnimationFrame(tlLoo
 function tlSel(){if(!TLSEL||!TE[TLSEL[0]])return null;return TE[TLSEL[0]].pieces[TLSEL[1]]||null}
 function tlLane(p){return p.speaker<0||p.ov||(p.text||'').startsWith('※')?2:(p.speaker>=1?1:0)}
 function tlLive(bid){const ps=TE[bid].pieces;return ps.map((p,i)=>[p,i]).filter(([p])=>p.speaker>=0&&!p.ov&&!p.deleted&&!p.cut&&!(p.text||'').startsWith('※')).sort((a,b)=>a[0].start-b[0].start)}
+function snpF(t){return Math.round((t+OFF)*30)/30-OFF}
 function tlDraw(follow){const c=document.getElementById('tlc'),sc=document.getElementById('tls');if(!c||!sc||!TE)return;const Lo=tlLayout(),dpr=window.devicePixelRatio||1;
  TLH.wave=52;const H0=tlWaveTop()+52+8,ex=TLUH?TLUH-18-H0:0;if(ex>0)TLH.wave=52+ex;const H=tlWaveTop()+TLH.wave+8,cw=sc.clientWidth;document.getElementById('tlspc').style.cssText='width:'+Lo.W+'px;height:1px';const dock=document.getElementById('tl');const dh=TLUH?Math.max(TLUH,120):H+18;dock.style.height=dh+'px';document.body.style.paddingBottom=(dh+4)+'px';document.documentElement.style.setProperty('--tlh',(dh+4)+'px');fitDock();document.body.classList.add('tlon');
  const t=au.currentTime,cx=tlX(t,Lo);
@@ -2471,8 +2545,8 @@ function tlDraw(follow){const c=document.getElementById('tlc'),sc=document.getEl
  const laneY=k=>TLH.ruler+8+Math.min(k,2)*(TLH.lane+TLH.gap);
  for(const s of Lo.L){if(s.x0+s.w<sx-20||s.x0>sx+cw+20)continue;
   g.fillStyle='#1a1b21';g.fillRect(s.x0,TLH.ruler,s.w,H-TLH.ruler);g.font='600 12px -apple-system,sans-serif';g.fillStyle='#9aa0ae';g.fillText(bname(s.bid),s.x0+8,13);g.fillStyle='rgba(255,214,10,.85)';g.fillRect(s.x0-1,0,4,TLH.ruler);g.fillRect(s.x0+s.w-3,0,4,TLH.ruler);g.fillStyle='#9aa0ae';
-  if(TLZ>=90){const f0=Math.max(Math.ceil(s.a0*30),Math.floor((sx-s.x0-20)/TLZ*30+s.a0*30)),f1=Math.min(Math.floor(s.a1*30),Math.ceil((sx+cw-s.x0+20)/TLZ*30+s.a0*30));for(let f=f0;f<=f1;f++){const x=Math.round(s.x0+(f/30-s.a0)*TLZ)+.5,m5=f%5===0;g.fillStyle=m5?'#4a4d5a':'#32343d';g.fillRect(x,TLH.ruler-(m5?9:4),1,m5?9:4)}}
-  const sf=TLZ>=500?5:(TLZ>=200?15:(TLZ>=60?30:150));for(let f=Math.ceil(s.a0*30/sf)*sf;f<=s.a1*30;f+=sf){const u=f/30,x=Math.round(s.x0+(u-s.a0)*TLZ)+.5;g.fillStyle='#4a4d5a';g.fillRect(x,TLH.ruler-10,1,10);if((TLZ>=60||Math.abs(u%10)<1e-6)&&x-s.x0>46){g.fillStyle='#8b91a0';g.font='10px ui-monospace,Menlo,monospace';g.fillText(TLZ>=200?tcf(u):fmt(u).replace(/\.00$/,''),x+3,TLH.ruler-12)}}
+  {const stp=Math.max(1,Math.ceil(3.2/(TLZ/30))),b0=(s.a0+OFF)*30,f0=Math.max(Math.ceil(b0),Math.floor((sx-s.x0-20)/TLZ*30+b0)),f1=Math.min(Math.floor((s.a1+OFF)*30),Math.ceil((sx+cw-s.x0+20)/TLZ*30+b0));for(let f=Math.ceil(f0/stp)*stp;f<=f1;f+=stp){const x=Math.round(s.x0+(f/30-OFF-s.a0)*TLZ)+.5,m5=f%(stp*5)===0;g.fillStyle=m5?'#9097a8':'#646879';g.fillRect(x,TLH.ruler-(m5?9:5),1,m5?9:5)}}
+  const sf=TLZ>=500?5:(TLZ>=200?15:(TLZ>=60?30:150));for(let f=Math.ceil((s.a0+OFF)*30/sf)*sf;f<=(s.a1+OFF)*30;f+=sf){const u=f/30,x=Math.round(s.x0+(u-OFF-s.a0)*TLZ)+.5;g.fillStyle='#9097a8';g.fillRect(x,TLH.ruler-12,1,12);if((TLZ>=60||Math.abs(u%10)<1e-6)&&x-s.x0>46){g.fillStyle='#8b91a0';g.font='10px ui-monospace,Menlo,monospace';g.fillText(TLZ>=200?tcf(u):fmt(u).replace(/\.00$/,''),x+3,TLH.ruler-14)}}
   if(PK){const r=PK.rate,wt=tlWaveTop(),mid=wt+TLH.wave-2,hh=TLH.wave-6,x0=Math.max(0,sx-s.x0-2),x1=Math.min(s.w,sx+cw-s.x0+2),sw=1/dpr;
    g.fillStyle='#1f3157';g.fillRect(s.x0,wt,s.w,TLH.wave);
    const xs=Math.floor(x0*dpr),xe=Math.ceil(x1*dpr),N=Math.max(0,xe-xs),A=new Float32Array(N),R=new Uint8Array(N);
@@ -2487,12 +2561,12 @@ function tlDraw(follow){const c=document.getElementById('tlc'),sc=document.getEl
   const lv=tlLive(s.bid);
   (TE[s.bid].notes||[]).forEach((n,ni)=>{if(n.deleted||!(n.text||'').trim())return;const x1=tlX(n.start,Lo),x2=Math.max(tlX(n.end,Lo),x1+3);if(x2<sx-5||x1>sx+cw+5)return;const y=laneY(2),lh=tlLH(2);
    g.fillStyle='#8a6fc0';g.fillRect(x1,y,x2-x1-1,lh);g.save();g.beginPath();g.rect(x1,y,x2-x1-1,lh);g.clip();g.fillStyle='#fff';g.font='600 13px -apple-system,"Hiragino Sans",sans-serif';g.fillText('※'+n.text,x1+6,y+lh/2+5);g.restore();if(TLNS&&TLNS[0]===s.bid&&TLNS[1]===ni){g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(x1+1,y+1,x2-x1-3,lh-2)}});
-  TE[s.bid].pieces.forEach((p,i)=>{if(p.deleted||p.cut)return;const e=pend(s.bid,i);const x1=tlX(p.start,Lo),x2=Math.max(tlX(e,Lo),x1+3);if(x2<sx-5||x1>sx+cw+5)return;const ln=tlLane(p),y=laneY(ln);
+  TE[s.bid].pieces.forEach((p,i)=>{if(p.deleted||p.cut)return;const e=pend(s.bid,i);const x1=tlX(snpF(p.start),Lo),x2=Math.max(tlX(snpF(e),Lo),x1+3);if(x2<sx-5||x1>sx+cw+5)return;const ln=tlLane(p),y=laneY(ln);
    const col=ln===2&&!p.ov?'#a08e4c':(p.speaker===1?'#3f7fd0':'#d85f86');const lh=tlLH(ln);g.fillStyle=col;g.fillRect(x1,y,x2-x1-1,lh);
    const sel=TLSEL&&TLSEL[0]===s.bid&&TLSEL[1]===i;if(sel){g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(x1+1,y+1,x2-x1-3,lh-2)}
    g.save();g.beginPath();g.rect(x1,y,x2-x1-1,lh);g.clip();g.fillStyle='#fff';g.font='600 13px -apple-system,"Hiragino Sans",sans-serif';const tx=(p.text||'').split('\n');{const two=!!tx[1]&&ln!==2&&lh>=36;g.fillText(two?tx[0]:tx.join(''),x1+6,two?y+lh/2-3:y+lh/2+5);if(two)g.fillText(tx[1],x1+6,y+lh/2+14)}g.restore()});
   {const y=laneY(2),lh=tlLH(2);g.save();g.setLineDash([4,3]);g.strokeStyle='#d8c46a';g.lineWidth=1;g.font='600 11px -apple-system,"Hiragino Sans",sans-serif';for(const [ga,gb] of tlGhosts(s.bid)){const x1=tlX(ga,Lo),x2=Math.max(tlX(gb,Lo),x1+4);if(x2<sx-5||x1>sx+cw+5)continue;g.fillStyle='rgba(216,196,106,.16)';g.fillRect(x1,y,x2-x1-1,lh);g.strokeRect(x1+.5,y+.5,x2-x1-2,lh-1);g.fillStyle='#d8c46a';if(x2-x1>26)g.fillText('（？）',x1+4,y+lh/2+4)}g.restore()}
-  lv.forEach(([p,i],k)=>{const x=tlX(p.start,Lo),hot=(TLHOV&&TLHOV[0]===s.bid&&TLHOV[1]===i)||(TLDRAG&&TLDRAG.bid===s.bid&&TLDRAG.i===i)||(TLSEL&&TLSEL[0]===s.bid&&TLSEL[1]===i);
+  lv.forEach(([p,i],k)=>{const x=tlX(snpF(p.start),Lo),hot=(TLHOV&&TLHOV[0]===s.bid&&TLHOV[1]===i)||(TLDRAG&&TLDRAG.bid===s.bid&&TLDRAG.i===i)||(TLSEL&&TLSEL[0]===s.bid&&TLSEL[1]===i);
    g.fillStyle=hot?'#ffd60a':'rgba(255,255,255,.55)';g.fillRect(Math.round(x),TLH.ruler,hot?3:1,H-TLH.ruler);
    if(hot&&k>0){const pr=lv[k-1][0],yp=laneY(tlLane(pr)),yc=laneY(tlLane(p));g.fillStyle='#ffd60a';g.fillRect(Math.round(x)-9,yp,9,3);g.fillRect(Math.round(x)-9,yp+TLH.lane-3,9,3);g.fillRect(Math.round(x),yc,9,3);g.fillRect(Math.round(x),yc+TLH.lane-3,9,3)}})}
  if(TLMX!==null&&!TLDRAG){g.fillStyle='rgba(255,255,255,.5)';g.fillRect(Math.round(TLMX),0,1,H)}

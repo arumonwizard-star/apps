@@ -73,7 +73,8 @@ def even_kerning(line, size, base, font_name, clamp=0.075, strength=0.8):
             m = [_metrics(fp, c) for c in line]
             gaps = [(m[i][0] - m[i][2]) + m[i + 1][1] for i in range(n - 1)]
             ref = sorted(gaps)[len(gaps) // 2]
-            ks = [base + max(-clamp, min(clamp, (ref - g) * strength)) * size for g in gaps]
+            ks = [base + max(-(0.42 if line[i] in "、。，．" else clamp), min(clamp, (ref - g) * strength)) * size
+                  for i, g in enumerate(gaps)]            # after 、。 the empty half of the cell is closed up fully
         except Exception:   # noqa: BLE001
             ks = []
     if not ks:
