@@ -6,7 +6,7 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
 | フォルダ | アプリ | 動く場所 |
 | --- | --- | --- |
 | light-operator | Light Operator（サーバー・操作画面） | Mac：~/Applications/.lightoperator/engine |
-| light-operator/public/alien | Alien Lab（キュー制御）とスマホ用の操作画面 | Mac：http://localhost:8787/alien ／ スマホ：Mac の Alien Lab 右下のスマホボタンに出るアドレス |
+| light-operator/public/alien | Alien Lab（キュー制御）とスマホ用の操作画面 | どの端末も http://<Macの名前>.local:8787/alien（Mac は操作卓、ほかの端末はスマホ画面になる） |
 | ch-cut | CH Cut | Mac：~/Applications/CHCut |
 | ara-safety | ARA安全装置 | Mac：~/Applications/ARA安全装置.app |
 | xfile-sync | X-FILE 同期 | Mac：~/Applications/X-FILE 同期.app |

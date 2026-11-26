@@ -56,10 +56,28 @@ function assignNumber(id) {
 
 // ---------- Alien Lab（Mac の画面をスマホで見る・操作する） ----------
 const AL = { list: null, lv: 0, live: null, v: 0, frame: null, fv: 0, cmds: [], seq: 0, phones: new Map(), macSeen: 0, waitP: new Set(), waitM: new Set() };
-function alLocal(req) {
-  const a = req.socket.remoteAddress || '';
-  return /^(127\.|::1$|::ffff:127\.)/.test(a) && !req.headers['cf-connecting-ip'] && !req.headers['x-forwarded-for'];
+function alAddr(req) { return String(req.socket.remoteAddress || '').replace(/^::ffff:/, ''); }
+function alFwd(req) { return !!(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']); }
+function alLoop(req) { const a = alAddr(req); return !alFwd(req) && (/^127\./.test(a) || a === '::1'); }
+function alSelf(req) { // この Mac 自身から（localhost 以外のアドレスで）開いた
+  if (alFwd(req)) return false; const a = alAddr(req);
+  return Object.values(os.networkInterfaces()).flat().some((i) => i && i.address.replace(/%.*$/, '') === a.replace(/%.*$/, ''));
 }
+function alLan(req) { // 同じ Wi-Fi の端末（トンネル経由は除く）
+  if (alFwd(req)) return false; const a = alAddr(req);
+  return /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|127\.|f[cd]|fe80|::1$)/i.test(a);
+}
+const alLocal = alLoop;
+let alHostCache = null;
+function alHost() { // Bonjour の名前（例 ny-mac.local）
+  if (alHostCache) return alHostCache;
+  let n = '';
+  try { n = execSync('scutil --get LocalHostName', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch {}
+  if (!n) n = os.hostname().replace(/\.local$/i, '');
+  alHostCache = n ? `${n}.local` : '';
+  return alHostCache;
+}
+function alURL() { const h = alHost(); return h ? `http://${h}:${PORT}/alien` : ''; }
 function alRaw(req, max) {
   return new Promise((resolve) => {
     const ch = []; let n = 0;
@@ -78,7 +96,7 @@ function alPage(file, req) {
   let html = fs.readFileSync(path.join(PUBLIC, 'alien', file), 'utf8');
   if (file === 'index.html' && alLocal(req)) {
     let cur = ''; try { cur = fs.readFileSync(path.join(DATA, 'current_url.txt'), 'utf8').trim(); } catch {}
-    const srv = { key: OPERATOR_KEY, port: PORT, lan: lanIPs().map((ip) => `http://${ip}:${PORT}`), tunnel: cur };
+    const srv = { key: OPERATOR_KEY, port: PORT, url: alURL(), lan: lanIPs().map((ip) => `http://${ip}:${PORT}`), tunnel: cur };
     html = html.replace('/*__AL_SRV__*/', `window.__AL_SRV=${JSON.stringify(srv)};`);
   }
   return html;
@@ -86,6 +104,7 @@ function alPage(file, req) {
 async function alien(req, res, url, p, okKey) {
   const json = (o) => { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)); };
   const local = alLocal(req);
+  if (alLan(req)) okKey = true; // 同じ Wi-Fi の端末は鍵なしで使える
   const q = (k) => url.searchParams.get(k);
   if (p.startsWith('/alien/api/')) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -157,13 +176,16 @@ async function alien(req, res, url, p, okKey) {
   if (p === '/alien/remote.webmanifest') {
     const k = okKey && url.searchParams.get('key') ? '?key=' + encodeURIComponent(url.searchParams.get('key')) : '';
     res.writeHead(200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ id: '/alien/remote', name: 'Alien Lab', short_name: 'Alien Lab', start_url: '/alien/remote' + k, scope: '/alien/',
+    res.end(JSON.stringify({ id: '/alien', name: 'Alien Lab', short_name: 'Alien Lab', start_url: '/alien' + k, scope: '/alien/',
       display: 'standalone', background_color: '#0e0f11', theme_color: '#0e0f11',
       icons: [{ src: '/alien/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/alien/icon-512.png', sizes: '512x512', type: 'image/png' }] }));
     return;
   }
+  // 同じアドレスで、Mac は操作卓・ほかの端末はスマホ画面
   if (p === '/alien' || p === '/alien/' || p === '/alien/index.html' || p === '/alien/remote' || p === '/alien/remote.html') {
-    const file = p.includes('remote') ? 'remote.html' : 'index.html';
+    let file = 'remote.html';
+    if (alLoop(req)) file = p.includes('remote') ? 'remote.html' : 'index.html';
+    else if (alSelf(req) && !p.includes('remote')) { res.writeHead(302, { Location: `http://localhost:${PORT}/alien`, 'Cache-Control': 'no-store' }).end(); return; }
     try { const html = alPage(file, req); res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(html); }
     catch { res.writeHead(404).end('not found'); }
     return;
@@ -386,6 +408,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const proto = cert ? 'https' : 'http';
   const k = OPERATOR_KEY ? `?key=${OPERATOR_KEY}` : '';
   console.log('\n=== Light Operator 起動 ===');
+  console.log(`  Alien Lab     : ${alURL() || 'http://localhost:' + PORT + '/alien'}`);
   for (const ip of ['localhost', ...lanIPs()]) {
     console.log(`  スマホ用      : ${proto}://${ip}:${PORT}/`);
     console.log(`  オペレーター用: ${proto}://${ip}:${PORT}/operator${k}\n`);

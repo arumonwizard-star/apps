@@ -13,101 +13,104 @@
 <link rel="apple-touch-icon" href="/alien/icon-180.png">
 <link rel="manifest" id="mani" href="/alien/remote.webmanifest">
 <style>
-:root{--bg:#0e0f11;--panel:#18191c;--panel2:#212226;--line:#2a2b30;--txt:#e8e8ea;--dim:#8a8b91;--green:#3ec36b;--red:#e5484d;--blue:#4a9eff;--yellow:#f5c84c}
+:root{--bg:#0e0f11;--panel:#18191c;--panel2:#232428;--line:#26272c;--txt:#e8e8ea;--dim:#8a8b91;--green:#3ec36b;--red:#e5484d;--blue:#4a9eff;--yellow:#f5c84c;--gap:8px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;overscroll-behavior:none}
-body{display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-user-select:none;user-select:none}
-button{font:inherit;color:inherit;border:0;background:none;touch-action:manipulation;cursor:pointer}
-.hd{display:flex;align-items:center;gap:8px;padding:8px 12px;flex:none}
+body{height:100vh;height:100dvh;overflow:hidden;display:grid;grid-template-rows:auto auto minmax(0,1fr);
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;border:0;background:none;touch-action:manipulation;cursor:pointer;padding:0}
+.hd{display:flex;align-items:center;gap:8px;padding:6px 12px;height:32px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex:none}
 .dot.ok{background:var(--blue)}.dot.wait{background:var(--yellow)}
-.hd .t{font-weight:700;letter-spacing:.02em}.hd .st{color:var(--dim);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd .t{font-weight:700;font-size:13px}.hd .st{color:var(--dim);font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ver{color:#55565c;font-size:10px}
-.main{flex:1;display:flex;flex-direction:column;min-height:0}
-.left{flex:none;padding:0 12px}
-.pv{position:relative;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.ctrl{display:flex;flex-direction:column;gap:var(--gap);padding:0 12px;min-height:0}
+.pv{position:relative;flex:none;height:min(24dvh,calc((100vw - 24px)*9/16));aspect-ratio:16/9;max-width:100%;margin:0 auto;background:#000;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 .pv img{width:100%;height:100%;object-fit:contain;display:block}
-.pv .tag{position:absolute;left:8px;top:8px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;display:none}
-.pv.bo .tag.bo{display:block;background:#fff;color:#000}
-.pv.panic .tag.pn{display:block;background:var(--red);color:#fff;left:auto;right:8px}
-.pv.bo img{opacity:.15}
-.next{display:flex;align-items:center;gap:8px;margin:10px 2px 8px;min-height:30px}
-.next .ic{width:20px;height:20px;color:var(--dim);flex:none}.next .ic svg{width:100%;height:100%}
-.next .nm{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.next .no{color:var(--dim);font-size:15px;font-weight:600;flex:none}
-.ctl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.ctl button{height:52px;border-radius:10px;background:var(--panel2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:4px}
+.pv .tag{position:absolute;top:6px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;display:none}
+.pv .tag.bo{left:6px}.pv .tag.pn{right:6px}
+.pv.bo .tag.bo{display:block;background:#fff;color:#000}.pv.bo img{opacity:.15}
+.pv.panic .tag.pn{display:block;background:var(--red);color:#fff}
+.cur{flex:none;display:flex;align-items:center;gap:7px;height:24px;min-width:0}
+.cur .lb{font-size:10px;color:var(--dim);flex:none;border:1px solid #3a3b40;border-radius:3px;padding:1px 4px}
+.cur .ic{width:16px;height:16px;color:var(--dim);flex:none}.cur .ic svg{width:100%;height:100%}
+.cur .no{color:var(--dim);font-weight:600;flex:none}
+.cur .nm{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:clamp(58px,10dvh,84px) clamp(40px,6dvh,50px) clamp(40px,6dvh,50px);gap:var(--gap)}
+.ctl button{border-radius:10px;background:var(--panel2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:5px;min-height:0}
 .ctl button:active{filter:brightness(1.4)}
-.ctl .go{grid-column:span 4;height:86px;font-size:34px;letter-spacing:.08em;background:var(--green);color:#082414;border-radius:14px}
+.ctl svg{width:16px;height:16px;flex:none}
+.ctl .go{grid-column:span 4;font-size:30px;letter-spacing:.1em;background:var(--green);color:#082414;border-radius:14px}
 .ctl .go.flash{filter:brightness(1.5)}
-.ctl .stop{background:#3a2224;color:#ff8a8d}
+.ctl .stop{color:#ff8a8d}
 .ctl .panic{grid-column:span 2;background:var(--red);color:#fff}
 .ctl .bo{grid-column:span 2}.ctl .bo.on{background:#fff;color:#000}
-.ctl svg{width:18px;height:18px}
-.tabs{display:flex;gap:6px;padding:12px 12px 6px;overflow-x:auto;flex:none;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{padding:6px 12px;border-radius:14px;background:var(--panel);color:var(--dim);font-size:12px;font-weight:600;white-space:nowrap}
+.cues{display:flex;flex-direction:column;min-height:0;padding-top:var(--gap)}
+.tabs{display:flex;gap:6px;padding:0 12px 6px;overflow-x:auto;flex:none;scrollbar-width:none}
+.tabs:empty{display:none}.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:5px 12px;border-radius:14px;background:var(--panel);color:var(--dim);font-size:12px;font-weight:600;white-space:nowrap}
 .tabs button.on{background:#2d3a4f;color:#cfe3ff}
-.list{flex:1;overflow-y:auto;padding:0 12px 16px;-webkit-overflow-scrolling:touch}
-.row{position:relative;display:flex;align-items:center;gap:8px;height:46px;padding:0 10px 0 4px;border-bottom:1px solid #1d1e22;overflow:hidden}
-.row .bar{position:absolute;left:0;top:0;bottom:0;background:rgba(62,195,107,.18);width:0;pointer-events:none}
-.row .cb{width:4px;align-self:stretch;margin:6px 0;border-radius:2px;flex:none}
-.row .ph{width:14px;color:var(--green);flex:none;display:flex}.row .ph svg{width:11px;height:11px}
-.row .ic{width:17px;height:17px;color:var(--dim);flex:none}.row .ic svg{width:100%;height:100%}
-.row .no{width:38px;color:var(--dim);font-size:12px;flex:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
-.row .tm{font-variant-numeric:tabular-nums;color:var(--dim);font-size:12px;flex:none}
-.row.isph{background:#1a2a20}.row.isph .nm{font-weight:700}
+.list{flex:1;min-height:0;overflow-y:auto;margin:0 12px 8px;border-top:1px solid var(--line);-webkit-overflow-scrolling:touch}
+.row{position:relative;display:flex;align-items:center;gap:7px;height:42px;padding-right:8px;border-bottom:1px solid #1b1c20;overflow:hidden}
+.row .bar{position:absolute;left:0;top:0;bottom:0;background:rgba(62,195,107,.16);width:0;pointer-events:none}
+.row .cb{width:3px;align-self:stretch;margin:7px 0;border-radius:2px;flex:none}
+.row .ph{width:12px;color:var(--green);flex:none;display:flex}.row .ph svg{width:10px;height:10px}
+.row .no{width:30px;color:var(--dim);font-size:11px;flex:none;text-align:right;overflow:hidden;white-space:nowrap}
+.row .ic{width:15px;height:15px;color:var(--dim);flex:none}.row .ic svg{width:100%;height:100%}
+.row .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ct{color:#6c6d73;font-size:12px;flex:none}
+.row .tm{font-variant-numeric:tabular-nums;color:var(--dim);font-size:12px;flex:none;min-width:42px;text-align:right}
+.row.isph{background:#17261c}.row.isph .nm{font-weight:700}
 .row.run .tm{color:var(--green)}.row.pre .tm{color:var(--yellow)}.row.pause .tm{color:var(--blue)}
 .row.bad .nm{color:#ff8a8d}
-.row .cont{font-size:10px;color:#6c6d73;flex:none}
-.cart{display:grid;gap:8px;padding-top:4px}
-.cell{position:relative;aspect-ratio:1.4;border-radius:10px;background:var(--panel2);padding:8px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;text-align:left}
+.cart{display:grid;gap:8px;padding-top:8px}
+.cell{position:relative;aspect-ratio:1.5;border-radius:10px;background:var(--panel2);padding:7px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;text-align:left}
 .cell.empty{background:#141518}
-.cell .cn{font-weight:700;font-size:13px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.cell .ct{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
-.cell .ic{width:15px;height:15px;color:var(--dim)}.cell .ic svg{width:100%;height:100%}
+.cell .cn{font-weight:700;font-size:12px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cell .ct2{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.cell .ic{width:14px;height:14px;color:var(--dim)}.cell .ic svg{width:100%;height:100%}
 .cell .bar{position:absolute;left:0;bottom:0;height:4px;background:var(--green);width:0}
-.cell.run{outline:2px solid var(--green)}
-.empty-msg{color:var(--dim);text-align:center;padding:40px 20px;line-height:1.7;font-size:13px}
-@media (orientation:landscape) and (min-width:600px){
-  .main{flex-direction:row}
-  .left{width:46%;max-width:520px;overflow-y:auto;padding-bottom:12px}
-  .right{flex:1;display:flex;flex-direction:column;min-width:0}
-  .tabs{padding-top:0}
-  .pv{height:30vh;margin:0 auto}
-  .next{margin:6px 2px}
-  .ctl{gap:6px}.ctl button{height:40px}.ctl .go{height:54px;font-size:26px}
+.cell.run{outline:2px solid var(--green);outline-offset:-2px}
+.empty-msg{color:var(--dim);text-align:center;padding:30px 16px;line-height:1.7;font-size:13px}
+/* 横向き：左に操作、右にリスト */
+@media (orientation:landscape){
+  body{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:auto minmax(0,1fr)}
+  .hd{grid-column:1/3}
+  .ctrl{padding-bottom:8px}
+  .pv{height:min(30dvh,calc((50vw - 24px)*9/16))}
+  .ctl{flex:1;min-height:0;grid-template-rows:1.5fr 1fr 1fr}
+  .ctl .go{font-size:clamp(20px,6dvh,30px)}
+  .cues{padding-top:0}
+  .list{margin-left:0}.tabs{padding-left:0}
 }
-.right{flex:1;display:flex;flex-direction:column;min-height:0}
+@media (orientation:landscape) and (max-height:340px){ .pv{display:none} }
+@media (orientation:portrait) and (max-height:600px){ .pv{height:18dvh} }
 </style>
 </head>
 <body>
 <div class="hd"><span class="dot" id="dot"></span><span class="t">Alien Lab</span><span class="st" id="st"></span><span class="ver" id="ver"></span></div>
-<div class="main">
-  <div class="left">
-    <div class="pv" id="pv"><img id="img" alt=""><span class="tag bo">BLACKOUT</span><span class="tag pn">PANIC</span></div>
-    <div class="next"><span class="no" id="nNo"></span><span class="ic" id="nIc"></span><span class="nm" id="nNm"></span></div>
-    <div class="ctl">
-      <button class="go" data-c="go">GO</button>
-      <button data-c="prev"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3l5 7H3z"/></svg>前</button>
-      <button data-c="next"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 13L3 6h10z"/></svg>次</button>
-      <button data-c="pause"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3" width="3" height="10" rx=".6"/><rect x="9.5" y="3" width="3" height="10" rx=".6"/></svg></button>
-      <button class="stop" data-c="stop"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3.5" width="9" height="9" rx="1"/></svg>STOP</button>
-      <button class="panic" data-c="panic">PANIC</button>
-      <button class="bo" data-c="bo" id="boBtn">BLACKOUT</button>
-    </div>
+<div class="ctrl">
+  <div class="pv" id="pv"><img id="img" alt=""><span class="tag bo">BLACKOUT</span><span class="tag pn">PANIC</span></div>
+  <div class="cur"><span class="lb">次</span><span class="no" id="nNo"></span><span class="ic" id="nIc"></span><span class="nm" id="nNm"></span></div>
+  <div class="ctl">
+    <button class="go" data-c="go">GO</button>
+    <button data-c="prev"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3l5 7H3z"/></svg></button>
+    <button data-c="next"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 13L3 6h10z"/></svg></button>
+    <button data-c="pause"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3" width="3" height="10" rx=".6"/><rect x="9.5" y="3" width="3" height="10" rx=".6"/></svg></button>
+    <button class="stop" data-c="stop"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3.5" width="9" height="9" rx="1"/></svg></button>
+    <button class="panic" data-c="panic">PANIC</button>
+    <button class="bo" data-c="bo" id="boBtn">BLACKOUT</button>
   </div>
-  <div class="right">
-    <div class="tabs" id="tabs"></div>
-    <div class="list" id="list"></div>
-  </div>
+</div>
+<div class="cues">
+  <div class="tabs" id="tabs"></div>
+  <div class="list" id="list"></div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ARROW='<svg viewBox="0 0 11 11"><path d="M2 1.5L9.5 5.5 2 9.5z" fill="currentColor"/></svg>';
-const CONT={'auto-continue':'すぐ次へ','auto-follow':'終わったら次へ'};
+const CONT={'auto-continue':'↓','auto-follow':'↓'};
 const qs=new URLSearchParams(location.search);
 let KEY=qs.get('key'); try{ if(KEY) localStorage.setItem('al.key',KEY); else KEY=localStorage.getItem('al.key')||''; }catch(e){ KEY=KEY||''; }
 $('mani').href='/alien/remote.webmanifest'+(KEY?'?key='+encodeURIComponent(KEY):'');
@@ -177,10 +180,10 @@ function renderList(){
     const cells=L.cells[tab.id]||[], n=(tab.cols||4)*(tab.rows||3), cols=Math.min(tab.cols||4,4);
     let h=`<div class="cart" style="grid-template-columns:repeat(${cols},1fr)">`;
     for(let i=0;i<n;i++){ const c=cells.find(x=>x.slot===i);
-      h+= c ? `<button class="cell" data-fire="${c.id}" style="${c.col?`background:linear-gradient(${c.col}55,#212226 75%)`:''}"><span class="ic">${icon(c.t)}</span><span class="cn">${esc(c.name)}</span><span class="ct" data-tm></span><span class="bar" data-bar></span></button>` : `<div class="cell empty"></div>`; }
+      h+= c ? `<button class="cell" data-fire="${c.id}" style="${c.col?`background:linear-gradient(${c.col}55,#212226 75%)`:''}"><span class="ic">${icon(c.t)}</span><span class="cn">${esc(c.name)}</span><span class="ct2" data-tm></span><span class="bar" data-bar></span></button>` : `<div class="cell empty"></div>`; }
     box.innerHTML=h+'</div>';
   } else {
-    box.innerHTML = L.rows.length ? L.rows.map(r=>`<div class="row${r.bad?' bad':''}" data-id="${r.id}"><span class="bar" data-bar></span>${r.col?`<span class="cb" style="background:${r.col}"></span>`:'<span class="cb"></span>'}<span class="ph" data-ph></span><span class="no">${esc(r.n)}</span><span class="ic" style="margin-left:${r.d*12}px">${icon(r.t)}</span><span class="nm">${esc(r.name)}</span>${CONT[r.cont]?`<span class="cont">${CONT[r.cont]}</span>`:''}<span class="tm" data-tm></span></div>`).join('') : '<div class="empty-msg">Cue がありません</div>';
+    box.innerHTML = L.rows.length ? L.rows.map(r=>`<div class="row${r.bad?' bad':''}" data-id="${r.id}"><span class="bar" data-bar></span>${r.col?`<span class="cb" style="background:${r.col}"></span>`:'<span class="cb"></span>'}<span class="ph" data-ph></span><span class="no">${esc(r.n)}</span><span class="ic" style="margin-left:${r.d*12}px">${icon(r.t)}</span><span class="nm">${esc(r.name)}</span>${CONT[r.cont]?`<span class="ct">${CONT[r.cont]}</span>`:''}<span class="tm" data-tm></span></div>`).join('') : '<div class="empty-msg">Cue がありません</div>';
   }
   renderLive(true);
 }
@@ -189,7 +192,7 @@ function renderLive(force){
   const L=S.list, lv=S.live; if(!L||!lv) return;
   const pv=$('pv'); pv.classList.toggle('bo',lv.bo); pv.classList.toggle('panic',lv.panic); $('boBtn').classList.toggle('on',lv.bo);
   const ph=L.rows.find(r=>r.id===lv.ph);
-  $('nNo').textContent=ph?ph.n:''; $('nIc').innerHTML=ph?icon(ph.t):''; $('nNm').textContent=ph?ph.name:'（最後まで進みました）';
+  $('nNo').textContent=ph?ph.n:''; $('nIc').innerHTML=ph?icon(ph.t):''; $('nNm').textContent=ph?ph.name:'—';
   document.querySelectorAll('.row').forEach(el=>{ const r=L.rows.find(x=>x.id===el.dataset.id); if(!r) return; const i=runInfo(r);
     el.className='row'+(r.bad?' bad':'')+(i.cls?' '+i.cls:'')+(r.id===lv.ph?' isph':'');
     el.querySelector('[data-ph]').innerHTML=r.id===lv.ph?ARROW:''; el.querySelector('[data-tm]').textContent=i.tm; el.querySelector('[data-bar]').style.width=(i.p*100)+'%'; });
@@ -205,7 +208,7 @@ setInterval(()=>{ if(S.live && S.live.run.length) renderLive(); }, 100);
 // 画面を消さない
 let wl=null; async function awake(){ try{ if('wakeLock' in navigator && !wl && document.visibilityState==='visible'){ wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{ wl=null; }); } }catch(e){} }
 document.addEventListener('visibilitychange',awake); addEventListener('pointerdown',awake,{capture:true}); awake();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('/alien/remote-sw.js',{scope:'/alien/remote'}).catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
 setStatus(); renderList(); poll();
 </script>
 </body>

@@ -376,6 +376,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 .rmbtn{position:relative}.rmbtn.on{color:#5fb0ff}#rmCount{position:absolute;right:-2px;top:-3px;font-size:9px;font-weight:700;color:#5fb0ff}
 .rmstat{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px}.rmdot{width:9px;height:9px;border-radius:50%;background:#e5484d}.rmdot.ok{background:#4a9eff}
 .rmurl{display:flex;gap:14px;align-items:center;margin:10px 0;padding:10px;background:#1c1d20;border-radius:8px}.rmqr svg{display:block;border-radius:4px}
+.rmbig{font-size:15px!important;font-weight:700;color:#fff!important}
 .rmtxt{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#ddd;word-break:break-all;margin:6px 0 8px;user-select:all}
 </style>
 </head>
@@ -441,7 +442,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
     <span class="mon" id="mon" title="動作状況（クリックで詳細）"></span>
     <span class="warn" id="warn"></span>
     <span class="spacer"></span>
-    <span class="ver">v0.18.0</span>
+    <span class="ver">v0.18.1</span>
     <button class="fbtn rmbtn" id="btnRemote" title="スマホで見る・操作する"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="2.5" width="6" height="11" rx="1.4"/><path d="M2.6 5.5a6 6 0 0 0 0 5M13.4 5.5a6 6 0 0 1 0 5"/></svg><span id="rmCount"></span></button>
     <button class="fbtn" id="btnPhones" title="スマホ（シミュレーション）"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/><path d="M7 12.5h2"/></svg></button>
     <button class="fbtn" id="btnStage" title="映像出力ウィンドウ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="9" rx="1.2"/><path d="M5.5 14h5M8 11.5V14"/></svg></button>
@@ -532,7 +533,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 
 <script>
 "use strict";
-const VERSION = '0.18.0';
+const VERSION = '0.18.1';
 const PANIC_SEC = 3;
 /* ================= icons ================= */
 const S = (p) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -2780,7 +2781,7 @@ function qrSVG(text, px){ const M=qrMatrix(text); if(!M) return ''; const n=M.le
 /*__AL_SRV__*/
 const SRV = window.__AL_SRV || null;
 const RM = { phones:0, since:-1, lastList:'', lastLiveKey:'', lastPost:0, lastFrame:0, posting:false, fcv:null, ok:false };
-function remoteURLs(){ if(!SRV) return []; const k='/alien/remote'+(SRV.key?'?key='+encodeURIComponent(SRV.key):''); const u=(SRV.lan||[]).map(b=>b+k); if(SRV.tunnel) u.push(SRV.tunnel.replace(/\/$/,'')+k); return u; }
+function remoteURLs(){ if(!SRV) return []; const u=[]; if(SRV.url) u.push(SRV.url); (SRV.lan||[]).forEach(b=>u.push(b+'/alien')); if(SRV.tunnel) u.push(SRV.tunnel.replace(/\/$/,'')+'/alien'+(SRV.key?'?key='+encodeURIComponent(SRV.key):'')); return u; }
 function rmList(){
   const out={v:VERSION, urls:remoteURLs(), lists:lists.map(l=>({id:l.id, name:l.name, type:l.type, cols:l.cols||0, rows:l.rows||0})), go:goListId, icons:{}, rows:[], cells:{}};
   const used=new Set();
@@ -2846,10 +2847,11 @@ async function rmCmdLoop(){
 }
 function renderRemote(){
   const box=$('rmBody');
-  if(!SRV){ box.innerHTML=`<div class="small" style="line-height:1.7">スマホとつなぐには、Mac でこのアドレスから開きます：<br><b style="color:#ddd;user-select:all">http://localhost:8787/alien</b></div>`; return; }
-  const urls=remoteURLs();
+  if(!SRV){ box.innerHTML=`<div class="small" style="line-height:1.7">Mac でもスマホでも、このアドレスを開きます：<br><b style="color:#ddd;user-select:all">http://localhost:8787/alien</b>（この Mac）</div>`; return; }
+  const urls=remoteURLs(), main=urls[0]||'';
   box.innerHTML = `<div class="rmstat"><span class="rmdot ${RM.ok?'ok':'ng'}"></span>${RM.ok?(RM.phones?`${RM.phones}台のスマホが接続中`:'スマホの接続を待っています'):'サーバーにつながりません'}</div>`+
-    (urls.length?urls.map((u,i)=>`<div class="rmurl"><div class="rmqr">${qrSVG(u,180)}</div><div><div class="small">${u.startsWith('https')?'どこからでも（インターネット経由）':'同じWi-Fiのスマホ'}</div><div class="rmtxt">${esc(u)}</div><button class="btn" data-copy="${i}">コピー</button></div></div>`).join(''):'<div class="small">Wi-Fi につながっていません</div>');
+    (main?`<div class="rmurl"><div class="rmqr">${qrSVG(main,170)}</div><div><div class="small">Mac・スマホ・iPad 共通のアドレス（同じ Wi-Fi）</div><div class="rmtxt rmbig">${esc(main)}</div><button class="btn" data-copy="0">コピー</button></div></div>`:'<div class="small">Wi-Fi につながっていません</div>')+
+    (urls.length>1?`<div class="small" style="margin-top:10px;line-height:1.8">つながらないとき：${urls.slice(1).map((u,i)=>`<br><span class="rmtxt" style="margin:0">${esc(u)}</span> <button class="btn" data-copy="${i+1}" style="height:18px;font-size:10px">コピー</button>`).join('')}</div>`:'');
   box.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{ navigator.clipboard?.writeText(urls[+b.dataset.copy]).then(()=>toast('コピーしました')).catch(()=>{}); b.blur(); });
 }
 $('btnRemote').addEventListener('click', e=>{ e.currentTarget.blur(); renderRemote(); openModal('mRemote'); });

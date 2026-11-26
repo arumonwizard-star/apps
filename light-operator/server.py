@@ -100,12 +100,76 @@ def set_light(on):
 # ---------- Alien Lab（Mac の画面をスマホで見る・操作する） ----------
 al_cond = threading.Condition()
 AL = {"list": None, "lv": 0, "live": None, "v": 0, "frame": None, "fv": 0, "cmds": [], "seq": 0, "phones": {}, "mac": 0.0}
+_al_host = []
+
+
+def al_host():
+    """Bonjour の名前（例 ny-mac.local）"""
+    if not _al_host:
+        n = ""
+        try:
+            n = subprocess.run(["scutil", "--get", "LocalHostName"], capture_output=True, text=True, timeout=3).stdout.strip()
+        except Exception:
+            pass
+        if not n:
+            n = socket.gethostname()
+            if n.lower().endswith(".local"):
+                n = n[:-6]
+        _al_host.append(n + ".local" if n else "")
+    return _al_host[0]
+
+
+def al_url():
+    h = al_host()
+    return "http://%s:%d/alien" % (h, PORT) if h else ""
+
+
+def al_own_ips():
+    ips = set(lan_ips())
+    try:
+        for fam in (socket.AF_INET, socket.AF_INET6):
+            for i in socket.getaddrinfo(socket.gethostname(), None, fam):
+                ips.add(i[4][0].split("%")[0])
+    except Exception:
+        pass
+    return ips
+
+
 AL_CMDS = ("go", "stop", "panic", "pause", "prev", "next", "ph", "fire", "bo")
 
 
 class AlienMixin:
+    def _al_addr(self):
+        a = self.client_address[0]
+        return a[7:] if a.startswith("::ffff:") else a
+
+    def _al_fwd(self):
+        return bool(self.headers.get("cf-connecting-ip") or self.headers.get("x-forwarded-for"))
+
     def _al_local(self):
-        return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1") and not self.headers.get("cf-connecting-ip") and not self.headers.get("x-forwarded-for")
+        a = self._al_addr()
+        return not self._al_fwd() and (a.startswith("127.") or a == "::1")
+
+    def _al_self(self):
+        # この Mac 自身から（localhost 以外のアドレスで）開いた
+        if self._al_fwd():
+            return False
+        a = self._al_addr().split("%")[0]
+        return a in al_own_ips()
+
+    def _al_lan(self):
+        # 同じ Wi-Fi の端末（トンネル経由は除く）
+        if self._al_fwd():
+            return False
+        a = self._al_addr().lower()
+        if a.startswith(("10.", "192.168.", "169.254.", "127.", "fc", "fd", "fe80")) or a == "::1":
+            return True
+        if a.startswith("172."):
+            try:
+                return 16 <= int(a.split(".")[1]) <= 31
+            except Exception:
+                return False
+        return False
 
     def _al_raw(self, mx):
         n = int(self.headers.get("Content-Length") or 0)
@@ -130,6 +194,7 @@ class AlienMixin:
 
     def alien_get(self, p, q, ok_key):
         local = self._al_local()
+        ok_key = ok_key or self._al_lan()
         if p == "/alien/api/frame":
             if not ok_key and not local:
                 return self._al_send(403)
@@ -165,12 +230,21 @@ class AlienMixin:
             return self._al_json(o)
         if p == "/alien/remote.webmanifest":
             k = "?key=" + q["key"] if ok_key and q.get("key") else ""
-            m = {"id": "/alien/remote", "name": "Alien Lab", "short_name": "Alien Lab", "start_url": "/alien/remote" + k, "scope": "/alien/",
+            m = {"id": "/alien", "name": "Alien Lab", "short_name": "Alien Lab", "start_url": "/alien" + k, "scope": "/alien/",
                  "display": "standalone", "background_color": "#0e0f11", "theme_color": "#0e0f11",
                  "icons": [{"src": "/alien/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/alien/icon-512.png", "sizes": "512x512", "type": "image/png"}]}
             return self._al_send(200, json.dumps(m).encode(), "application/manifest+json")
         if p in ("/alien", "/alien/", "/alien/index.html", "/alien/remote", "/alien/remote.html"):
-            f = "remote.html" if "remote" in p else "index.html"
+            # 同じアドレスで、Mac は操作卓・ほかの端末はスマホ画面
+            f = "remote.html"
+            if local:
+                f = "remote.html" if "remote" in p else "index.html"
+            elif self._al_self() and "remote" not in p:
+                self.send_response(302)
+                self.send_header("Location", "http://localhost:%d/alien" % PORT)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return True
             try:
                 html = open(os.path.join(PUBLIC, "alien", f), encoding="utf-8").read()
             except Exception:
@@ -180,13 +254,14 @@ class AlienMixin:
                     cur = open(os.path.join(DATA, "current_url.txt")).read().strip()
                 except Exception:
                     cur = ""
-                srv = {"key": OPERATOR_KEY, "port": PORT, "lan": ["http://%s:%d" % (ip, PORT) for ip in lan_ips()], "tunnel": cur}
+                srv = {"key": OPERATOR_KEY, "port": PORT, "url": al_url(), "lan": ["http://%s:%d" % (ip, PORT) for ip in lan_ips()], "tunnel": cur}
                 html = html.replace("/*__AL_SRV__*/", "window.__AL_SRV=%s;" % json.dumps(srv))
             return self._al_send(200, html.encode("utf-8"), "text/html; charset=utf-8")
         return False
 
     def alien_post(self, p, q, ok_key):
         local = self._al_local()
+        ok_key = ok_key or self._al_lan()
         if p == "/alien/api/state":
             if not local:
                 return self._al_send(403)
@@ -562,6 +637,7 @@ def main():
     proto = "https" if cert else "http"
     k = "?key=" + OPERATOR_KEY if OPERATOR_KEY else ""
     print("\n=== Light Operator 起動 ===")
+    print("  Alien Lab     : %s" % (al_url() or "http://localhost:%d/alien" % PORT))
     for ip in ["localhost"] + lan_ips():
         print("  スマホ用      : %s://%s:%d/" % (proto, ip, PORT))
         print("  オペレーター用: %s://%s:%d/operator%s\n" % (proto, ip, PORT, k))
