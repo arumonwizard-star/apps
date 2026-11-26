@@ -6,13 +6,14 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
 | フォルダ | アプリ | 動く場所 |
 | --- | --- | --- |
 | light-operator | Light Operator（サーバー・操作画面） | Mac：~/Applications/.lightoperator/engine |
+| light-operator/public/alien | Alien Lab（キュー制御）とスマホ用の操作画面 | Mac：http://localhost:8787/alien ／ スマホ：Mac の Alien Lab 右下のスマホボタンに出るアドレス |
 | ch-cut | CH Cut | Mac：~/Applications/CHCut |
 | ara-safety | ARA安全装置 | Mac：~/Applications/ARA安全装置.app |
 | xfile-sync | X-FILE 同期 | Mac：~/Applications/X-FILE 同期.app |
 | gmail | Gmail（閉じても受信・Dockに未読数・バナー通知） | Mac：~/Applications/Gmail.app |
 | x-file | X-FILE | Cloudflare Workers（未移行） |
 
-別のリポジトリにあるもの：dramatic-simulator、aigis-script、uketsuke-keikaku、serifu-take。Alien Lab は Claude 上のページ。
+別のリポジトリにあるもの：dramatic-simulator、aigis-script、uketsuke-keikaku、serifu-take。Alien Lab は Light Operator のサーバーから配信（Claude 上のページは見本用）。
 
 ## 反映のしかた
 

@@ -54,6 +54,123 @@ function assignNumber(id) {
   return n;
 }
 
+// ---------- Alien Lab（Mac の画面をスマホで見る・操作する） ----------
+const AL = { list: null, lv: 0, live: null, v: 0, frame: null, fv: 0, cmds: [], seq: 0, phones: new Map(), macSeen: 0, waitP: new Set(), waitM: new Set() };
+function alLocal(req) {
+  const a = req.socket.remoteAddress || '';
+  return /^(127\.|::1$|::ffff:127\.)/.test(a) && !req.headers['cf-connecting-ip'] && !req.headers['x-forwarded-for'];
+}
+function alRaw(req, max) {
+  return new Promise((resolve) => {
+    const ch = []; let n = 0;
+    req.on('data', (d) => { n += d.length; if (n > max) { req.destroy(); resolve(null); } else ch.push(d); });
+    req.on('end', () => resolve(Buffer.concat(ch))); req.on('error', () => resolve(null));
+  });
+}
+function alWake(set) { for (const w of [...set]) w(); set.clear(); }
+function alWait(req, set, ms, fn) {
+  let done = false;
+  const go = () => { if (done) return; done = true; clearTimeout(t); set.delete(go); fn(); };
+  const t = setTimeout(go, ms); set.add(go);
+  req.on('close', () => { done = true; clearTimeout(t); set.delete(go); });
+}
+function alPage(file, req) {
+  let html = fs.readFileSync(path.join(PUBLIC, 'alien', file), 'utf8');
+  if (file === 'index.html' && alLocal(req)) {
+    let cur = ''; try { cur = fs.readFileSync(path.join(DATA, 'current_url.txt'), 'utf8').trim(); } catch {}
+    const srv = { key: OPERATOR_KEY, port: PORT, lan: lanIPs().map((ip) => `http://${ip}:${PORT}`), tunnel: cur };
+    html = html.replace('/*__AL_SRV__*/', `window.__AL_SRV=${JSON.stringify(srv)};`);
+  }
+  return html;
+}
+async function alien(req, res, url, p, okKey) {
+  const json = (o) => { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)); };
+  const local = alLocal(req);
+  const q = (k) => url.searchParams.get(k);
+  if (p.startsWith('/alien/api/')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.writeHead(204).end(); return; }
+  }
+  // Mac → サーバー：画面の状態
+  if (p === '/alien/api/state' && req.method === 'POST') {
+    if (!local) { res.writeHead(403).end(); return; }
+    const b = await alRaw(req, 4e6); let j = null; try { j = JSON.parse(b); } catch {}
+    if (!j) { res.writeHead(400).end(); return; }
+    AL.macSeen = Date.now();
+    if (j.list) { AL.list = j.list; AL.lv++; }
+    if (j.live) { AL.live = j.live; AL.v++; }
+    alWake(AL.waitP);
+    const now = Date.now(); for (const [k, t] of AL.phones) if (now - t > 15000) AL.phones.delete(k);
+    json({ phones: AL.phones.size }); return;
+  }
+  // Mac → サーバー：映像の縮小画像
+  if (p === '/alien/api/frame' && req.method === 'POST') {
+    if (!local) { res.writeHead(403).end(); return; }
+    const b = await alRaw(req, 3e6); if (b && b.length) { AL.frame = b; AL.fv++; }
+    res.writeHead(204).end(); return;
+  }
+  if (p === '/alien/api/frame') {
+    if (!okKey && !local) { res.writeHead(403).end(); return; }
+    if (!AL.frame) { res.writeHead(204).end(); return; }
+    res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' }); res.end(AL.frame); return;
+  }
+  // スマホ：状態を受け取る（ロングポーリング）
+  if (p === '/alien/api/poll') {
+    if (!okKey && !local) { res.writeHead(403).end(); return; }
+    const id = (q('id') || '').slice(0, 40) || 'x';
+    AL.phones.set(id, Date.now());
+    const reply = () => {
+      AL.phones.set(id, Date.now());
+      const o = { v: AL.v, lv: AL.lv, fv: AL.fv, mac: Date.now() - AL.macSeen < 6000, live: AL.live };
+      if (String(AL.lv) !== q('lv')) o.list = AL.list;
+      json(o);
+    };
+    if (String(AL.v) !== q('v') || String(AL.lv) !== q('lv')) { reply(); return; }
+    alWait(req, AL.waitP, 20000, reply); return;
+  }
+  // スマホ → Mac：操作
+  if (p === '/alien/api/cmd' && req.method === 'POST') {
+    if (!okKey && !local) { res.writeHead(403).end(); return; }
+    const b = await alRaw(req, 1e4); let j = {}; try { j = JSON.parse(b); } catch {}
+    const ok = ['go', 'stop', 'panic', 'pause', 'prev', 'next', 'ph', 'fire', 'bo'];
+    if (ok.includes(j.c)) {
+      AL.cmds.push({ seq: ++AL.seq, c: j.c, id: typeof j.id === 'string' ? j.id.slice(0, 40) : '', from: String(j.from || '').slice(0, 30), at: Date.now() });
+      if (AL.cmds.length > 50) AL.cmds.splice(0, AL.cmds.length - 50);
+      alWake(AL.waitM);
+    }
+    res.writeHead(204).end(); return;
+  }
+  // Mac：操作を受け取る（ロングポーリング）
+  if (p === '/alien/api/cmds') {
+    if (!local) { res.writeHead(403).end(); return; }
+    AL.macSeen = Date.now();
+    const since = Number(q('since'));
+    const reply = () => {
+      const now = Date.now();
+      json({ seq: AL.seq, cmds: since < 0 ? [] : AL.cmds.filter((c) => c.seq > since && now - c.at < 5000) });
+    };
+    if (since < 0 || AL.seq > since) { reply(); return; }
+    alWait(req, AL.waitM, 20000, reply); return;
+  }
+  // スマホのホーム画面用
+  if (p === '/alien/remote.webmanifest') {
+    const k = okKey && url.searchParams.get('key') ? '?key=' + encodeURIComponent(url.searchParams.get('key')) : '';
+    res.writeHead(200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ id: '/alien/remote', name: 'Alien Lab', short_name: 'Alien Lab', start_url: '/alien/remote' + k, scope: '/alien/',
+      display: 'standalone', background_color: '#0e0f11', theme_color: '#0e0f11',
+      icons: [{ src: '/alien/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/alien/icon-512.png', sizes: '512x512', type: 'image/png' }] }));
+    return;
+  }
+  if (p === '/alien' || p === '/alien/' || p === '/alien/index.html' || p === '/alien/remote' || p === '/alien/remote.html') {
+    const file = p.includes('remote') ? 'remote.html' : 'index.html';
+    try { const html = alPage(file, req); res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(html); }
+    catch { res.writeHead(404).end('not found'); }
+    return;
+  }
+  return false;
+}
+
 // ---------- HTTP ハンドラ ----------
 function readBody(req) {
   return new Promise((resolve) => {
@@ -97,6 +214,7 @@ async function handler(req, res) {
     return;
   }
   const okKey = !OPERATOR_KEY || url.searchParams.get('key') === OPERATOR_KEY;
+  if (p.startsWith('/alien')) { if ((await alien(req, res, url, p, okKey)) !== false) return; }
 
   // スマホ: イベント受信
   if (p === '/events/client') {

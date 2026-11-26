@@ -97,17 +97,152 @@ def set_light(on):
         broadcast_state()
 
 
+# ---------- Alien Lab（Mac の画面をスマホで見る・操作する） ----------
+al_cond = threading.Condition()
+AL = {"list": None, "lv": 0, "live": None, "v": 0, "frame": None, "fv": 0, "cmds": [], "seq": 0, "phones": {}, "mac": 0.0}
+AL_CMDS = ("go", "stop", "panic", "pause", "prev", "next", "ph", "fire", "bo")
+
+
+class AlienMixin:
+    def _al_local(self):
+        return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1") and not self.headers.get("cf-connecting-ip") and not self.headers.get("x-forwarded-for")
+
+    def _al_raw(self, mx):
+        n = int(self.headers.get("Content-Length") or 0)
+        if n > mx:
+            return None
+        return self.rfile.read(n) if n else b""
+
+    def _al_send(self, code, body=b"", ctype="application/json"):
+        self.send_response(code)
+        if body:
+            self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if body:
+            self.wfile.write(body)
+        return True
+
+    def _al_json(self, o):
+        return self._al_send(200, json.dumps(o, ensure_ascii=False).encode())
+
+    def alien_get(self, p, q, ok_key):
+        local = self._al_local()
+        if p == "/alien/api/frame":
+            if not ok_key and not local:
+                return self._al_send(403)
+            with al_cond:
+                f = AL["frame"]
+            return self._al_send(200, f, "image/jpeg") if f else self._al_send(204)
+        if p == "/alien/api/poll":
+            if not ok_key and not local:
+                return self._al_send(403)
+            pid = (q.get("id") or "x")[:40]
+            with al_cond:
+                AL["phones"][pid] = time.time()
+                al_cond.wait_for(lambda: str(AL["v"]) != q.get("v") or str(AL["lv"]) != q.get("lv"), timeout=20)
+                AL["phones"][pid] = time.time()
+                o = {"v": AL["v"], "lv": AL["lv"], "fv": AL["fv"], "mac": time.time() - AL["mac"] < 6, "live": AL["live"]}
+                if str(AL["lv"]) != q.get("lv"):
+                    o["list"] = AL["list"]
+            return self._al_json(o)
+        if p == "/alien/api/cmds":
+            if not local:
+                return self._al_send(403)
+            try:
+                since = int(q.get("since", "-1"))
+            except Exception:
+                since = -1
+            with al_cond:
+                AL["mac"] = time.time()
+                if since >= 0:
+                    al_cond.wait_for(lambda: AL["seq"] > since, timeout=20)
+                now = time.time()
+                cmds = [] if since < 0 else [c for c in AL["cmds"] if c["seq"] > since and now - c["at"] < 5]
+                o = {"seq": AL["seq"], "cmds": [{k: v for k, v in c.items() if k != "at"} for c in cmds]}
+            return self._al_json(o)
+        if p == "/alien/remote.webmanifest":
+            k = "?key=" + q["key"] if ok_key and q.get("key") else ""
+            m = {"id": "/alien/remote", "name": "Alien Lab", "short_name": "Alien Lab", "start_url": "/alien/remote" + k, "scope": "/alien/",
+                 "display": "standalone", "background_color": "#0e0f11", "theme_color": "#0e0f11",
+                 "icons": [{"src": "/alien/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/alien/icon-512.png", "sizes": "512x512", "type": "image/png"}]}
+            return self._al_send(200, json.dumps(m).encode(), "application/manifest+json")
+        if p in ("/alien", "/alien/", "/alien/index.html", "/alien/remote", "/alien/remote.html"):
+            f = "remote.html" if "remote" in p else "index.html"
+            try:
+                html = open(os.path.join(PUBLIC, "alien", f), encoding="utf-8").read()
+            except Exception:
+                return self._al_send(404)
+            if f == "index.html" and local:
+                try:
+                    cur = open(os.path.join(DATA, "current_url.txt")).read().strip()
+                except Exception:
+                    cur = ""
+                srv = {"key": OPERATOR_KEY, "port": PORT, "lan": ["http://%s:%d" % (ip, PORT) for ip in lan_ips()], "tunnel": cur}
+                html = html.replace("/*__AL_SRV__*/", "window.__AL_SRV=%s;" % json.dumps(srv))
+            return self._al_send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+        return False
+
+    def alien_post(self, p, q, ok_key):
+        local = self._al_local()
+        if p == "/alien/api/state":
+            if not local:
+                return self._al_send(403)
+            b = self._al_raw(4000000)
+            try:
+                j = json.loads(b)
+            except Exception:
+                return self._al_send(400)
+            with al_cond:
+                AL["mac"] = time.time()
+                if j.get("list"):
+                    AL["list"] = j["list"]; AL["lv"] += 1
+                if j.get("live"):
+                    AL["live"] = j["live"]; AL["v"] += 1
+                now = time.time()
+                for k in [k for k, t in AL["phones"].items() if now - t > 15]:
+                    del AL["phones"][k]
+                n = len(AL["phones"])
+                al_cond.notify_all()
+            return self._al_json({"phones": n})
+        if p == "/alien/api/frame":
+            if not local:
+                return self._al_send(403)
+            b = self._al_raw(3000000)
+            if b:
+                with al_cond:
+                    AL["frame"] = b; AL["fv"] += 1
+            return self._al_send(204)
+        if p == "/alien/api/cmd":
+            if not ok_key and not local:
+                return self._al_send(403)
+            try:
+                j = json.loads(self._al_raw(10000) or b"{}")
+            except Exception:
+                j = {}
+            if j.get("c") in AL_CMDS:
+                with al_cond:
+                    AL["seq"] += 1
+                    AL["cmds"].append({"seq": AL["seq"], "c": j["c"], "id": str(j.get("id") or "")[:40], "from": str(j.get("from") or "")[:30], "at": time.time()})
+                    del AL["cmds"][:-50]
+                    al_cond.notify_all()
+            return self._al_send(204)
+        return False
+
+
 MIME = {".png": "image/png", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json"}
 
 
-class H(BaseHTTPRequestHandler):
+class H(AlienMixin, BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def log_message(self, *a):
         pass
 
     def end_headers(self):
-        if self.path.startswith("/api/") or self.path.startswith("/client.html"):
+        if self.path.startswith("/api/") or self.path.startswith("/client.html") or (self.path.startswith("/alien/api/") and self.command == "OPTIONS"):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
@@ -148,6 +283,8 @@ class H(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         ok_key = not OPERATOR_KEY or q.get("key") == OPERATOR_KEY
         p = u.path
+        if p.startswith("/alien") and self.alien_get(p, q, ok_key) is not False:
+            return
 
         if p == "/events/client":
             cid = q.get("id") or str(uuid.uuid4())
@@ -270,6 +407,8 @@ class H(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         ok_key = not OPERATOR_KEY or q.get("key") == OPERATOR_KEY
+        if u.path.startswith("/alien") and self.alien_post(u.path, q, ok_key) is not False:
+            return
         b = self._body()
 
         if u.path == "/api/report":
