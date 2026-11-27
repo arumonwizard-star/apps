@@ -1,0 +1,36 @@
+{
+  "name": "alien-lab",
+  "productName": "Alien Lab",
+  "version": "1.0.0",
+  "description": "Alien Lab",
+  "main": "main.js",
+  "author": "Yuito Nomura",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "45.5.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "jp.yuito.alienlab",
+    "productName": "Alien Lab",
+    "copyright": "Yuito Nomura",
+    "files": ["main.js", "preload.js", "remote.js", "ui/**"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "mac": {
+      "target": [{ "target": "dir", "arch": ["universal"] }],
+      "icon": "build/icon.png",
+      "category": "public.app-category.entertainment",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Live Camera",
+        "NSMicrophoneUsageDescription": "Mic",
+        "LSMinimumSystemVersion": "12.0"
+      }
+    },
+    "fileAssociations": [
+      { "ext": "alienlab", "name": "Alien Lab Project", "role": "Editor", "rank": "Owner" }
+    ]
+  }
+}

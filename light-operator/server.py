@@ -195,6 +195,14 @@ class AlienMixin:
     def alien_get(self, p, q, ok_key):
         local = self._al_local()
         ok_key = ok_key or self._al_lan()
+        if p == "/alien/api/srv":
+            if not local:
+                return self._al_send(403)
+            try:
+                cur = open(os.path.join(DATA, "current_url.txt")).read().strip()
+            except Exception:
+                cur = ""
+            return self._al_json({"key": OPERATOR_KEY, "port": PORT, "url": al_url(), "lan": ["http://%s:%d" % (ip, PORT) for ip in lan_ips()], "tunnel": cur})
         if p == "/alien/api/frame":
             if not ok_key and not local:
                 return self._al_send(403)

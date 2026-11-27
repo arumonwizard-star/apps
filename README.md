@@ -12,6 +12,7 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
 | xfile-sync | X-FILE 同期 | Mac：~/Applications/X-FILE 同期.app |
 | gmail | Gmail（閉じても受信・Dockに未読数・バナー通知） | Mac：~/Applications/Gmail.app |
 | x-file | X-FILE | Cloudflare Workers（未移行） |
+| alien-lab/app | Alien Lab（Mac アプリ。.alienlab をダブルクリックで開く） | Mac：~/Applications/Alien Lab.app ／ 配布：https://github.com/arumonwizard-star/apps/releases/tag/alien-lab |
 
 別のリポジトリにあるもの：dramatic-simulator、aigis-script、uketsuke-keikaku、serifu-take。Alien Lab は Light Operator のサーバーから配信（Claude 上のページは見本用）。
 
@@ -22,6 +23,8 @@ Claude が作ったアプリの本体をここにまとめる。どのチャッ�
   supervisor.sh・鍵・CH Cut のプリセットは自動では入れ替えない。記録は ~/Applications/.apps-updater/update.log。
 - Light Operator のサーバーは、server.js / server.py が変わると自動で入れ替わる。画面（public）は次に開いたときから。
 - CH Cut・ARA安全装置・X-FILE 同期は、次に開いたときから新しい版。
+- Alien Lab：画面は light-operator/public/alien/index.html の1つだけ。ここを直すと、ブラウザ版・Mac アプリ（起動中に取り込み、次に開くウィンドウから）・スマホ画面のすべてに入る。
+  アプリの外側（alien-lab/app）を直すと GitHub Actions（Mac）が作り直してリリースに置き、各 Mac のアプリが終了時に自分で入れ替わる。
 - Gmail：gmail/src を main に送信すると GitHub Actions（Mac）が Gmail.app を作ってリポジトリに入れる。
   Mac には上の仕組みで入り、アプリが画面を閉じている間に自分で新しい版に入れ替わる。
 

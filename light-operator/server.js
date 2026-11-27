@@ -111,6 +111,12 @@ async function alien(req, res, url, p, okKey) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') { res.writeHead(204).end(); return; }
   }
+  // Mac アプリ版 Alien Lab から：接続情報
+  if (p === '/alien/api/srv') {
+    if (!local) { res.writeHead(403).end(); return; }
+    let cur = ''; try { cur = fs.readFileSync(path.join(DATA, 'current_url.txt'), 'utf8').trim(); } catch {}
+    json({ key: OPERATOR_KEY, port: PORT, url: alURL(), lan: lanIPs().map((ip) => `http://${ip}:${PORT}`), tunnel: cur }); return;
+  }
   // Mac → サーバー：画面の状態
   if (p === '/alien/api/state' && req.method === 'POST') {
     if (!local) { res.writeHead(403).end(); return; }

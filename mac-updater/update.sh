@@ -10,6 +10,17 @@ log() { echo "[$(date '+%m/%d %H:%M:%S')] $*" >> update.log; }
 mkdir lock 2>/dev/null || { [ -n "$(find lock -maxdepth 0 -mmin +30 2>/dev/null)" ] && rm -rf lock && mkdir lock; } || exit 0
 trap 'rm -rf "$D/lock" "$D/tmp"' EXIT
 
+# Alien Lab（Mac アプリ）がまだ無ければ入れる。入ったあとはアプリが自分で新しい版に入れ替わる
+AL="$A/Alien Lab.app"
+if [ ! -d "$AL" ]; then
+  if curl -fsSL -m 600 -o "$D/alienlab.zip" https://github.com/arumonwizard-star/apps/releases/download/alien-lab/Alien-Lab.zip; then
+    rm -rf "$D/alienlab-new" && mkdir -p "$D/alienlab-new" && ditto -x -k "$D/alienlab.zip" "$D/alienlab-new" \
+      && [ -d "$D/alienlab-new/Alien Lab.app" ] && mv "$D/alienlab-new/Alien Lab.app" "$AL" && xattr -dr com.apple.quarantine "$AL" 2>/dev/null
+    [ -d "$AL" ] && log "Alien Lab を入れました" && /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$AL" 2>/dev/null
+    rm -rf "$D/alienlab-new" "$D/alienlab.zip"
+  fi
+fi
+
 SHA=$(curl -fsS -m 15 -H "Accept: application/vnd.github.sha" https://api.github.com/repos/arumonwizard-star/apps/commits/main) || exit 0
 case "$SHA" in *[!0-9a-f]*|"") exit 0;; esac
 [ "$SHA" = "$(cat sha 2>/dev/null)" ] && exit 0

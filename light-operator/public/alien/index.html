@@ -46,7 +46,7 @@ button{font:inherit;color:inherit}
 .standby{height:36px;border-radius:6px;background:#161616;border:1px solid #333;display:flex;align-items:center;padding:0 14px;gap:14px;overflow:hidden;white-space:nowrap}
 .standby .num{color:var(--dim);font-size:20px;font-weight:600}
 .standby .sn{margin-left:auto;color:#9a9a9a;font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:45%;padding-left:12px}
-.strip{flex:1;position:relative;border-radius:6px;background:#121212;border:1px solid #333;overflow:hidden;min-height:40px}
+.strip{flex:1;position:relative;touch-action:none;border-radius:6px;background:#121212;border:1px solid #333;overflow:hidden;min-height:40px}
 .strip canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .striplbl{position:absolute;left:6px;top:4px;font-size:10.5px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:4px;background:rgba(0,0,0,.6);color:#ccc;pointer-events:none}
 .striplbl.run{background:#3ec36b;color:#0d2a17}
@@ -192,7 +192,10 @@ textarea.in{height:auto;padding:6px;resize:none;width:100%}
 .btn{height:22px;padding:0 10px;border-radius:4px;border:1px solid #4a4a4a;background:#383838;cursor:pointer;color:#e6e6e6;white-space:nowrap}
 .btn:hover{background:#444}
 .btn.danger{border-color:#8a2b2e;color:#ff8a8d}
-.btn.danger.armed{background:#8a2b2e;color:#fff}
+.btn.danger.armed,.btn.armed{background:#8a2b2e;color:#fff;animation:armblink .5s steps(2) infinite}
+@keyframes armblink{50%{filter:brightness(1.5)}}
+.delarm{background:#6a1f22!important;animation:armblink .4s steps(2) infinite}
+.flasharm{box-shadow:inset 0 0 0 3px #e5484d;animation:armblink .4s steps(2) infinite}
 .chk{display:flex;align-items:center;gap:6px;color:#cfcfcf;white-space:nowrap}
 .chk input{margin:0;accent-color:#4d78b4}
 .swatches{display:flex;gap:5px}
@@ -378,14 +381,62 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 .rmurl{display:flex;gap:14px;align-items:center;margin:10px 0;padding:10px;background:#1c1d20;border-radius:8px}.rmqr svg{display:block;border-radius:4px}
 .rmbig{font-size:15px!important;font-weight:700;color:#fff!important}
 .rmtxt{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#ddd;word-break:break-all;margin:6px 0 8px;user-select:all}
+.faders{display:flex;align-items:stretch;gap:14px;padding:6px 4px}
+.fstrip{display:flex;flex-direction:column;align-items:center;gap:6px;width:62px}
+.fstrip.off{opacity:.45}
+.fl{font-size:11px;color:#bbb;height:16px;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ftrack{position:relative;width:62px;height:150px;cursor:ns-resize;touch-action:none}
+.frail{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#0b0b0c;border-radius:2px;box-shadow:inset 0 0 0 1px #333}
+.fticks i{position:absolute;left:0;right:0;height:0;border-top:1px solid #333}
+.fticks b{position:absolute;left:0;top:-6px;font:9px ui-monospace,Menlo,monospace;color:#666;font-weight:400}
+.fmeter{position:absolute;right:2px;top:0;bottom:0;width:8px;display:flex;gap:1px;align-items:flex-end}
+.fmeter s{flex:1;background:linear-gradient(to top,#2fa75a,#3ec36b 70%,#e0c040 85%,#e5484d);height:0;transition:height .06s linear;text-decoration:none;border-radius:1px}
+.fthumb{position:absolute;left:50%;width:30px;height:16px;margin:0 0 -8px -15px;border-radius:3px;background:linear-gradient(#d9d9db,#9a9a9e 48%,#6d6d72 52%,#b7b7ba);box-shadow:0 1px 3px rgba(0,0,0,.6);cursor:grab}
+.fthumb:after{content:"";position:absolute;left:3px;right:3px;top:7px;height:2px;background:#222}
+.fdb{width:56px!important;text-align:center}
+.fsep{width:1px;background:#333;margin:18px 2px 30px}
+.fside{display:flex;flex-direction:column;gap:6px;justify-content:center;margin-left:10px}
+.layer.text .tx{position:relative;display:inline-block}
+.layer.text .tl{display:block}
+.layer.text .tfc{position:relative}
+.layer.text .tg,.layer.text .to{position:absolute;inset:0;pointer-events:none}
+.tsub{display:flex;gap:2px;margin-bottom:8px}.tsub button{padding:3px 12px;border:1px solid #3a3a3a;background:#262626;color:#aaa;font-size:11px;border-radius:4px}.tsub button.on{background:#3a5a8a;color:#fff;border-color:#4a6a9a}
+.tsec{border-top:1px solid #333;padding:6px 0 4px}.tsec>.th{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#ddd;margin-bottom:4px}
+.tsec.off .trow{opacity:.4;pointer-events:none}
+.trow{display:grid;grid-template-columns:92px 1fr 64px 22px;align-items:center;gap:6px;height:24px}
+.trow>label{font-size:11px;color:#aaa;text-align:right}
+.trow input[type=range]{width:100%}
+.trow .in.num{width:60px!important}
+.trow .u{font-size:10px;color:#777}
+.segb{display:inline-flex;border:1px solid #3a3a3a;border-radius:4px;overflow:hidden}.segb button{width:28px;height:20px;border:0;background:#262626;color:#aaa;display:flex;align-items:center;justify-content:center}.segb button+button{border-left:1px solid #3a3a3a}.segb button.on{background:#3a5a8a;color:#fff}.segb svg{width:14px;height:14px}
+.tcols{display:grid;grid-template-columns:minmax(220px,1fr) minmax(360px,1.6fr);gap:14px}
+.tcols textarea{width:100%;height:100%;min-height:120px;resize:none}
+.tscroll{max-height:100%;overflow-y:auto;padding-right:4px}
+.row.istgt{box-shadow:inset 0 0 0 2px #e8a33a!important}.row.istgt:after{content:'◎';position:absolute;left:4px;color:#e8a33a;font-size:11px;top:50%;transform:translateY(-50%)}
+.row.isctl{box-shadow:inset 3px 0 0 #e8a33a!important}
+.row{position:relative}
+.qset{width:860px!important;max-width:94vw}
+.qsetb{display:flex;height:min(560px,70vh);border-top:1px solid #333;border-bottom:1px solid #333}
+.qside{width:178px;flex:none;background:#1e1e20;border-right:1px solid #333;padding:8px 6px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.sside{display:flex;align-items:center;gap:9px;height:28px;padding:0 10px;border:0;border-radius:5px;background:transparent;color:#cfcfd2;font-size:12.5px;text-align:left;cursor:pointer}
+.sside svg{width:16px;height:16px;color:#9a9aa0;flex:none}
+.sside:hover{background:#2a2a2d}.sside.on{background:#3a5a8a;color:#fff}.sside.on svg{color:#fff}
+.qmain{flex:1;overflow-y:auto;padding:14px 22px 20px;background:#262628}
+.sptitle{font-size:17px;font-weight:700;color:#eee;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #383838}
+.spage .f{margin-bottom:10px}
+.spage.hide{display:none}
+#btnBackup{display:none}.app #btnBackup{display:inline-block}
+.app .titlebar{-webkit-app-region:drag}.app .titlebar button,.app .titlebar input{-webkit-app-region:no-drag}
+.app .titlebar .lights{visibility:hidden}
+.app #btnDirReg,.app #dirInfo{display:none}
 </style>
 </head>
 <body>
 <div class="win" id="win">
-  <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><span id="wsTitle">暗転骸骨.alienlab — Alien Lab</span><span class="dirty" id="dirtyMark" title="保存していない変更があります"></span><div class="tbfile"><button id="btnNew" title="新規（⌘N・2回押し）">新規</button><button id="btnOpen" title="開く（⌘O）">開く</button><button id="btnSave" title="保存（⌘S）">保存</button></div></div>
+  <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><span id="wsTitle">暗転骸骨.alienlab — Alien Lab</span><span class="dirty" id="dirtyMark" title="未保存"></span><div class="tbfile"><button id="btnNew" title="新規（⌘N）">新規</button><button id="btnOpen" title="開く（⌘O）">開く</button><button id="btnBackup" title="Backup">Backup</button><button id="btnSave" title="保存（⌘S）">保存</button></div></div>
 
   <div class="masthead">
-    <div class="pgm" id="pgmBox" title="映像プレビュー（クリックで映像出力ウィンドウ）"><canvas id="pgm"></canvas><span class="pgmlbl" id="pgmLbl"></span></div>
+    <div class="pgm" id="pgmBox" title="プレビュー"><canvas id="pgm"></canvas><span class="pgmlbl" id="pgmLbl"></span></div>
     <button class="gobtn" id="go" style="display:none">GO</button>
     <div class="mastright">
       <div class="standby" id="standby"></div>
@@ -393,22 +444,22 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
       <textarea class="notes" id="notes" style="display:none"></textarea>
     </div>
     <div class="rt">
-      <div class="rtbox" id="rtbox" title="クリックで開演時刻を設定">
+      <div class="rtbox" id="rtbox" title="開演時刻">
         <div class="clock" id="clock">--:--:--</div>
         <div class="run" id="runtime"><small>RUNTIME</small>00:00:00</div>
       </div>
       <div class="rtbtns">
-        <button class="panic" id="btnPanic" title="PANIC（Esc）：3秒でフェードアウトして停止">PANIC</button>
+        <button class="panic" id="btnPanic" title="PANIC（Esc）">PANIC</button>
         <button class="bo" id="btnBO" title="BLACKOUT（B）">BLACKOUT</button>
       </div>
     </div>
   </div>
 
   <div class="perfbar" id="perfbar">
-    <button class="prev" id="pfPrev" title="1つ前のCueへ（↑）">◀ PREV</button>
-    <button class="next" id="pfNext" title="次のCueへ（↓）">NEXT ▶</button>
-    <button class="pause" id="pfPause" title="全体を一時停止／再開（P）">❚❚ PAUSE</button>
-    <button class="stop" id="pfStop" title="すべてすぐに停止（フェードなし）">■ STOP</button>
+    <button class="prev" id="pfPrev" title="前（↑）">◀ PREV</button>
+    <button class="next" id="pfNext" title="次（↓）">NEXT ▶</button>
+    <button class="pause" id="pfPause" title="PAUSE（P）">❚❚ PAUSE</button>
+    <button class="stop" id="pfStop" title="STOP">■ STOP</button>
     <button class="info" id="pfInfo"></button>
   </div>
   <div class="toolbar" id="toolbar"></div>
@@ -416,10 +467,10 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   <div class="main">
     <div class="center">
       <div class="listwrap">
-        <div class="listtabs"><div id="tabs" style="display:flex;align-items:flex-end"></div><button class="tabadd" id="tabAdd" title="Cue List / Cart を追加">＋</button><input class="search" id="search" placeholder="検索（Esc で閉じる）" spellcheck="false"></div>
+        <div class="listtabs"><div id="tabs" style="display:flex;align-items:flex-end"></div><button class="tabadd" id="tabAdd" title="Cue List / Cart を追加">＋</button><input class="search" id="search" placeholder="🔍" spellcheck="false"></div>
         <div class="cols" id="colsHead">
           <div></div><div></div><div></div><div>Number</div><div>Q</div><div>Target</div>
-          <div class="r">Pre-Wait</div><div class="r">Action</div><div class="r">Post-Wait</div><div style="justify-content:center;padding:0" title="続き（クリックで変更）">続</div>
+          <div class="r">Pre-Wait</div><div class="r">Action</div><div class="r">Post-Wait</div><div style="justify-content:center;padding:0" title="Continue">続</div>
         </div>
         <div class="rows" id="rows"></div>
       </div>
@@ -436,25 +487,25 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   </div>
 
   <div class="footer">
-    <div class="seg" id="mode"><button data-m="edit" class="on">Edit</button><button data-m="show" title="本番用：編集をロックし、本番の操作ボタンを表示">Show</button></div>
+    <div class="seg" id="mode"><button data-m="edit" class="on">Edit</button><button data-m="show" title="Show">Show</button></div>
     <span class="spacer"></span>
     <span id="count"></span>
-    <span class="mon" id="mon" title="動作状況（クリックで詳細）"></span>
+    <span class="mon" id="mon" title="動作状況"></span>
     <span class="warn" id="warn"></span>
     <span class="spacer"></span>
-    <span class="ver">v0.18.1</span>
-    <button class="fbtn rmbtn" id="btnRemote" title="スマホで見る・操作する"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="2.5" width="6" height="11" rx="1.4"/><path d="M2.6 5.5a6 6 0 0 0 0 5M13.4 5.5a6 6 0 0 1 0 5"/></svg><span id="rmCount"></span></button>
-    <button class="fbtn" id="btnPhones" title="スマホ（シミュレーション）"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/><path d="M7 12.5h2"/></svg></button>
+    <span class="ver">v0.19.0</span>
+    <button class="fbtn rmbtn" id="btnRemote" title="スマホ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="2.5" width="6" height="11" rx="1.4"/><path d="M2.6 5.5a6 6 0 0 0 0 5M13.4 5.5a6 6 0 0 1 0 5"/></svg><span id="rmCount"></span></button>
+    <button class="fbtn" id="btnPhones" title="スマホ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/><path d="M7 12.5h2"/></svg></button>
     <button class="fbtn" id="btnStage" title="映像出力ウィンドウ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="9" rx="1.2"/><path d="M5.5 14h5M8 11.5V14"/></svg></button>
     <button class="fbtn" id="btnSide" title="Lists, Carts & Active Cues"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><line x1="10" y1="2.5" x2="10" y2="13.5"/></svg></button>
-    <button class="fbtn" id="btnStatus" title="Workspace Status（警告とログ）"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><polyline points="1.5,9 4.5,9 6.5,4 9.5,12 11.5,7 14.5,7"/></svg></button>
+    <button class="fbtn" id="btnStatus" title="Workspace Status"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><polyline points="1.5,9 4.5,9 6.5,4 9.5,12 11.5,7 14.5,7"/></svg></button>
     <button class="fbtn" id="btnSettings" title="Settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="2.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
   </div>
 
   <div class="stagewin hide" id="stagewin">
     <div class="stagehd" id="stagehd"><span>Video Output</span><select class="sel2" id="outSel" style="height:19px;font-size:11px"></select><span class="small" id="outPopNote"></span><span class="pv" id="pvLabel">PREVIEW</span><span class="spacer"></span>
-      <button class="fbtn" id="btnPopAll" title="すべての出力を別ウィンドウで開く（前回の位置に）"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="5.5" width="7" height="6" rx="1"/><rect x="7.5" y="2.5" width="7" height="6" rx="1"/></svg></button>
-      <button class="fbtn" id="btnPop" title="別ウィンドウに出す（プロジェクター用）"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="4.5" width="10" height="9" rx="1"/><path d="M8 1.5h6.5V8M14.5 1.5L8 8"/></svg></button>
+      <button class="fbtn" id="btnPopAll" title="全出力"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="5.5" width="7" height="6" rx="1"/><rect x="7.5" y="2.5" width="7" height="6" rx="1"/></svg></button>
+      <button class="fbtn" id="btnPop" title="出力ウィンドウ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="4.5" width="10" height="9" rx="1"/><path d="M8 1.5h6.5V8M14.5 1.5L8 8"/></svg></button>
       <button class="fbtn" id="btnFull" title="全画面"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
       <button class="fbtn" id="btnStageClose" title="閉じる"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
     </div>
@@ -468,24 +519,16 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
     <div class="phones" id="phones"></div>
   </div>
 
-  <div class="modal hide" id="mSettings"><div class="mbox">
+  <div class="modal hide" id="mSettings"><div class="mbox qset">
     <div class="mhd">Settings</div>
-    <div class="mbd">
-      <div class="f"><label>プロジェクト名</label><input class="in" id="setName" style="width:220px" spellcheck="false"><span class="small">.alienlab</span></div>
-      <div class="f"><label>素材フォルダ</label><button class="btn" id="btnDirReg">素材フォルダを登録</button><span class="small" id="dirInfo"></span></div>
-      <div class="f"><label>素材</label><button class="btn" id="btnFolder">素材フォルダを選んでつなぎ直す</button><span class="small">見つからない素材（✕）を名前で探します</span></div>
-      <div class="f"><label>開演時刻</label><input class="in time" id="setStart" spellcheck="false"><span class="small">例 19:00:00（RUNTIMEの基準）</span></div>
-      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">映像出力</label><div style="flex:1"><select class="sel2" id="outCnt"><option value="1">1系統</option><option value="2">2系統</option><option value="3">3系統</option><option value="4">4系統</option></select> <span id="outNamesV"></span>
-        <div class="small" style="margin-top:4px">プロジェクターごとに出力を分けられます。各 Cue の Geometry タブで出力先を選びます。</div></div></div>
-      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">MIDI</label><div id="midiBox" style="flex:1;line-height:2"></div></div>
-      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">音声出力</label><div style="flex:1"><select class="sel2" id="sinkSel" style="max-width:300px"><option value="">既定の出力</option></select> <span class="small" id="sinkInfo"></span>
-        <div class="small" style="margin-top:4px">出力の名前：<span id="outNames"></span></div></div></div>
-      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">カメラ入力</label><div style="flex:1"><div id="camList"></div><button class="btn" id="btnCamScan" style="margin-top:4px">つながっているカメラを探す</button> <button class="btn" id="btnCamAdd" style="margin-top:4px">＋ シミュレーションを追加</button></div></div>
-      <div class="f"><label>スマホ台数</label><input class="in num" id="setPhones" spellcheck="false"><span class="small">Stage Device として使う台数（iPhone 01〜）</span></div>
-      <div class="f"><label>GO 連打防止</label><input class="in num" id="setGuard" spellcheck="false"><span class="small">ミリ秒（この間に押された2回目の GO は無視）</span></div>
-      <div class="f"><label>PANIC</label><span class="small">Esc：3秒でフェードアウト ／ フェード中の Esc：即停止</span></div>
-      <div class="f" style="margin-top:16px"><label></label><button class="btn danger" id="btnReset">サンプルの状態に戻す</button></div>
-    </div>
+    <div class="qsetb"><div class="qside"><button class="sside on" data-spage="general"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg><span>General</span></button><button class="sside" data-spage="audio"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2.5 6h2.5l3-2.5v9L5 10H2.5z"/><path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.3 6.3 0 0 1 0 9"/></svg><span>Audio</span></button><button class="sside" data-spage="video"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="3" width="13" height="8.5" rx="1"/><path d="M5.5 14h5"/></svg><span>Video</span></button><button class="sside" data-spage="media"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"/></svg><span>Media</span></button><button class="sside" data-spage="camera"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="4.5" width="9" height="7" rx="1"/><path d="M10.5 7l4-2v6l-4-2"/></svg><span>Cameras</span></button><button class="sside" data-spage="midi"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6.3"/><circle cx="5" cy="7" r=".7" fill="currentColor"/><circle cx="11" cy="7" r=".7" fill="currentColor"/><circle cx="8" cy="5" r=".7" fill="currentColor"/><circle cx="6" cy="10" r=".7" fill="currentColor"/><circle cx="10" cy="10" r=".7" fill="currentColor"/></svg><span>MIDI</span></button><button class="sside" data-spage="devices"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="1.5" width="6" height="13" rx="1.3"/><path d="M7 12.5h2"/></svg><span>Devices</span></button></div><div class="qmain"><div class="spage" data-page="general"><div class="sptitle">General</div>      <div class="f"><label>プロジェクト名</label><input class="in" id="setName" style="width:220px" spellcheck="false"><span class="small">.alienlab</span></div>
+      <div class="f"><label>開演時刻</label><input class="in time" id="setStart" spellcheck="false"></div>
+      <div class="f"><label>GO 連打防止</label><input class="in num" id="setGuard" spellcheck="false"><span class="small">ms</span></div>
+      <div class="f"><label>PANIC</label><span class="small">Esc　3s FO ／ Esc×2　■</span></div>
+      <div class="f" style="margin-top:16px"><label></label><button class="btn danger" id="btnReset">サンプルの状態に戻す</button></div></div><div class="spage hide" data-page="audio"><div class="sptitle">Audio</div>      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">音声出力</label><div style="flex:1"><select class="sel2" id="sinkSel" style="max-width:300px"><option value="">既定の出力</option></select> <span class="small" id="sinkInfo"></span>
+        <div class="small" style="margin-top:4px"><span id="outNames"></span></div></div></div></div><div class="spage hide" data-page="video"><div class="sptitle">Video</div>      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">映像出力</label><div style="flex:1"><select class="sel2" id="outCnt"><option value="1">1系統</option><option value="2">2系統</option><option value="3">3系統</option><option value="4">4系統</option></select> <span id="outNamesV"></span>
+        </div></div></div><div class="spage hide" data-page="media"><div class="sptitle">Media</div>      <div class="f"><label>素材フォルダ</label><button class="btn" id="btnDirReg">素材フォルダを登録</button><span class="small" id="dirInfo"></span></div>
+      <div class="f"><label>素材</label><button class="btn" id="btnFolder">素材フォルダを選んでつなぎ直す</button></div></div><div class="spage hide" data-page="camera"><div class="sptitle">Cameras</div>      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">カメラ入力</label><div style="flex:1"><div id="camList"></div><button class="btn" id="btnCamScan" style="margin-top:4px">つながっているカメラを探す</button> <button class="btn" id="btnCamAdd" style="margin-top:4px">＋ シミュレーションを追加</button></div></div></div><div class="spage hide" data-page="midi"><div class="sptitle">MIDI</div>      <div class="f" style="align-items:flex-start"><label style="padding-top:3px">MIDI</label><div id="midiBox" style="flex:1;line-height:2"></div></div></div><div class="spage hide" data-page="devices"><div class="sptitle">Devices</div>      <div class="f"><label>スマホ台数</label><input class="in num" id="setPhones" spellcheck="false"></div></div></div></div>
     <div class="mft"><button class="btn" data-close>閉じる</button></div>
   </div></div>
 
@@ -499,7 +542,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   </div></div>
 
   <div class="modal hide" id="mRemote"><div class="mbox" style="width:560px">
-    <div class="mhd">スマホで見る・操作する</div>
+    <div class="mhd">📱</div>
     <div class="mbd" id="rmBody"></div>
     <div class="mft"><button class="btn" data-close>閉じる</button></div>
   </div></div>
@@ -508,7 +551,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   <input type="file" id="folderPick" webkitdirectory multiple style="display:none">
   <div class="modal hide" id="mExport"><div class="mbox">
     <div class="mhd">プロジェクトを書き出す</div>
-    <div class="mbd"><div class="small" style="margin-bottom:8px">この表示環境ではファイルを直接保存できません。下の内容をコピーして、テキストファイル（名前.alienlab）として保存してください。</div>
+    <div class="mbd">
       <textarea class="in" id="exportText" rows="12" readonly style="font-family:ui-monospace,Menlo,monospace;font-size:11px"></textarea></div>
     <div class="mft"><button class="btn" id="btnCopyProj">コピー</button><button class="btn" data-close>閉じる</button></div>
   </div></div>
@@ -516,14 +559,14 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   <div class="plugwin hide" id="eqwin">
     <div class="plughd" id="eqhd"><button class="dot" id="eqClose" title="閉じる"></button><span id="eqTitle">Channel EQ</span></div>
     <div class="plugbar"><label class="chk"><input type="checkbox" id="eqOn"> ON</label><span class="small" id="eqCue"></span><span class="spacer" style="flex:1"></span>
-      <span class="small">点をドラッグ：周波数・ゲイン ／ ホイール：Q ／ ダブルクリック：ON・OFF</span><label class="chk" style="margin-left:12px"><input type="checkbox" id="eqAna" checked> Analyzer</label></div>
+      <label class="chk" style="margin-left:12px"><input type="checkbox" id="eqAna" checked> Analyzer</label></div>
     <div class="eqbody"><div class="eqrow" id="eqicons"></div><canvas id="eqcv"></canvas><div class="eqrow" id="eqvals"></div></div>
     <div class="plugft">Channel EQ</div>
   </div>
   <div class="modal hide" id="mFx"><div class="mbox fxbrowser">
     <div class="mhd" id="fxbTitle">Effects</div>
     <div class="fxb"><div class="fxcats" id="fxcats"></div><div class="fxtiles" id="fxtiles"></div></div>
-    <div class="mft"><span class="small" style="margin-right:auto">クリックすると選んでいるCueに追加されます</span><button class="btn" data-close>閉じる</button></div>
+    <div class="mft"><span style="margin-right:auto"></span><button class="btn" data-close>閉じる</button></div>
   </div></div>
   <svg id="fxdefs" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden"><defs id="fxdefsInner"></defs></svg>
   <div class="dropline" id="dropline"></div>
@@ -532,8 +575,10 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 </div>
 
 <script>
+const APP = window.alienApp || null; if(APP) document.documentElement.classList.add('app');
+
 "use strict";
-const VERSION = '0.18.1';
+const VERSION = '0.19.0';
 const PANIC_SEC = 3;
 /* ================= icons ================= */
 const S = (p) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -623,9 +668,10 @@ const FONTS = {sans:'"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Mei
 const FONT_LABEL = {sans:'ゴシック',serif:'明朝',maru:'丸ゴシック',helvetica:'Helvetica',mono:'等幅'};
 const HAS_FILE = new Set(['audio','video','midifile']);
 const HAS_TARGET_CUE = new Set(['fade','start','stop','pause','load','reset','devamp','goto','target','arm','disarm']);
+function tgt(c){ return (c.targetId && find(c.targetId)) || (c.targetCue ? findByNumber(c.targetCue) : null); }
 const DEFAULT_DUR = {fade:5,wait:5};
 const COLORS = [null,'#e5484d','#f08c2e','#e8c53a','#3ec36b','#2fb8b0','#3b8ee8','#9a62e0','#e05a9c','#8a8a8a'];
-const CONT_LABEL = {'none':['GOを待つ','次は手動でGO'], 'auto-continue':['すぐ次へ','Post-Wait後に次も開始（自動）'], 'auto-follow':['終わったら次へ','このCueが終わったら次を開始']};
+const CONT_LABEL = {'none':['Do not continue'], 'auto-continue':['Auto-continue'], 'auto-follow':['Auto-follow']};
 const CART_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>`;
 const ARROW = `<svg viewBox="0 0 11 11"><path d="M2 1.5L9.5 5.5 2 9.5z" fill="currentColor"/></svg>`;
 const ST_RUN = `<svg viewBox="0 0 12 12"><path d="M2.5 1.5L10.5 6 2.5 10.5z" fill="#3ec36b"/></svg>`;
@@ -644,7 +690,7 @@ const CONT_AF = `<svg viewBox="0 0 12 14"><path d="M6 1v9M2.5 6.5L6 10l3.5-3.5M2
 let uid = 1;
 const DEFAULTS = {slot:null,type:'memo',number:'',name:'',file:'',mediaDur:0,targetCue:'',preWait:0,duration:0,postWait:0,cont:'none',color:null,notes:'',armed:true,flagged:false,
   children:null,collapsed:false,groupMode:'all',
-  loop:1,rate:1,startOff:0,endOff:0,fadeIn:0,fadeOut:0,holdLast:true,volume:0,
+  loop:1,rate:1,startOff:0,endOff:0,fadeIn:0,fadeOut:0,holdLast:true,volume:0,lvL:0,lvR:0,
   posX:0,posY:0,scale:1,rotation:0,opacity:100,
   text:'',fontSize:120,textColor:'#ffffff',
   fadeVolOn:true,fadeVol:-60,fadeOpOn:true,fadeOp:0,stopWhenDone:true,fadeGeoOn:false,fadeX:0,fadeY:0,fadeScale:100,fadeRot:0,
@@ -732,7 +778,7 @@ const CAM_TYPES = {sim:'シミュレーション', usb:'USB カメラ', capture:
 function camOf(c){ return (settings.cameras||[]).find(x=>x.id===c.camDevice) || null; }
 function problem(c){
   if(c.type==='audio'||c.type==='video'){ if(!c.file) return 'ファイルが未設定'; if(!mediaOf(c)) return `素材が見つかりません：${c.file}`; }
-  if(HAS_TARGET_CUE.has(c.type) && c.targetCue && !findByNumber(c.targetCue)) return `対象のCue ${c.targetCue} がありません`;
+  if(HAS_TARGET_CUE.has(c.type) && c.targetCue && !tgt(c)) return `対象のCue ${c.targetCue} がありません`;
   if(c.type==='camera'){ const cam=camOf(c); if(!c.camDevice) return 'カメラが未設定'; if(!cam) return 'カメラが見つかりません'; if(!cam.online) return `カメラが接続されていません：${cam.name}`; }
   return null;
 }
@@ -743,9 +789,9 @@ let toastT;
 function toast(msg, danger){ const t=$('toast'); t.textContent=msg; t.className='toast on'+(danger?' danger':''); clearTimeout(toastT); toastT=setTimeout(()=>t.className='toast',1800); }
 function nextNumber(){ let max=0; walkAll(c=>{ if(/^\d+$/.test(c.number)) max=Math.max(max,+c.number); }); return String(max+1); }
 function targetText(c){ const t=targetText0(c); return (OUTS.length>1 && ['video','text','camera'].includes(c.type)) ? `[${outName(outIdx(c))}] ${t}` : t; }
-function targetText0(c){ if(c.type==='timecode') return `MTC ${c.tcStart} @${c.tcRate}`; if(c.type==='group') return c.children && c.children.length ? `${c.children.length}個のCue・${c.groupMode==='all'?'同時に開始':'順番に開始'}` : '空 — Cueをここへドラッグ';
+function targetText0(c){ if(c.type==='timecode') return `MTC ${c.tcStart} @${c.tcRate}`; if(c.type==='group') return c.children && c.children.length ? `▣ ${c.children.length} · ${c.groupMode==='all'?'⇉':'⇣'}` : '▣';
   if(HAS_FILE.has(c.type)) return c.file || '';
-  if(c.type==='camera'){ const cam=camOf(c); return cam ? cam.name : (c.camDevice?'（見つかりません）':''); } if(HAS_TARGET_CUE.has(c.type)) return c.targetCue ? 'Cue '+c.targetCue : ''; if(c.type==='text') return c.text.split('\n')[0];
+  if(c.type==='camera'){ const cam=camOf(c); return cam ? cam.name : (c.camDevice?'✕':''); } if(HAS_TARGET_CUE.has(c.type)){ const t=tgt(c); return t ? `→ ${t.number?t.number+'  ':''}${t.name||t.file||TYPE_NAME[t.type]}` : (c.targetCue?'→ '+c.targetCue:''); } if(c.type==='text') return c.text.split('\n')[0];
   if(c.type==='phone') return `${c.phoneTarget==='all'?'全台':c.phoneTarget} · ${PHONE_ACT[c.phoneAction]||''}`; return ''; }
 const LOG = [];
 function log(msg){ const d=new Date(); const line = `${d.toTimeString().slice(0,8)}.${String(d.getMilliseconds()).padStart(3,'0')}  ${msg}`; LOG.push(line); if(LOG.length>500) LOG.shift(); console.log('[AlienLab] '+line); }
@@ -756,7 +802,7 @@ const KEY = 'alienlab.workspace.v1';
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ const l=curList(); if(l){ l.selected=selected; if(l.type==='list') l.playhead=playhead; } localStorage.setItem(KEY, JSON.stringify({lists,activeId,goListId,settings})); }catch(e){} }, 300); }
 function load(){
-  try{ const s = JSON.parse(localStorage.getItem(KEY)||'null');
+  try{ const s = APP ? null : JSON.parse(localStorage.getItem(KEY)||'null');
     if(s && Array.isArray(s.lists)){ lists = s.lists.map(l=>({...l, cues:l.cues.map(mk)})); activeId=s.activeId; goListId=s.goListId; Object.assign(settings, s.settings||{}); }
     else if(s && Array.isArray(s.cues)){ lists=[{id:newListId(), name:'Main Cue List', type:'list', cues:s.cues.map(mk)}]; Object.assign(settings, s.settings||{}); fixIds(); lists.push(sampleCart()); } }catch(e){}
   if(!lists.length) lists = sampleLists();
@@ -807,9 +853,9 @@ function kindOf(file){
   if(file.type.startsWith('video/') || VIDEO_EXT.test(file.name)) return 'video';
   return null;
 }
-function registerMedia(name, url, kind){
-  const old = media.get(name); if(old && old.url!==url && !old.builtin) { try{ URL.revokeObjectURL(old.url); }catch(e){} }
-  const m = {url, kind, dur:0, w:0, h:0}; media.set(name, m);
+function registerMedia(name, url, kind, path){
+  const old = media.get(name); if(old && old.url!==url && !old.builtin && String(old.url).startsWith('blob:')) { try{ URL.revokeObjectURL(old.url); }catch(e){} }
+  const m = {url, kind, dur:0, w:0, h:0, path:path||null}; media.set(name, m);
   if(kind==='image'){ const im=new Image(); im.onload=()=>{ m.w=im.naturalWidth; m.h=im.naturalHeight; }; im.src=url; }
   else { const el=document.createElement(kind==='audio'?'audio':'video'); el.preload='metadata';
     el.onloadedmetadata=()=>{ m.dur=el.duration||0; m.w=el.videoWidth||0; m.h=el.videoHeight||0; walkAll(c=>{ if(c.file===name) c.mediaDur=m.dur; }); renderList(); renderInspector(); save(); };
@@ -817,24 +863,25 @@ function registerMedia(name, url, kind){
     el.src=url; }
   return m;
 }
+function fileURL(f){ if(APP){ const p=APP.pathForFile(f); if(p) return [APP.mediaURL(p), p]; } return [URL.createObjectURL(f), null]; }
 function importFiles(files, place){ // place: {list, index} or {replace: cue}
   const pf=[...files].find(isProjectFile); if(pf){ openProjectFile(pf); return; }
-  const fl=[...files].filter(f=>kindOf(f)); if(!fl.length){ toast('対応していないファイルです'); return; }
+  const fl=[...files].filter(f=>kindOf(f)); if(!fl.length){ toast('✕ ファイル', true); return; }
   snapshot();
-  if(place.replace){ const f=fl[0]; registerMedia(f.name, URL.createObjectURL(f), kindOf(f)); place.replace.file=f.name; log(`素材を差し替え: ${cueLabel(place.replace)} ← ${f.name}`); selected=place.replace.id; render(); toast(`${f.name} をつなぎました`); return; }
+  if(place.replace){ const f=fl[0]; { const [u,pp]=fileURL(f); registerMedia(f.name, u, kindOf(f), pp); } place.replace.file=f.name; log(`素材を差し替え: ${cueLabel(place.replace)} ← ${f.name}`); selected=place.replace.id; render(); toast(`✓ ${f.name}`); return; }
   let idx=place.index, last=null, relinked=0;
   for(const f of fl){
     const kind=kindOf(f); const wasMissing = []; walkAll(c=>{ if(c.file===f.name && !media.has(c.file)) wasMissing.push(c); });
-    registerMedia(f.name, URL.createObjectURL(f), kind);
+    { const [u,pp]=fileURL(f); registerMedia(f.name, u, kind, pp); }
     if(wasMissing.length){ relinked+=wasMissing.length; continue; } // 見つからなかった素材が戻ってきた → 新しいCueは作らない
     const c = mk({type: kind==='audio'?'audio':'video', number: nextNumber(), name: f.name.replace(/\.[^.]+$/,''), file: f.name});
-    if(isCart() && place.list===cues){ const sl = place.slot!=null && !cues.some(x=>x.slot===place.slot) ? place.slot : firstEmptySlot(curList()); if(sl==null){ toast('カートに空きがありません', true); break; } c.slot=sl; place.slot=null; cues.push(c); }
+    if(isCart() && place.list===cues){ const sl = place.slot!=null && !cues.some(x=>x.slot===place.slot) ? place.slot : firstEmptySlot(curList()); if(sl==null){ toast('✕ Cart', true); break; } c.slot=sl; place.slot=null; cues.push(c); }
     else place.list.splice(idx++, 0, c);
     last=c; log(`Cue追加: ${cueLabel(c)}（${f.name}）`);
   }
   if(last){ selected=last.id; if(!isCart()) playhead=last.id; }
   render(); scrollToSel();
-  if(relinked) toast(`見つからなかった素材 ${relinked}件 をつなぎ直しました`);
+  if(relinked) toast(`✓ ${relinked}`);
 }
 
 /* ================= audio ================= */
@@ -871,11 +918,11 @@ function openOutputWindow(i=shownOut){
   const o=OUTS[i]; if(!o) return; if(outOpen(i)){ o.win.focus(); return; }
   const pos=(settings.outputs[i]||{}).win; const feat = pos ? `left=${pos.x},top=${pos.y},width=${pos.w},height=${pos.h}` : 'width=960,height=560';
   let w=null; try{ w=window.open('', 'alienlab-output-'+(i+1), feat); }catch(e){}
-  if(!w){ toast('出力ウィンドウを開けませんでした（Claude の中の表示では使えません。ダウンロード版で使ってください）', true); log('出力ウィンドウ: 開けない環境'); return; }
+  if(!w){ toast('✕ 出力', true); log('出力ウィンドウ: 開けない環境'); return; }
   o.win=w; const d=w.document;
   d.open(); d.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Alien Lab — ${esc(outName(i))}</title>${[...document.querySelectorAll('style')].map(x=>x.outerHTML).join('')}
     <style>html,body{margin:0;height:100%;background:#000;overflow:hidden} #hint{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:20;background:rgba(30,30,30,.85);color:#fff;font:13px -apple-system,sans-serif;padding:8px 14px;border-radius:8px;transition:opacity .4s}
-    body.idle{cursor:none} body.idle #hint{opacity:0}</style></head><body><div id="hint">${esc(outName(i))}：プロジェクターの画面へドラッグしてから、ダブルクリックで全画面（Esc で戻る）</div></body></html>`); d.close();
+    body.idle{cursor:none} body.idle #hint{opacity:0}</style></head><body><div id="hint">${esc(outName(i))}</div></body></html>`); d.close();
   if(o.view.parentNode) o.view.remove(); const sv=d.adoptNode(o.view); sv.style.position='fixed'; sv.style.inset='0'; d.body.appendChild(sv);
   sv.querySelectorAll('video').forEach(v=>v.play().catch(()=>{}));
   if(shownOut===i) setShown(i);
@@ -885,7 +932,7 @@ function openOutputWindow(i=shownOut){
   d.addEventListener('keydown', ev=>{ if(ev.code==='Space'){ ev.preventDefault(); go(); } else if(ev.key==='Escape' && !d.fullscreenElement){ panic(); } });
   w.addEventListener('resize', fitStage); setTimeout(fitStage,50);
   w.addEventListener('pagehide', ()=>closeOutputWindow(i));
-  renderOutSel(); log(`出力ウィンドウを開きました: ${outName(i)}`); toast(`${outName(i)} を別ウィンドウに出しました。プロジェクター側へ移動してダブルクリックで全画面`);
+  renderOutSel(); log(`出力ウィンドウを開きました: ${outName(i)}`); toast(`▭ ${outName(i)}`);
 }
 function closeOutputWindow(i){
   const o=OUTS[i]; if(!o || !o.win) return; const w=o.win; o.win=null;
@@ -895,12 +942,12 @@ function closeOutputWindow(i){
 }
 setInterval(()=>{ OUTS.forEach((o,i)=>{ if(o.win && o.win.closed){ closeOutputWindow(i); return; }
   if(o.win){ try{ const w=o.win, p={x:w.screenX, y:w.screenY, w:w.outerWidth, h:w.outerHeight}, cfg=settings.outputs[i]; if(cfg && JSON.stringify(cfg.win)!==JSON.stringify(p) && !w.document.fullscreenElement){ cfg.win=p; save(); } }catch(e){} } }); }, 1000);
-function openAllOutputs(){ let blocked=0; OUTS.forEach((o,i)=>{ if(!outOpen(i)){ openOutputWindow(i); if(!outOpen(i)) blocked++; } }); if(blocked) toast('ポップアップがブロックされました。アドレスバー右端のアイコンから「常に許可」を選んでください', true); }
+function openAllOutputs(){ let blocked=0; OUTS.forEach((o,i)=>{ if(!outOpen(i)){ openOutputWindow(i); if(!outOpen(i)) blocked++; } }); if(blocked) toast('✕ ポップアップ', true); }
 function showStage(i=0){ if(outOpen(i)) return; const w=$('stagewin'); if(w.classList.contains('hide')){ w.classList.remove('hide'); $('btnStage').classList.add('on'); if(shownOut!==i) setShown(i); fitStage(); } }
 let blackout=false;
 function setBlackout(on){ blackout=on; if(on) phonesAllOff(0.5); OUTS.forEach(o=>o.bo.classList.toggle('on',on)); $('btnBO').classList.toggle('on',on); log(on?'BLACKOUT ON（映像を黒・スマホを黒＆ライトOFF）':'BLACKOUT OFF'); }
 function pauseAll(){ const rs=[...running.values()].filter(r=>r.phase!=='hold'); if(!rs.length) return; const anyRun=rs.some(r=>r.phase!=='paused');
-  rs.forEach(r=>{ if(anyRun ? r.phase!=='paused' : r.phase==='paused') togglePause(r); }); toast(anyRun?'すべて一時停止（P で再開）':'再開'); }
+  rs.forEach(r=>{ if(anyRun ? r.phase!=='paused' : r.phase==='paused') togglePause(r); }); toast(anyRun?'❚❚':'▶'); }
 
 /* ================= playback engine ================= */
 const running = new Map(); // runId -> run
@@ -945,15 +992,15 @@ function beginAction(r, t){
       if(c.groupMode==='all') c.children.forEach(ch=>fire(ch,false)); else fire(c.children[0], true);
       break; }
     case 'fade': {
-      const tc=findByNumber(c.targetCue); const trs = tc ? runsOf(tc).filter(x=>x.player) : [];
+      const tc=tgt(c); const trs = tc ? runsOf(tc).filter(x=>x.player) : [];
       if(!trs.length) log(`Fade: 対象が再生されていません（Cue ${c.targetCue||'未設定'}）`);
       r.fade = trs.map(tr=>({tr, v0:tr.player.level, o0:tr.player.opacity, g0:cloneMap(tr.player.mapOv||getMap(tr.cue))}));
       break; }
-    case 'start': { const tc=findByNumber(c.targetCue); if(tc) fire(tc,false); break; }
-    case 'stop': { const tc=findByNumber(c.targetCue); if(tc) runsOf(tc).forEach(stopRun); break; }
-    case 'pause': { const tc=findByNumber(c.targetCue); if(tc) runsOf(tc).forEach(togglePause); break; }
-    case 'goto': { const tc=findByNumber(c.targetCue); if(tc){ playhead=tc.id; selected=tc.id; render(); } break; }
-    case 'arm': case 'disarm': { const tc=findByNumber(c.targetCue); if(tc){ tc.armed = c.type==='arm'; render(); } break; }
+    case 'start': { const tc=tgt(c); if(tc) fire(tc,false); break; }
+    case 'stop': { const tc=tgt(c); if(tc) runsOf(tc).forEach(stopRun); break; }
+    case 'pause': { const tc=tgt(c); if(tc) runsOf(tc).forEach(togglePause); break; }
+    case 'goto': { const tc=tgt(c); if(tc){ playhead=tc.id; selected=tc.id; render(); } break; }
+    case 'arm': case 'disarm': { const tc=tgt(c); if(tc){ tc.armed = c.type==='arm'; render(); } break; }
     case 'phone': applyPhone(c); break;
     case 'light': log(`Light: ${cueLabel(c)} → 送信（DMX未接続）`); break;
     case 'network': sendNetCue(c); break;
@@ -986,10 +1033,10 @@ function makePlayer(c){
     el.playsInline=true; el.preload='auto'; el.playbackRate=c.rate||1;
     el.addEventListener('loadedmetadata', ()=>{ if(c.startOff>0) el.currentTime=c.startOff; }, {once:true});
     el.addEventListener('ended', ()=>onMediaEnd(p, c));
-    el.addEventListener('error', ()=>{ p.done=true; log(`再生エラー: ${c.file}（ブラウザ版では再生できない形式。Mac版で対応予定）`); toast(`${c.file} はブラウザ版では再生できません`, true); });
+    el.addEventListener('error', ()=>{ p.done=true; log(`再生エラー: ${c.file}（ブラウザ版では再生できない形式。Mac版で対応予定）`); toast(`✕ ${c.file}`, true); });
     p.el=el;
     try{ buildAudioGraph(p, el, c); }catch(e){ log('音声の接続に失敗: '+e.message); }
-    el.play().catch(e=>{ log('再生が拒否されました: '+e.message); toast('再生できませんでした（画面を一度クリックしてからGO）', true); });
+    el.play().catch(e=>{ log('再生が拒否されました: '+e.message); toast('✕ ▶', true); });
   }
   if(p.kind!=='audio'){
     const layer=document.createElement('div'); layer.className='layer'; layer.appendChild(p.el);
@@ -1005,8 +1052,11 @@ function impulse(ctx, sec){ const k=Math.round(sec*2)/2; if(irCache.has(k)) retu
 function buildAudioGraph(p, el, c){
   const ctx=ac(), src=ctx.createMediaElementSource(el);
   const chainIn=ctx.createGain(), chainOut=ctx.createGain(), pan=ctx.createStereoPanner(), gain=ctx.createGain(); gain.gain.value=0;
-  src.connect(chainIn); chainOut.connect(pan); pan.connect(gain); routeOut(p, gain, c.outPair||0);
-  p.gain=gain; p.ax={chainIn, chainOut, pan, blocks:[], key:null};
+  const sp=ctx.createChannelSplitter(2), gL=ctx.createGain(), gR=ctx.createGain(), mg=ctx.createChannelMerger(2), anL=ctx.createAnalyser(), anR=ctx.createAnalyser();
+  anL.fftSize=anR.fftSize=512;
+  src.connect(chainIn); chainOut.connect(pan); pan.connect(sp); sp.connect(gL,0); sp.connect(gR,1); gL.connect(mg,0,0); gR.connect(mg,0,1); mg.connect(gain); routeOut(p, gain, c.outPair||0);
+  const ms=ctx.createChannelSplitter(2); gain.connect(ms); ms.connect(anL,0); ms.connect(anR,1);
+  p.gain=gain; p.ax={chainIn, chainOut, pan, gL, gR, anL, anR, blocks:[], key:null};
   rebuildChain(p, c);
 }
 function setP(param, v){ if(!isFinite(v)) return; if(Math.abs(param.value-v)>1e-4) param.setTargetAtTime(v, actx.currentTime, 0.02); }
@@ -1018,7 +1068,7 @@ function rebuildChain(p, c){
   let prev=ax.chainIn; for(const b of ax.blocks){ prev.connect(b.in); prev=b.out; } prev.connect(ax.chainOut); ax.key=afxKey(c);
 }
 function applyFx(p, c){ const ax=p.ax; if(!ax||!actx) return; if((c.outPair||0)!==p.pair) routeOut(p, p.gain, c.outPair||0); if(ax.key!==afxKey(c)) rebuildChain(p, c);
-  for(const b of ax.blocks) b.update(b.fx.p); setP(ax.pan.pan, clamp(c.pan,-1,1)); }
+  for(const b of ax.blocks) b.update(b.fx.p); setP(ax.pan.pan, clamp(c.pan,-1,1)); setP(ax.gL.gain, dbToGain(c.lvL||0)); setP(ax.gR.gain, dbToGain(c.lvR||0)); }
 const disc = (...ns) => ns.forEach(n=>{ try{ n.disconnect(); }catch(e){} });
 function dryWet(ctx){ const i=ctx.createGain(), o=ctx.createGain(), dry=ctx.createGain(), w=ctx.createGain(); i.connect(dry); dry.connect(o); w.connect(o); return {i,o,dry,w}; }
 function setNow(param, v, first){ if(first) param.value=v; else setP(param, v); }
@@ -1122,7 +1172,7 @@ function softMask(S,w,h){ if(!(S.l||S.r||S.t||S.b)) return 'none'; const g=Math.
 /* ---- Mesh Warp (WebGL) ---- */
 const MESH_RES=24;
 function makeGL(p){
-  const cv=document.createElement('canvas'); cv.style.display='block'; const gl=cv.getContext('webgl',{premultipliedAlpha:false,alpha:true}); if(!gl){ log('WebGL が使えないため Mesh Warp を表示できません'); toast('この環境では WebGL が使えず、メッシュを表示できません', true); return null; }
+  const cv=document.createElement('canvas'); cv.style.display='block'; const gl=cv.getContext('webgl',{premultipliedAlpha:false,alpha:true}); if(!gl){ log('WebGL が使えないため Mesh Warp を表示できません'); toast('✕ WebGL', true); return null; }
   const sh=(t,src)=>{ const o=gl.createShader(t); gl.shaderSource(o,src); gl.compileShader(o); return o; };
   const pr=gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER,'attribute vec2 aP;attribute vec2 aU;uniform vec2 uS;varying vec2 v;void main(){vec2 c=aP/uS*2.0-1.0;gl_Position=vec4(c.x,-c.y,0,1);v=aU;}'));
   gl.attachShader(pr, sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec2 v;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,v);}')); gl.linkProgram(pr); gl.useProgram(pr);
@@ -1153,7 +1203,7 @@ function makeCameraLayer(c, isPreview){
   if(cam && cam.type!=='sim'){
     const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.autoplay=true; L.appendChild(v); addLayer(L, c);
     const p={kind:'camera', real:true, el:v, layer:L, level:0, opacity:1, done:false, gain:null};
-    getCamStream(cam).then(st=>{ v.srcObject=st; v.play().catch(()=>{}); }).catch(e=>{ log(`カメラを開けません: ${cam.name}（${e.name||e}）`); toast(`${cam.name} を開けませんでした`, true); });
+    getCamStream(cam).then(st=>{ v.srcObject=st; v.play().catch(()=>{}); }).catch(e=>{ log(`カメラを開けません: ${cam.name}（${e.name||e}）`); toast(`✕ ${cam.name}`, true); });
     return p;
   }
   const [w,h]=(cam&&cam.res||'1920x1080').split('x').map(Number);
@@ -1162,7 +1212,7 @@ function makeCameraLayer(c, isPreview){
 }
 /* ---- real camera devices ---- */
 const camStreams=new Map(), camLost=new Set();
-function resumeLost(cam){ walkAll(c=>{ if(camLost.has(c.id) && c.camDevice===cam.id){ camLost.delete(c.id); if(!runsOf(c).length && panicT0==null){ log(`カメラ復帰 → 自動で再表示: ${cueLabel(c)}`); toast(`${cam.name} が戻ったので映像を再表示しました`); fire(c,false); } } }); }
+function resumeLost(cam){ walkAll(c=>{ if(camLost.has(c.id) && c.camDevice===cam.id){ camLost.delete(c.id); if(!runsOf(c).length && panicT0==null){ log(`カメラ復帰 → 自動で再表示: ${cueLabel(c)}`); toast(`● ${cam.name}`); fire(c,false); } } }); }
 const camAPI = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 function guessCamType(label){ label=label||''; if(/iphone|continuity|連係/i.test(label)) return 'iphone'; if(/ndi/i.test(label)) return 'ndi';
   if(/blackmagic|elgato|cam ?link|ultrastudio|decklink|magewell|avermedia|capture|hdmi|sdi|usb video|ezcap|uvc capture/i.test(label)) return 'capture'; return 'usb'; }
@@ -1173,27 +1223,27 @@ async function getCamStream(cam){
   const st=await navigator.mediaDevices.getUserMedia({audio:false, video:{deviceId: cam.deviceId?{exact:cam.deviceId}:undefined, width:{ideal:w}, height:{ideal:h}, frameRate:{ideal:60}}});
   camStreams.set(cam.id, st); const tr=st.getVideoTracks()[0]; const sset=tr.getSettings?tr.getSettings():{};
   log(`カメラ接続: ${cam.name}（${sset.width||'?'}×${sset.height||'?'} ${sset.frameRate?Math.round(sset.frameRate)+'fps':''}）`);
-  tr.addEventListener('ended', ()=>{ camStreams.delete(cam.id); cam.online=false; log(`カメラ切断: ${cam.name}`); toast(`${cam.name} が切断されました`, true);
+  tr.addEventListener('ended', ()=>{ camStreams.delete(cam.id); cam.online=false; log(`カメラ切断: ${cam.name}`); toast(`✕ ${cam.name}`, true);
     walkAll(c=>{ if(c.type==='camera' && c.camDevice===cam.id && runsOf(c).length){ camLost.add(c.id); runsOf(c).forEach(stopRun); } }); render(); });
   return st;
 }
 function releaseCam(cam){ const st=camStreams.get(cam.id); if(st){ st.getTracks().forEach(t=>t.stop()); camStreams.delete(cam.id); } }
 async function scanCameras(){
-  if(!camAPI()){ toast('この画面ではカメラを使えません。ダウンロード版を Chrome で開いてください', true); log('カメラ検出: mediaDevices が使えない環境'); return; }
+  if(!camAPI()){ toast('✕ Camera', true); log('カメラ検出: mediaDevices が使えない環境'); return; }
   try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true}); tmp.getTracks().forEach(t=>t.stop()); }
-  catch(e){ log(`カメラ検出: 許可されませんでした（${e.name}）`); toast(e.name==='NotAllowedError'||e.name==='SecurityError' ? 'カメラの使用が許可されていません（ダウンロード版を Chrome で開き、カメラを「許可」してください）' : 'カメラが見つかりませんでした', true); return; }
+  catch(e){ log(`カメラ検出: 許可されませんでした（${e.name}）`); toast('✕ Camera', true); return; }
   const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
   const cams=settings.cameras||(settings.cameras=[]); let added=0;
   for(const d of devs){ let cam=cams.find(x=>x.type!=='sim' && (x.deviceId===d.deviceId || (x.label && x.label===d.label)));
     if(!cam){ cam={id:'cam'+Date.now().toString(36)+added, name:(d.label||'Camera').replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i,''), type:guessCamType(d.label), res:'1920x1080', online:true, deviceId:d.deviceId, label:d.label}; cams.push(cam); added++; }
     else { cam.deviceId=d.deviceId; cam.label=d.label; cam.online=true; } }
   for(const x of cams) if(x.type!=='sim' && !devs.some(d=>d.deviceId===x.deviceId)) x.online=false;
-  log(`カメラ検出: ${devs.length}台（新規 ${added}台）`); toast(devs.length ? `${devs.length}台のカメラが見つかりました${added?`（${added}台を追加）`:''}` : 'カメラが見つかりませんでした', !devs.length);
+  log(`カメラ検出: ${devs.length}台（新規 ${added}台）`); toast(devs.length ? `● Camera ×${devs.length}` : '✕ Camera', !devs.length);
   setDirty(true); save(); renderCams(); render();
 }
 if(camAPI() && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', async ()=>{
   try{ const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'); let ch=false;
-    for(const x of (settings.cameras||[])){ if(x.type==='sim') continue; const on=devs.some(d=>d.deviceId===x.deviceId); if(on!==x.online){ x.online=on; ch=true; log(`カメラ ${x.name}: ${on?'接続':'切断'}`); toast(`${x.name} が${on?'接続されました':'切断されました'}`, !on); if(on) setTimeout(()=>resumeLost(x), 800); } }
+    for(const x of (settings.cameras||[])){ if(x.type==='sim') continue; const on=devs.some(d=>d.deviceId===x.deviceId); if(on!==x.online){ x.online=on; ch=true; log(`カメラ ${x.name}: ${on?'接続':'切断'}`); toast(`${on?'●':'✕'} ${x.name}`, !on); if(on) setTimeout(()=>resumeLost(x), 800); } }
     if(ch){ save(); renderCams(); render(); } }catch(e){} });
 function preloadCam(c){ if(!c || c.type!=='camera') return; const cam=camOf(c); if(cam && cam.type!=='sim' && cam.online && !camStreams.get(cam.id)) getCamStream(cam).catch(()=>{}); }
 function drawCam(p, c){
@@ -1211,7 +1261,7 @@ function drawCam(p, c){
   g.fillStyle='#fff'; g.fillText(`LIVE  ${cam?cam.name:'—'}`, fs*2, fs*0.95);
   const d=new Date(); const tc=d.toTimeString().slice(0,8)+':'+String(Math.floor(d.getMilliseconds()/1000*30)).padStart(2,'0');
   g.font=`${Math.round(fs*0.9)}px ui-monospace,Menlo,monospace`; g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(W-fs*8.6,H-fs*2,fs*8,fs*1.4); g.fillStyle='#fff'; g.fillText(tc, W-fs*8.2, H-fs*1.8);
-  g.font=`${Math.round(fs*0.7)}px -apple-system,Helvetica,sans-serif`; g.fillStyle='rgba(255,255,255,.5)'; g.fillText('シミュレーション映像（Mac版で実カメラに置き換わります）', fs*0.7, H-fs*1.6);
+  g.font=`${Math.round(fs*0.7)}px -apple-system,Helvetica,sans-serif`; g.fillStyle='rgba(255,255,255,.5)'; g.fillText('SIM', fs*0.7, H-fs*1.6);
 }
 function renderVisual(p, c, op){
   const L=p.layer; L.style.opacity=clamp(op,0,1);
@@ -1231,15 +1281,51 @@ function renderVisual(p, c, op){
 }
 function addLayer(L, c){ (OUTS[outIdx(c)]||OUTS[0]).canvas.appendChild(L); }
 
-function textStyleKey(c){ return [c.text,c.fontSize,c.textColor,c.fontFamily,c.fontWeight,c.letterSpacing,c.lineHeight,c.align,c.strokeW,c.strokeColor,c.shadow,c.bgOn,c.bgColor,c.bgOpacity].join('|'); }
-function hexA(hex, a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+/* ---------- テキスト（Final Cut / Motion のテキストインスペクタ風） ---------- */
+function tf(c){ // 古い項目からの引き継ぎも含めた実際の値
+  const n=(v,d)=> (v===undefined||v===null||v==='')?d:v;
+  return {
+    font: c.fontFamily||'sans', weight: n(c.fontWeight,700), size: n(c.fontSize,120),
+    tracking: n(c.tracking, (c.letterSpacing||0)*100), kerning: n(c.kerning,0),
+    lineSpacing: n(c.lineSpacing, c.lineHeight!=null ? Math.round(((c.lineHeight||1.2)-1.2)*(c.fontSize||120)) : 0),
+    baseline: n(c.baseline,0), slant: n(c.slant,0), caps: !!c.allCaps, vertical: !!c.vertical, align: c.align||'center',
+    faceColor: c.textColor||'#ffffff', faceOpacity: n(c.faceOpacity,100), faceBlur: n(c.faceBlur,0),
+    outlineOn: c.outlineOn!=null ? !!c.outlineOn : (c.strokeW>0), outlineColor: c.outlineColor||c.strokeColor||'#000000', outlineOpacity: n(c.outlineOpacity,100), outlineBlur: n(c.outlineBlur,0), outlineWidth: n(c.outlineWidth, c.strokeW>0?c.strokeW:3),
+    glowOn: !!c.glowOn, glowColor: c.glowColor||'#ffffff', glowOpacity: n(c.glowOpacity,75), glowBlur: n(c.glowBlur,10), glowRadius: n(c.glowRadius,4),
+    shadowOn: c.shadowOn!=null ? !!c.shadowOn : !!c.shadow, shadowColor: c.shadowColor||'#000000', shadowOpacity: n(c.shadowOpacity,75), shadowBlur: n(c.shadowBlur,8), shadowDistance: n(c.shadowDistance,10), shadowAngle: n(c.shadowAngle,315),
+    bgOn: !!c.bgOn, bgColor: c.bgColor||'#000000', bgOpacity: n(c.bgOpacity,60),
+  };
+}
+function drawTextCanvas(g, c, w, h, k){
+  const T=tf(c), fs=Math.max(4,T.size*k); let txt=String(c.text||''); if(T.caps) txt=txt.toUpperCase();
+  const lines=txt.split('\n'), lh=fs*1.2+T.lineSpacing*k;
+  g.font=`${T.weight} ${fs}px ${fontCSS(T.font)}`; g.textAlign='center'; g.textBaseline='middle'; g.lineJoin='round';
+  const paint=(t,x,y)=>{ if(T.outlineOn){ g.strokeStyle=hexA(T.outlineColor,T.outlineOpacity/100); g.lineWidth=T.outlineWidth*2*k; g.strokeText(t,x,y); } g.fillStyle=hexA(T.faceColor,T.faceOpacity/100); g.fillText(t,x,y); };
+  if(T.vertical){ const cols=lines.length; lines.forEach((ln,i)=>{ const x=w/2+((cols-1)/2-i)*lh; const ch=[...ln], step=fs*(1+T.tracking/100)+T.kerning*k; ch.forEach((t,j)=>paint(t, x, h/2+(j-(ch.length-1)/2)*step)); }); }
+  else lines.forEach((t,i)=>paint(t, w/2, h/2+(i-(lines.length-1)/2)*lh - T.baseline*k));
+}
+function fontCSS(k){ return FONTS[k] || `"${String(k).replace(/"/g,'')}", sans-serif`; }
+function textStyleKey(c){ return c.text+'|'+JSON.stringify(tf(c)); }
+function hexA(hex, a){ const n=parseInt(String(hex||'#000').slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
 function styleText(layer, c){
-  let tx=layer.querySelector('.tx'); if(!tx){ tx=document.createElement('span'); tx.className='tx'; layer.prepend(tx); } tx.textContent=c.text; const st=layer.style;
-  st.fontSize=c.fontSize+'px'; st.color=c.textColor; st.fontFamily=FONTS[c.fontFamily]||FONTS.sans; st.fontWeight=c.fontWeight;
-  st.letterSpacing=c.letterSpacing+'em'; st.lineHeight=c.lineHeight; st.textAlign=c.align;
-  st.webkitTextStroke = c.strokeW>0 ? `${c.strokeW*2}px ${c.strokeColor}` : '0'; st.paintOrder='stroke fill';
-  st.textShadow = c.shadow ? '0 6px 24px rgba(0,0,0,.85)' : 'none';
-  st.background = c.bgOn ? hexA(c.bgColor, c.bgOpacity/100) : 'transparent'; st.padding = c.bgOn ? '.15em .5em' : '0'; st.borderRadius = c.bgOn ? '.15em' : '0';
+  const T=tf(c); let tx=layer.querySelector('.tx');
+  if(!tx || !tx.querySelector('.tl')){ if(tx) tx.remove(); tx=document.createElement('span'); tx.className='tx'; tx.innerHTML='<span class="tl tg"></span><span class="tl to"></span><span class="tl tfc"></span>'; layer.prepend(tx); }
+  tx.querySelectorAll('.tl').forEach(x=>{ x.textContent=c.text; }); delete tx.dataset.tw;
+  const st=layer.style;
+  st.fontSize=T.size+'px'; st.fontFamily=fontCSS(T.font); st.fontWeight=T.weight; st.fontKerning='normal';
+  st.letterSpacing=`calc(${T.tracking/100}em + ${T.kerning}px)`; st.lineHeight=`calc(1.2em + ${T.lineSpacing}px)`;
+  st.textAlign=T.align; st.textAlignLast = T.align==='justify' ? 'left' : ''; st.textTransform=T.caps?'uppercase':'none';
+  st.writingMode=T.vertical?'vertical-rl':'horizontal-tb'; st.textOrientation='mixed'; st.whiteSpace='pre';
+  st.color=''; st.webkitTextStroke=''; st.textShadow='none';
+  st.background = T.bgOn ? hexA(T.bgColor, T.bgOpacity/100) : 'transparent'; st.padding = T.bgOn ? '.15em .5em' : '0'; st.borderRadius = T.bgOn ? '.15em' : '0';
+  const [g,o,f]=tx.querySelectorAll('.tl');
+  const skew = T.slant ? `skewX(${-T.slant}deg)` : '', base = T.baseline ? `translateY(${T.vertical?0:-T.baseline}px) translateX(${T.vertical?T.baseline:0}px)` : '';
+  [g,o,f].forEach(x=>{ x.style.transform=[base,skew].filter(Boolean).join(' ')||'none'; });
+  f.style.color=hexA(T.faceColor, T.faceOpacity/100); f.style.filter=T.faceBlur>0?`blur(${T.faceBlur}px)`:'none';
+  o.style.display=T.outlineOn?'':'none'; o.style.color=hexA(T.outlineColor, T.outlineOpacity/100); o.style.webkitTextStroke=`${T.outlineWidth*2}px ${hexA(T.outlineColor, T.outlineOpacity/100)}`; o.style.filter=T.outlineBlur>0?`blur(${T.outlineBlur}px)`:'none';
+  g.style.display=T.glowOn?'':'none'; g.style.color=hexA(T.glowColor, T.glowOpacity/100); g.style.webkitTextStroke=`${(T.glowRadius+(T.outlineOn?T.outlineWidth:0))*2}px ${hexA(T.glowColor, T.glowOpacity/100)}`; g.style.filter=`blur(${T.glowBlur}px)`;
+  const rad=T.shadowAngle*Math.PI/180, dx=Math.cos(rad)*T.shadowDistance, dy=-Math.sin(rad)*T.shadowDistance;
+  tx.style.setProperty('--tshadow', T.shadowOn ? `drop-shadow(${dx.toFixed(1)}px ${dy.toFixed(1)}px ${T.shadowBlur}px ${hexA(T.shadowColor, T.shadowOpacity/100)})` : '');
 }
 function fxFilter(c){ return `blur(${c.fxBlur}px) brightness(${c.fxBright}%) contrast(${c.fxContrast}%) saturate(${c.fxSat}%) hue-rotate(${c.fxHue}deg) grayscale(${c.fxGray}%) invert(${c.fxInvert}%)`; }
 
@@ -1281,11 +1367,12 @@ function textAnim(p, c, a, r){
   const A=part(c.animIn,kin), B= kout<1 ? part(c.animOut,kout) : {op:1};
   const op=(A.op??1)*(B.op??1), tf=[A.tf,B.tf].filter(Boolean).join(' '), fl=[A.fl,B.fl].filter(Boolean).join(' ');
   if(tx.style.display!=='inline-block') tx.style.display='inline-block';
-  tx.style.opacity=op; tx.style.transform=tf||'none'; tx.style.filter=fl||'none';
+  tx.style.opacity=op; tx.style.transform=tf||'none'; tx.style.filter=[tx.style.getPropertyValue('--tshadow'),fl].filter(Boolean).join(' ')||'none';
   const tk = A.type!=null ? A.type : (B.type!=null ? B.type : null);
   const txt=String(c.text||'');
-  if(tk!=null && tk<1){ const n=Math.floor(txt.length*tk); const key='t'+n; if(tx.dataset.tw!==key){ tx.innerHTML = esc(txt.slice(0,n)) + `<span style="opacity:0">${esc(txt.slice(n))}</span>`; tx.dataset.tw=key; } }
-  else if(tx.dataset.tw){ tx.textContent=txt; delete tx.dataset.tw; }
+  const tls=tx.querySelectorAll('.tl');
+  if(tk!=null && tk<1){ const n=Math.floor(txt.length*tk); const key='t'+n; if(tx.dataset.tw!==key){ const h=esc(txt.slice(0,n)) + `<span style="opacity:0">${esc(txt.slice(n))}</span>`; tls.forEach(x=>x.innerHTML=h); tx.dataset.tw=key; } }
+  else if(tx.dataset.tw){ tls.forEach(x=>x.textContent=txt); delete tx.dataset.tw; }
 }
 function makeTextPlayer(c){
   const layer=document.createElement('div'); layer.className='layer text'; layer.style.opacity=0;
@@ -1349,13 +1436,13 @@ function togglePause(r){
 }
 function hardStop(){ for(const r of [...running.values()]) stopRun(r); pending=[]; if(panicT0!=null) phonesAllOff(0); panicT0=null; panicMult=1; $('btnPanic').classList.remove('on'); log('すべて停止'); render(); }
 function panic(){
-  if(panicT0!=null){ hardStop(); toast('即停止しました'); return; }
+  if(panicT0!=null){ hardStop(); toast('■'); return; }
   pending=[];
   for(const r of [...running.values()]) if(r.phase==='pre' || !r.player) stopRun(r);
   if(!running.size){ hardStop(); phonesAllOff(0.5); toast('PANIC'); return; }
   phonesAllOff(PANIC_SEC);
   panicT0=now(); $('btnPanic').classList.add('on'); log(`PANIC: ${PANIC_SEC}秒でフェードアウト`);
-  toast(`PANIC — ${PANIC_SEC}秒でフェードアウト`, true);
+  toast('PANIC', true);
 }
 function stepFade(r, a){
   const c=r.cue, k = c.duration>0 ? clamp(a/c.duration,0,1) : 1, s=k*k*(3-2*k);
@@ -1376,7 +1463,7 @@ function step(r, t){
   }
 }
 function tick(){
-  const t=now();
+  const t=now(); try{ drawFaderMeters(); }catch(e){}
   if(panicT0!=null){ panicMult = 1 - (t-panicT0)/PANIC_SEC; if(panicMult<=0) hardStop(); } else panicMult=1;
   for(let i=pending.length-1;i>=0;i--){ if(t>=pending[i].at){ const p=pending.splice(i,1)[0]; const c=find(p.id); const n=c&&sequenceAfter(c.id); if(n) fire(n,true); } }
   for(const r of [...running.values()]) step(r, t);
@@ -1573,7 +1660,7 @@ function renderToolbar(){
 function renderStandby(){
   const c = find(playhead); preloadCam(c); preloadAhead();
   const gl=lists.find(l=>l.id===goListId);
-  $('standby').innerHTML = (c ? `<span class="num">${esc(c.number)}</span><span class="nm">${esc(c.name || TYPE_NAME[c.type])}</span>${c.notes?`<span class="sn" title="${esc(c.notes)}">${esc(c.notes.split('\n')[0])}</span>`:''}` : `<span class="empty">次のCueはありません</span>`) + (gl && gl.id!==activeId ? `<span class="small" style="margin-left:auto">GO → ${esc(gl.name)}</span>` : '');
+  $('standby').innerHTML = (c ? `<span class="num">${esc(c.number)}</span><span class="nm">${esc(c.name || TYPE_NAME[c.type])}</span>${c.notes?`<span class="sn" title="${esc(c.notes)}">${esc(c.notes.split('\n')[0])}</span>`:''}` : `<span class="empty">—</span>`) + (gl && gl.id!==activeId ? `<span class="small" style="margin-left:auto">GO → ${esc(gl.name)}</span>` : '');
   const n = $('notes'); if(document.activeElement !== n) n.value = c ? c.notes : ''; n.disabled = !c;
   $('go').classList.toggle('ready', !!c);
 }
@@ -1582,18 +1669,19 @@ function rowHTML({c,d}){
   const isSel=c.id===selected, isPh=c.id===playhead, bad=!!problem(c), dur=actDur(c);
   const disc = c.children ? `<span class="disc" data-disc="${c.id}">${c.collapsed?'▸':'▾'}</span>` : '';
   const ind = d ? `<span style="width:${d*16}px;flex:none"></span>` : '';
-  const tgt = targetText(c);
-  return `<div class="row${isSel?' sel':''}${isPh?' ph':''}${c.armed?'':' disarmed'}${c.color?' colored':''}${multi.has(c.id)&&!isSel?' multi':''}" data-id="${c.id}" draggable="${mode==='edit'&&!c.locked}"${c.color?` style="background:${hexA(c.color,.38)};--rc:${hexA(c.color,.62)}"`:''}>
+  const tgtTxt = targetText(c);
+  const selC=selected&&selected!==c.id?find(selected):null, isTg=selC&&HAS_TARGET_CUE.has(selC.type)&&tgt(selC)===c, isCt=selC&&HAS_TARGET_CUE.has(c.type)&&tgt(c)===selC;
+  return `<div class="row${isSel?' sel':''}${isPh?' ph':''}${isTg?' istgt':''}${isCt?' isctl':''}${c.armed?'':' disarmed'}${c.color?' colored':''}${multi.has(c.id)&&!isSel?' multi':''}" data-id="${c.id}" draggable="${mode==='edit'&&!c.locked}"${c.color?` style="background:${hexA(c.color,.38)};--rc:${hexA(c.color,.62)}"`:''}>
     <div class="phm">${isPh?ARROW:''}${c.color?`<span class="colorbar" style="background:${c.color}"></span>`:''}</div>
     <div class="st" data-st>${baseStatus(c)}</div>
     <div class="ty">${ICON[c.type]||''}</div>
     <div class="num" data-edit="number">${esc(c.number)}</div>
     <div class="nm" data-edit="name">${ind}${disc}<span style="overflow:hidden;text-overflow:ellipsis">${esc(c.name || TYPE_NAME[c.type])}</span>${c.hotkey?`<span class="hk" title="Hotkey">${esc(c.hotkey)}</span>`:''}${c.wallOn?`<span class="hk" title="Wall Clock">⏰ ${esc(c.wallTime)}</span>`:''}${(c.vfx.length||c.afx.length)?`<span class="hk" title="Effects">fx ${c.vfx.length+c.afx.length}</span>`:''}${c.midiTrig?`<span class="hk" title="MIDI Trigger">MIDI</span>`:''}${c.tcOn?`<span class="hk" title="Timecode Trigger">TC ${esc(c.tcTime)}</span>`:''}${c.locked?'<span class="lk" title="ロック中">🔒</span>':''}</div>
-    <div class="tgt${bad?' bad':''}" title="${esc(problem(c)||'')}">${esc(tgt) || (bad?'未設定':'')}</div>
+    <div class="tgt${bad?' bad':''}" title="${esc(problem(c)||'')}">${esc(tgtTxt) || (bad?"✕":"")}</div>
     <div class="r t${c.preWait?'':' zero'}" data-pre>${fmt(c.preWait)}</div>
     <div class="r t${dur?'':' zero'}" data-act>${fmt(dur)}</div>
     <div class="r t${c.postWait?'':' zero'}">${fmt(c.postWait)}</div>
-    <div class="cont" data-cont="${c.id}" title="続き：${CONT_LABEL[c.cont][0]}（クリックで変更）">${c.cont==='auto-continue'?CONT_AC:c.cont==='auto-follow'?CONT_AF:''}</div>
+    <div class="cont" data-cont="${c.id}" title="${CONT_LABEL[c.cont][0]}">${c.cont==='auto-continue'?CONT_AC:c.cont==='auto-follow'?CONT_AF:''}</div>
   </div>`;
 }
 let query='';
@@ -1613,7 +1701,7 @@ function renderList(){
   $('colsHead').style.display = isCart() ? 'none' : '';
   if(isCart()){ const L=curList();
     $('rows').innerHTML = `<div class="cartbar">${esc(L.name)}<select class="sel2" id="cartSize">${[[3,2],[4,3],[4,4],[5,4],[6,4],[8,4],[8,6]].map(([c,r])=>`<option value="${c}x${r}"${L.cols===c&&L.rows===r?' selected':''}>${c} × ${r}</option>`).join('')}</select>
-      <span class="small">${mode==='show'?'クリックで発火・停止':'クリックで選択・▶で発火（Show モードではクリックで発火）・ファイルやCueを空きマスにドロップ'}</span></div>
+      </div>
       <div class="cart" style="grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${Array.from({length:L.cols*L.rows},(_,i)=>cellHTML(i)).join('')}</div>`;
     updateRunning(now(), true); return; }
   let v = visible();
@@ -1635,7 +1723,9 @@ function drawGroupFrames(v){
 }
 function updateSelection(){
   document.querySelectorAll('.cell[data-id]').forEach(el=>el.classList.toggle('sel', el.dataset.id===selected));
+  const selC=selected&&find(selected), stg=selC&&HAS_TARGET_CUE.has(selC.type)?tgt(selC):null;
   document.querySelectorAll('.row').forEach(row=>{ const id=row.dataset.id; row.classList.toggle('sel', id===selected); row.classList.toggle('ph', id===playhead);
+    const rc=find(id); row.classList.toggle('istgt', !!stg && stg.id===id && id!==selected); row.classList.toggle('isctl', !!selC && !!rc && id!==selected && HAS_TARGET_CUE.has(rc.type) && tgt(rc)===selC);
     const phm=row.querySelector('.phm'); const cb=phm.querySelector('.colorbar'); phm.innerHTML=(id===playhead?ARROW:''); if(cb) phm.appendChild(cb); });
 }
 function updateRunning(t, force){
@@ -1706,10 +1796,10 @@ const chk = (key, on, label) => `<label class="chk"><input type="checkbox" data-
 function renderInspector(){
   const c = find(selected); const tabs=$('itabs'), body=$('ibody');
   if(document.activeElement && body.contains(document.activeElement) && document.activeElement.matches('input.in,textarea.in')) return; // 入力中は書き換えない
-  if(!c){ tabs.innerHTML=''; body.className='ibody none'; body.innerHTML='Cueが選択されていません'; return; }
+  if(!c){ tabs.innerHTML=''; body.className='ibody none'; body.innerHTML=''; return; }
   const list = tabsFor(c); if(!list.includes(inspTab)) inspTab='Basics';
   tabs.innerHTML = list.map(t=>`<button class="itab${t===inspTab?' on':''}" data-tab="${t}">${t}</button>`).join('') + `<span class="who">${esc(TYPE_NAME[c.type])} Cue · ${esc(cueLabel(c))}</span>`;
-  body.className='ibody'+(c.locked?' locked':''); body.dataset.cue=c.id; body.innerHTML = (c.locked?'<div class="lockbar">🔒 このCueはロックされています（編集・削除・移動できません）<button class="btn" id="unlockBtn">ロックを外す</button></div>':'') + tabBody(c, inspTab);
+  body.className='ibody'+(c.locked?' locked':''); body.dataset.cue=c.id; body.innerHTML = (c.locked?'<div class="lockbar">🔒<button class="btn" id="unlockBtn">ロックを外す</button></div>':'') + tabBody(c, inspTab);
   if(inspTab==='Time & Loops') drawWave(c);
 }
 function tabBody(c, tab){
@@ -1717,9 +1807,9 @@ function tabBody(c, tab){
     let target='';
     if(c.type==='audio'||c.type==='video'){
       const prob=problem(c), m=mediaOf(c);
-      target = field('Target', `<input class="in grow" value="${esc(c.file)}" disabled placeholder="ファイルをドロップ、または選択"><button class="btn" id="btnPick">選択…</button><span class="small" style="color:${prob?'var(--err)':'var(--dim)'}">${prob?'✕ 見つかりません':'✓'}</span>`)
-        + (m && m.w ? field('', `<span class="small">${m.w}×${m.h}${m.dur?'　'+fmt(m.dur):''}　素材の解像度のまま出力</span>`) : '');
-    } else if(HAS_TARGET_CUE.has(c.type)) target = field('Target', inp('targetCue', c.targetCue, 'in num') + `<span class="small">${c.targetCue ? (findByNumber(c.targetCue) ? '→ '+esc(cueLabel(findByNumber(c.targetCue))) : '<span style="color:var(--err)">✕ 見つかりません</span>') : 'Cue Number'}</span>`);
+      target = field('Target', `<input class="in grow" value="${esc(c.file)}" disabled placeholder=""><button class="btn" id="btnPick">選択…</button><span class="small" style="color:${prob?'var(--err)':'var(--dim)'}">${prob?'✕ 見つかりません':'✓'}</span>`)
+        + (m && m.w ? field('', `<span class="small">${m.w}×${m.h}${m.dur?'　'+fmt(m.dur):''}</span>`) : '');
+    } else if(HAS_TARGET_CUE.has(c.type)) target = field('Target', inp('targetCue', c.targetCue, 'in num') + `<span class="small">${c.targetCue ? (tgt(c) ? '→ '+esc(cueLabel(tgt(c))) : '<span style="color:var(--err)">✕ 見つかりません</span>') : 'Cue Number'}</span>`);
     const durEditable = ['wait','fade','text','light','phone'].includes(c.type);
     return `<div class="grid2"><div>
       ${field('Number', inp('number', c.number, 'in num'))}
@@ -1729,8 +1819,8 @@ function tabBody(c, tab){
         <label class="w" style="margin-left:10px;color:#bdbdbd">Duration</label>${inp('duration', fmt(actDur(c)),'in time', durEditable?'':'disabled')}
         <label class="w" style="margin-left:10px;color:#bdbdbd">Post Wait</label>${inp('postWait', fmt(c.postWait),'in time')}</div>
       ${field('', `<select class="sel2" data-k="cont">
-          ${Object.entries(CONT_LABEL).map(([k,l])=>`<option value="${k}"${c.cont===k?' selected':''}>${l[0]}（${l[1]}）</option>`).join('')}</select>`)}
-      ${c.type==='fade' ? field('', chk('stopWhenDone', c.stopWhenDone, 'フェード完了後に対象を停止')) : ''}
+          ${Object.entries(CONT_LABEL).map(([k,l])=>`<option value="${k}"${c.cont===k?' selected':''}>${l[0]}</option>`).join('')}</select>`)}
+      ${c.type==='fade' ? field('', chk('stopWhenDone', c.stopWhenDone, 'Stop target when done')) : ''}
       ${field('Color', `<div class="swatches">${COLORS.map(col=>`<div class="sw${c.color===col?' on':''}" data-color="${col||''}" style="background:${col||'#1a1a1a'}" title="${col?'':'色なし'}"></div>`).join('')}<label class="sw custom${c.color && !COLORS.includes(c.color)?' on':''}" title="好きな色を選ぶ" style="${c.color && !COLORS.includes(c.color)?`--cur:${c.color}`:''}"><input type="color" data-k="color" value="${esc(c.color||'#ff00aa')}"></label></div>`)}
       ${field('', chk('armed', c.armed, 'Armed') + '<span style="width:14px"></span>' + chk('flagged', c.flagged, 'Flagged') + '<span style="width:14px"></span>' + chk('locked', c.locked, '🔒 ロック'))}
     </div><div>
@@ -1740,45 +1830,44 @@ function tabBody(c, tab){
   }
   if(tab==='Triggers'){
     return `<div class="grid2"><div>
-      ${field('Hotkey', `<button class="in hkcap${hkCapture===c.id?' wait':''}" id="hkCap">${hkCapture===c.id?'キーを押す…':(esc(c.hotkey)||'—')}</button><span class="small">押してからキーを1つ（Delete で解除・Esc で取消）</span><button class="btn" id="hkTest">テスト</button>`)}
-      ${field('', chk('wallOn', c.wallOn, 'Wall Clock') + inp('wallTime', c.wallTime, 'in time') + '<span class="small">この時刻に自動で発火</span>')}
-      ${field('MIDI', `<button class="btn${learnFor==='cue:'+c.id?' learn':''}" id="midiLearnTrig">${learnFor==='cue:'+c.id?'MIDI を待っています…':'MIDI Learn'}</button><span class="small">${c.midiTrig?esc(midiTrigLabel(c.midiTrig)):'未設定'}</span>${c.midiTrig?'<button class="btn" id="midiTrigClear">解除</button>':''}`)}
-      ${field('Timecode', chk('tcOn', c.tcOn, '') + inp('tcTime', c.tcTime, 'in time') + '<span class="small">受け取ったタイムコードがこの時刻を通ったら発火</span>')}
+      ${field('Hotkey', `<button class="in hkcap${hkCapture===c.id?' wait':''}" id="hkCap">${hkCapture===c.id?'⌨ …':(esc(c.hotkey)||'—')}</button><button class="btn" id="hkTest">テスト</button>`)}
+      ${field('', chk('wallOn', c.wallOn, 'Wall Clock') + inp('wallTime', c.wallTime, 'in time') + '')}
+      ${field('MIDI', `<button class="btn${learnFor==='cue:'+c.id?' learn':''}" id="midiLearnTrig">${learnFor==='cue:'+c.id?'MIDI …':'MIDI Learn'}</button><span class="small">${c.midiTrig?esc(midiTrigLabel(c.midiTrig)):'未設定'}</span>${c.midiTrig?'<button class="btn" id="midiTrigClear">解除</button>':''}`)}
+      ${field('Timecode', chk('tcOn', c.tcOn, '') + inp('tcTime', c.tcTime, 'in time') + '')}
       ${field('', `<label class="chk"><input type="checkbox" disabled> OSC</label> <input class="in grow" disabled placeholder="/cue/1/start">`)}
-    </div><div><div class="ph-note">外部トリガー（MIDI / OSC / Timecode）は Mac 版の段階で実装します。</div></div></div>`;
+    </div><div></div></div>`;
   }
   if(tab==='Mode' && c.type==='group'){
     const m=(v,t,d)=>`<label class="chk" style="margin-bottom:10px;align-items:flex-start"><input type="radio" name="gm" data-k="groupMode" value="${v}"${c.groupMode===v?' checked':''}> <span><b style="font-weight:600">${t}</b><br><span class="small">${d}</span></span></label>`;
     return m('all','Start all children simultaneously','中のCueをすべて同時に開始') + m('first','Start first child and go to next cue','最初のCueを開始し、その先は各CueのContinue設定に従う');
   }
   if(tab==='Time & Loops'){
-    if(c.type==='text') return field('Duration', inp('duration', fmt(c.duration), 'in time') + '<span class="small">0 = 止めるまで表示し続ける</span>') + field('', `<span class="small">表示時のフェードは下で設定</span>`) +
-      `<div class="f"><label>Fade In</label>${inp('fadeIn', c.fadeIn, 'in num')}<span class="small">秒</span><label class="w" style="margin-left:14px">Fade Out</label>${inp('fadeOut', c.fadeOut, 'in num')}<span class="small">秒（Duration指定時）</span></div>`;
+    if(c.type==='text') return field('Duration', inp('duration', fmt(c.duration), 'in time') + '<span class="small">0 = ∞</span>')  +
+      `<div class="f"><label>Fade In</label>${inp('fadeIn', c.fadeIn, 'in num')}<span class="small">秒</span><label class="w" style="margin-left:14px">Fade Out</label>${inp('fadeOut', c.fadeOut, 'in num')}<span class="small">秒</span></div>`;
     const img = isImage(c);
     return `<div class="wave"><canvas id="wave"></canvas></div>
-      ${img ? '<div class="ph-note">静止画は Stop / Fade されるまで表示し続けます。</div>' : `
+      ${img ? '' : `
       <div class="f"><label>Start</label>${inp('startOff', fmt(c.startOff),'in time')}<label class="w" style="margin-left:10px">End</label>${inp('endOff', c.endOff?fmt(c.endOff):'','in time','placeholder="最後まで"')}
-        <label class="w" style="margin-left:18px">Play</label>${inp('loop', c.loop,'in num')}<span class="small">回（0 = 無限ループ）</span>
+        <label class="w" style="margin-left:18px">Play</label>${inp('loop', c.loop,'in num')}<span class="small">回（0 = ∞）</span>
         <label class="w" style="margin-left:18px">Rate</label>${inp('rate', c.rate,'in num')}</div>
       <div class="f"><label>Fade In</label>${inp('fadeIn', c.fadeIn, 'in num')}<span class="small">秒</span><label class="w" style="margin-left:14px">Fade Out</label>${inp('fadeOut', c.fadeOut, 'in num')}<span class="small">秒</span>
         ${c.type==='video' ? '<span style="width:24px"></span>'+chk('holdLast', c.holdLast, '最後のフレームを保持') : ''}</div>`}`;
   }
   if(tab==='Audio Levels'){
-    if(c.type==='fade') return `<div class="f"><label></label>${chk('fadeVolOn', c.fadeVolOn, '音量をフェードする')}</div>
-      <div class="f"><label>Volume</label><input type="range" min="-60" max="12" step="0.1" data-live="fadeVol" value="${c.fadeVol}"${c.fadeVolOn?'':' disabled'}>${inp('fadeVol', c.fadeVol, 'in num', c.fadeVolOn?'':'disabled')}<span class="small">dB（-60 = 無音）</span></div>`;
-    return `<div class="f"><label>Main</label><input type="range" min="-60" max="12" step="0.1" data-live="volume" value="${c.volume}">${inp('volume', c.volume, 'in num')}<span class="small">dB</span></div>
-      <div class="f"><label>Output</label><select class="sel2" data-k="outPair">${outPairOptions(c.outPair)}</select><span class="small">${audioChannels()>2?`この出力機器は ${audioChannels()}ch`:'今の出力機器は 2ch（ステレオ）のみ'}</span></div>
-      <div class="f"><label>Pan</label><input type="range" min="-1" max="1" step="0.01" data-live="pan" value="${c.pan}">${inp('pan', c.pan, 'in num')}<span class="small">-1 = 左 ／ 1 = 右</span></div>
-      <div class="ph-note">出力ルーティング（1-2 Main / 3-4 Monitor など）は Mac 版でオーディオインターフェースにつなぐ段階で実装します。</div>`;
+    if(c.type==='fade') return `<div class="faders">${fader('fadeVol','Main',c.fadeVol,!c.fadeVolOn,'fadeVolOn',c.fadeVolOn)}</div>`;
+    const pr=(c.outPair||0)*2;
+    return `<div class="faders">${fader('volume','Main',c.volume)}<div class="fsep"></div>${fader('lvL',String(pr+1),c.lvL||0)}${fader('lvR',String(pr+2),c.lvR||0)}
+      <div class="fside"><div class="f"><label>Output</label><select class="sel2" data-k="outPair">${outPairOptions(c.outPair)}</select></div>
+      <div class="f"><label>Pan</label><input type="range" min="-1" max="1" step="0.01" data-live="pan" value="${c.pan}">${inp('pan', c.pan, 'in num')}</div></div></div>`;
   }
   if(tab==='Geometry'){
-    if(c.type==='fade') return `<div class="grid2"><div><div class="f"><label></label>${chk('fadeOpOn', c.fadeOpOn, '不透明度をフェードする')}</div>${field('Opacity', inp('fadeOp', c.fadeOp, 'in num', c.fadeOpOn?'':'disabled')+'<span class="small">%（0 = 黒）</span>')}</div>
-      <div><div class="f"><label></label>${chk('fadeGeoOn', c.fadeGeoOn, '位置・大きさ・回転を動かす')}</div>
+    if(c.type==='fade') return `<div class="grid2"><div><div class="f"><label></label>${chk('fadeOpOn', c.fadeOpOn, 'Opacity')}</div>${field('Opacity', inp('fadeOp', c.fadeOp, 'in num', c.fadeOpOn?'':'disabled')+'<span class="small">%</span>')}</div>
+      <div><div class="f"><label></label>${chk('fadeGeoOn', c.fadeGeoOn, 'Geometry')}</div>
       ${field('Position', 'X '+inp('fadeX', c.fadeX, 'in num', c.fadeGeoOn?'':'disabled')+' Y '+inp('fadeY', c.fadeY, 'in num', c.fadeGeoOn?'':'disabled'))}
       ${field('Scale', inp('fadeScale', c.fadeScale, 'in num', c.fadeGeoOn?'':'disabled')+'<span class="small">%</span>')}
       ${field('Rotation', inp('fadeRot', c.fadeRot, 'in num', c.fadeGeoOn?'':'disabled')+'<span class="small">°</span>')}
       ${field('', '<button class="btn" id="fadeGeoCopy">対象Cueの今の位置を入れる</button>')}</div></div>
-      <div class="ph-note">Duration の時間をかけて、対象の映像・文字・カメラが今の位置からここで決めた位置へ動きます（なめらかに加速・減速）。</div>`;
+      `;
     return geoTab(c);
   }
   if(tab==='Video Effects') return fxTab(c,'v');
@@ -1792,12 +1881,12 @@ function tabBody(c, tab){
       ${field('Action', `<select class="sel2" data-k="phoneAction">${Object.entries(PHONE_ACT).map(([k,v])=>`<option value="${k}"${k===a?' selected':''}>${v}</option>`).join('')}</select>`)}
       ${a==='color'||a==='text' ? field('Color', `<input type="color" data-k="phoneColor" value="${esc(c.phoneColor)}">`) : ''}
       ${a==='text' ? field('Text', inp('phoneText', c.phoneText)) : ''}
-      ${a==='image' ? field('Image', `<select class="sel2" data-k="phoneFile"><option value="">（画像を選択）</option>${imgs.map(n=>`<option${n===c.phoneFile?' selected':''}>${esc(n)}</option>`).join('')}</select><span class="small">画像は Cue List にドロップすると選べます</span>`) : ''}
+      ${a==='image' ? field('Image', `<select class="sel2" data-k="phoneFile"><option value="">（画像を選択）</option>${imgs.map(n=>`<option${n===c.phoneFile?' selected':''}>${esc(n)}</option>`).join('')}</select>`) : ''}
     </div><div>
       ${screen ? field('Brightness', inp('phoneBright', c.phoneBright, 'in num')+'<span class="small">%</span>') : ''}
       ${a==='blink' ? field('点滅', inp('blinkHz', c.blinkHz, 'in num')+'<span class="small">回／秒</span>') : ''}
       ${a!=='blink'&&a!=='light-on'&&a!=='light-off' ? field('Fade', inp('duration', fmt(c.duration), 'in time')) : ''}
-      <div class="ph-note">いまは画面上のシミュレーターで動きを確認できます。<br>実機への送信（Companionアプリ／LightOperator連携）は次の段階で作ります。</div>
+      
     </div></div>`;
   }
   if(tab==='Camera'){
@@ -1806,33 +1895,52 @@ function tabBody(c, tab){
       ${field('Camera', `<select class="sel2" data-k="camDevice"><option value="">（選択）</option>${cams.map(x=>`<option value="${x.id}"${x.id===c.camDevice?' selected':''}>${esc(x.name)}</option>`).join('')}</select>`
         + (cam ? `<span class="small" style="color:${cam.online?'#3ec36b':'var(--err)'}">${cam.online?'● 接続中':'✕ 未接続'}</span>` : ''))}
       ${cam ? field('', `<span class="small">${esc(CAM_TYPES[cam.type]||cam.type)} ・ ${esc(cam.res)}</span>`) : ''}
-      ${field('', chk('camMirror', c.camMirror, '左右反転（ミラー）') + '<span style="width:12px"></span>' + chk('camFlipV', c.camFlipV, '上下反転'))}
-      ${field('遅延補正', inp('camDelay', c.camDelay, 'in num') + '<span class="small">フレーム（Mac版で音とのズレ合わせに使用）</span>')}
+      ${field('', chk('camMirror', c.camMirror, '⇋') + '<span style="width:12px"></span>' + chk('camFlipV', c.camFlipV, '⇵'))}
+      ${field('遅延補正', inp('camDelay', c.camDelay, 'in num') + '<span class="small">fr</span>')}
       <div class="g2" style="margin-top:6px"><label></label><button class="btn" id="btnCamScanTab">つながっているカメラを探す</button><button class="btn" id="btnCamSettings">カメラ入力の設定…</button></div>
     </div><div>
-      <div class="ph-note">中継カメラは Stop / Fade されるまで映り続けます。Geometry でマッピング、Video Effects でエフェクトも使えます。<br><br>
-      Mac 版で使える入力：USB カメラ ／ HDMI・SDI キャプチャー（Blackmagic・Elgato など）／ NDI（ネットワークカメラ・別PCの画面）／ iPhone（連係カメラ）<br>Claude の中の表示ではカメラを使えません。ダウンロード版を Chrome で開くと実際のカメラを使えます。</div>
+      
     </div></div>`;
   }
   if(tab==='Text'){
-    const opt=(k,o)=>`<select class="sel2" data-k="${k}">${Object.entries(o).map(([v,l])=>`<option value="${v}"${String(c[k])===String(v)?' selected':''}>${l}</option>`).join('')}</select>`;
-    return `<div class="grid2"><div>
-      <textarea class="in" data-k="text" id="liveText" rows="6" spellcheck="false" placeholder="表示する文字（再生中は打った文字がそのまま投影されます）">${esc(c.text)}</textarea>
-      <div class="small" style="margin-top:4px">● リアルタイム入力：このCueを再生中に打つと、すぐ投影に反映されます</div>
-    </div><div>
-      ${field('Font', opt('fontFamily', FONT_LABEL) + opt('fontWeight', {300:'Light',400:'Regular',700:'Bold',900:'Black'}))}
-      ${field('Size', inp('fontSize', c.fontSize, 'in num') + '<span class="small">px</span>' + `<input type="color" data-k="textColor" value="${esc(c.textColor)}">` + opt('align', {left:'左揃え',center:'中央',right:'右揃え'}))}
-      ${field('字間 / 行間', inp('letterSpacing', c.letterSpacing, 'in num') + '<span class="small">em</span>' + inp('lineHeight', c.lineHeight, 'in num'))}
-      ${field('Outline', inp('strokeW', c.strokeW, 'in num') + '<span class="small">px</span>' + `<input type="color" data-k="strokeColor" value="${esc(c.strokeColor)}">` + chk('shadow', c.shadow, 'Shadow'))}
-      ${field('Background', chk('bgOn', c.bgOn, 'ON') + `<input type="color" data-k="bgColor" value="${esc(c.bgColor)}">` + inp('bgOpacity', c.bgOpacity, 'in num') + '<span class="small">%</span>')}
-      ${field('登場', `<select class="sel2" data-k="animIn">${Object.entries(ANIM).map(([k,l])=>`<option value="${k}"${c.animIn===k?' selected':''}>${l}</option>`).join('')}</select>` + inp('animInDur', c.animInDur, 'in num') + '<span class="small">秒</span>')}
-      ${field('退場', `<select class="sel2" data-k="animOut">${Object.entries(ANIM).filter(([k])=>k!=='type').map(([k,l])=>`<option value="${k}"${c.animOut===k?' selected':''}>${l}</option>`).join('')}</select>` + inp('animOutDur', c.animOutDur, 'in num') + '<span class="small">秒（Time & Loops の Duration を入れたとき）</span>')}
-    </div></div>`;
+    const T=tf(c);
+    const row=(label,k,v,min,max,step,u='')=>`<div class="trow"><label>${label}</label><input type="range" min="${min}" max="${max}" step="${step}" data-live="${k}" value="${v}"><input class="in num" data-k="${k}" value="${v}" spellcheck="false"><span class="u">${u}</span></div>`;
+    const crow=(label,k,v)=>`<div class="trow"><label>${label}</label><input type="color" data-k="${k}" value="${esc(v)}"><span></span><span></span></div>`;
+    const sec=(title,onK,on,body)=>`<div class="tsec${onK&&!on?' off':''}"><div class="th">${onK?`<input type="checkbox" data-k="${onK}"${on?' checked':''}>`:''}${title}</div>${body}</div>`;
+    const seg=(k,cur,items)=>`<span class="segb">${items.map(([v,ic,t])=>`<button data-setk="${k}" data-v="${v}" class="${String(cur)===String(v)?'on':''}" title="${t}">${ic}</button>`).join('')}</span>`;
+    const AL=(d)=>`<svg viewBox="0 0 14 14" fill="currentColor">${d}</svg>`;
+    const fonts=Object.entries(FONT_LABEL).map(([v,l])=>`<option value="${v}"${T.font===v?' selected':''}>${l}</option>`).join('')
+      + (sysFonts.length?`<optgroup label="Mac">${sysFonts.map(f=>`<option value="${esc(f)}"${T.font===f?' selected':''}>${esc(f)}</option>`).join('')}</optgroup>`:'')
+      + (!FONT_LABEL[T.font] && !sysFonts.includes(T.font) ? `<option value="${esc(T.font)}" selected>${esc(T.font)}</option>`:'');
+    let body='';
+    if(textSub==='format') body =
+      sec('Basic','',true,
+        `<div class="trow"><label>Font</label><span style="display:flex;gap:4px;grid-column:span 3"><select class="sel2" data-k="fontFamily" style="flex:1;min-width:0">${fonts}</select>${window.queryLocalFonts?'<button class="btn" id="loadFonts" title="Mac のフォント">⋯</button>':''}
+          <select class="sel2" data-k="fontWeight">${[[100,'Thin'],[300,'Light'],[400,'Regular'],[500,'Medium'],[600,'Semibold'],[700,'Bold'],[800,'Heavy'],[900,'Black']].map(([v,l])=>`<option value="${v}"${+T.weight===v?' selected':''}>${l}</option>`).join('')}</select></span></div>`
+        + row('Size','fontSize',T.size,8,600,1,'px')
+        + `<div class="trow"><label>Alignment</label><span style="grid-column:span 3;display:flex;gap:8px">${seg('align',T.align,[['left',AL('<rect x="1" y="2" width="12" height="1.6"/><rect x="1" y="6" width="8" height="1.6"/><rect x="1" y="10" width="10" height="1.6"/>'),'Left'],['center',AL('<rect x="1" y="2" width="12" height="1.6"/><rect x="3" y="6" width="8" height="1.6"/><rect x="2" y="10" width="10" height="1.6"/>'),'Center'],['right',AL('<rect x="1" y="2" width="12" height="1.6"/><rect x="5" y="6" width="8" height="1.6"/><rect x="3" y="10" width="10" height="1.6"/>'),'Right'],['justify',AL('<rect x="1" y="2" width="12" height="1.6"/><rect x="1" y="6" width="12" height="1.6"/><rect x="1" y="10" width="8" height="1.6"/>'),'Justify']])}
+          ${seg('vertical',T.vertical?1:0,[[0,AL('<path d="M2 3h10v1.6H7.8V12H6.2V4.6H2z"/>'),'横書き'],[1,AL('<path d="M3 2h1.6v10H3zM7 2h1.6v6H7zM11 2h1.6v8H11z"/>'),'縦書き']])}
+          ${seg('allCaps',T.caps?1:0,[[0,'<b style="font-size:11px">Aa</b>','Aa'],[1,'<b style="font-size:11px">AA</b>','All Caps']])}</span></div>`
+        + row('Line Spacing','lineSpacing',T.lineSpacing,-100,300,1,'px')
+        + row('Tracking','tracking',T.tracking,-50,200,0.5,'%')
+        + row('Kerning','kerning',T.kerning,-20,60,0.5,'px')
+        + row('Baseline','baseline',T.baseline,-200,200,1,'px')
+        + row('Slant','slant',T.slant,-45,45,1,'°'))
+      + sec('Background','bgOn',T.bgOn, crow('Color','bgColor',T.bgColor) + row('Opacity','bgOpacity',T.bgOpacity,0,100,1,'%'));
+    else if(textSub==='appearance') body =
+      sec('Face','',true, crow('Color','textColor',T.faceColor) + row('Opacity','faceOpacity',T.faceOpacity,0,100,1,'%') + row('Blur','faceBlur',T.faceBlur,0,50,0.5,'px'))
+      + sec('Outline','outlineOn',T.outlineOn, crow('Color','outlineColor',T.outlineColor) + row('Opacity','outlineOpacity',T.outlineOpacity,0,100,1,'%') + row('Blur','outlineBlur',T.outlineBlur,0,50,0.5,'px') + row('Width','outlineWidth',T.outlineWidth,0,40,0.5,'px'))
+      + sec('Glow','glowOn',T.glowOn, crow('Color','glowColor',T.glowColor) + row('Opacity','glowOpacity',T.glowOpacity,0,100,1,'%') + row('Blur','glowBlur',T.glowBlur,0,80,0.5,'px') + row('Radius','glowRadius',T.glowRadius,0,60,0.5,'px'))
+      + sec('Drop Shadow','shadowOn',T.shadowOn, crow('Color','shadowColor',T.shadowColor) + row('Opacity','shadowOpacity',T.shadowOpacity,0,100,1,'%') + row('Blur','shadowBlur',T.shadowBlur,0,80,0.5,'px') + row('Distance','shadowDistance',T.shadowDistance,0,200,0.5,'px') + row('Angle','shadowAngle',T.shadowAngle,0,360,1,'°'));
+    else body = sec('In','',true, `<div class="trow"><label>Type</label><select class="sel2" data-k="animIn">${Object.entries(ANIM).map(([k,l])=>`<option value="${k}"${c.animIn===k?' selected':''}>${l}</option>`).join('')}</select><span></span><span></span></div>` + row('Duration','animInDur',c.animInDur,0,10,0.1,'s'))
+      + sec('Out','',true, `<div class="trow"><label>Type</label><select class="sel2" data-k="animOut">${Object.entries(ANIM).filter(([k])=>k!=='type').map(([k,l])=>`<option value="${k}"${c.animOut===k?' selected':''}>${l}</option>`).join('')}</select><span></span><span></span></div>` + row('Duration','animOutDur',c.animOutDur,0,10,0.1,'s'));
+    return `<div class="tcols"><div><textarea class="in" data-k="text" id="liveText" spellcheck="false" placeholder="" style="${T.vertical?'writing-mode:vertical-rl;':''}font-family:${esc(fontCSS(T.font))}">${esc(c.text)}</textarea></div>
+      <div class="tscroll"><div class="tsub">${[['format','Format'],['appearance','Appearance'],['anim','Animation']].map(([k,l])=>`<button data-tsub="${k}" class="${textSub===k?'on':''}">${l}</button>`).join('')}</div>${body}</div></div>`;
   }
   if(tab==='Settings' && c.type==='midi') return midiTab(c);
   if(tab==='Settings' && c.type==='network') return netTab(c);
   if(tab==='Settings' && c.type==='timecode') return tcTab(c);
-  return `<div class="ph-note" style="padding-top:20px">「${esc(tab)}」タブは配置のみ。中身は次の段階で作ります。</div>`;
+  return ``;
 }
 function geoTab(c){
   const M=getMap(c), surf=Object.keys(settings.surfaces);
@@ -1844,7 +1952,6 @@ function geoTab(c){
       <select class="sel2" id="surfSel"><option value="">このCueだけ</option>${surf.map(n=>`<option value="${esc(n)}"${n===c.surface?' selected':''}>${esc(n)}</option>`).join('')}<option value="__new">＋ 新しいマッピングを作る</option></select>
       ${c.surface?`<input class="in" id="surfName" value="${esc(c.surface)}" style="width:110px" spellcheck="false" title="名前を変える">`:''}
       <span style="width:10px"></span><span class="osebar">${ob('transform','変形')}${ob('crop','トリム')}${ob('distort','歪み')}${ob('mesh','メッシュ')}</span>
-      <span class="small">← 押すと映像出力ウィンドウ上でドラッグして調整（中央・端に吸い付きます。⌥ を押しながらで吸い付きなし）</span>
       <button class="btn" id="mapReset" style="margin-left:auto">リセット</button>
     </div>
     <div class="grid2"><div>
@@ -1869,8 +1976,8 @@ function geoTab(c){
       <div class="gsec" style="margin-top:10px">ソフトエッジ（Soft Edge）</div>
       <div class="g2"><label>Left / Right</label>${mi('soft.l',M.soft.l)}${mi('soft.r',M.soft.r,'px')}</div>
       <div class="g2"><label>Top / Bottom</label>${mi('soft.t',M.soft.t)}${mi('soft.b',M.soft.b,'px')}</div>
-      <div class="g2"><label>Gamma</label>${mi('soft.gamma',M.soft.gamma)}<span class="small">プロジェクター同士の重なりをなじませる</span></div>
-      <div class="ph-note">「マッピング」を作ると、同じ設定（Wall・Floor など）を他のCueでも使い回せます。</div>
+      <div class="g2"><label>Gamma</label>${mi('soft.gamma',M.soft.gamma)}</div>
+      
     </div></div>`;
 }
 const fxSel = {};
@@ -1884,7 +1991,7 @@ function fxTab(c, kind){
   let params='';
   if(sel && kind==='a' && sel.type==='eq'){ normalizeEq(sel.p);
     params = `<div class="sect" style="display:flex;align-items:center;gap:10px">Channel EQ<span class="small">イコライザー</span><button class="btn" data-eqopen="${sel.id}" style="margin-left:auto">EQ 画面を開く</button><button class="btn" data-fxreset>初期値に戻す</button></div>
-      <canvas class="eqmini" id="eqmini" data-eqopen="${sel.id}" title="クリックで EQ 画面を開く"></canvas>`;
+      <canvas class="eqmini" id="eqmini" data-eqopen="${sel.id}" title="EQ"></canvas>`;
   } else if(sel && DEF[sel.type]){ const d=DEF[sel.type];
     params = `<div class="sect" style="display:flex;align-items:center;gap:10px">${esc(d.name)}<span class="small">${esc(d.ja)}</span><button class="btn" data-fxreset style="margin-left:auto">初期値に戻す</button></div>` +
       d.ps.map(pd=>{ const v=sel.p[pd.k] ?? pd.def;
@@ -1892,11 +1999,11 @@ function fxTab(c, kind){
         if(pd.t==='select') return `<div class="fxp"><label>${pd.l}</label><select class="sel2" data-fxs="${pd.k}">${Object.entries(pd.o).map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${l}</option>`).join('')}</select></div>`;
         if(pd.t==='check') return `<div class="fxp"><label>${pd.l}</label><input type="checkbox" data-fxk="${pd.k}"${v?' checked':''}></div>`;
         return `<div class="fxp"><label>${pd.l}</label><input type="range" min="${pd.log?0:pd.min}" max="${pd.log?1000:pd.max}" step="${pd.log?1:(pd.step||1)}" data-fxp="${pd.k}" value="${fxSliderPos(pd,v)}"><input class="in num" data-fxn="${pd.k}" value="${v}" spellcheck="false"><span class="small">${pd.u||''}</span></div>`; }).join('');
-  } else params = `<div class="ph-note" style="padding-top:8px">左の「＋ 追加」からエフェクトを選ぶと、ここに設定が出ます。${kind==='v'?'<br>映像出力ウィンドウを開いておくと、再生しなくても見た目を確認できます。':''}</div>`;
+  } else params = ``;
   return `<div class="fxwrap" data-fxkind="${kind}"><div class="fxlist">
       <div class="fxhead">${kind==='v'?'Video':'Audio'} Effects<button class="btn" data-fxadd="${kind}">＋ 追加</button></div>
-      ${items || '<div class="fxempty">まだエフェクトはありません</div>'}
-      ${list.length>1?'<div class="small" style="margin-top:4px">ドラッグで順番を入れ替え（上から順にかかります）</div>':''}
+      ${items || ''}
+      
     </div><div class="fxparams">${params}</div></div>`;
 }
 /* effects browser */
@@ -1913,7 +2020,7 @@ $('fxcats').addEventListener('click', e=>{ const c=e.target.closest('[data-cat]'
 $('fxtiles').addEventListener('click', e=>{ const t=e.target.closest('[data-addfx]'); if(!t) return; const c=find(selected); if(!c) return;
   const DEF=fxbKind==='v'?VFX:AFX, d=DEF[t.dataset.addfx]; const f={id:newFxId(), type:t.dataset.addfx, on:true, p:fxDefaults(d)};
   snapshot(); (fxbKind==='v'?c.vfx:c.afx).push(f); fxSel[c.id]=f.id; inspTab = fxbKind==='v'?'Video Effects':'Audio Effects';
-  closeModals(); render(); toast(`${d.name} を追加しました`); log(`エフェクト追加: ${cueLabel(c)} ← ${d.name}`); });
+  closeModals(); render(); toast(`＋ ${d.name}`); log(`エフェクト追加: ${cueLabel(c)} ← ${d.name}`); });
 function drawWave(c){
   const cv=$('wave'); if(!cv) return; const w=cv.clientWidth, h=cv.clientHeight; if(!w) return; cv.width=w*devicePixelRatio; cv.height=h*devicePixelRatio;
   const g=cv.getContext('2d'); g.scale(devicePixelRatio,devicePixelRatio);
@@ -1925,7 +2032,7 @@ function drawWave(c){
 
 /* ================= lists & carts ================= */
 function renderTabs(){
-  $('tabs').innerHTML = lists.map(l=>`<div class="listtab${l.id===activeId?' on':''}" data-list="${l.id}" title="ダブルクリックで名前を変更">${l.type==='cart'?CART_ICON:''}<span>${esc(l.name)}</span>${l.id===activeId&&lists.length>1?`<button class="tx" data-dellist="${l.id}" title="削除">×</button>`:''}</div>`).join('');
+  $('tabs').innerHTML = lists.map(l=>`<div class="listtab${l.id===activeId?' on':''}" data-list="${l.id}" >${l.type==='cart'?CART_ICON:''}<span>${esc(l.name)}</span>${l.id===activeId&&lists.length>1?`<button class="tx" data-dellist="${l.id}" title="削除">×</button>`:''}</div>`).join('');
 }
 function setActive(id){
   const cur=curList(); if(cur){ cur.selected=selected; if(cur.type==='list') cur.playhead=playhead; }
@@ -1937,14 +2044,14 @@ function setActive(id){
 function addList(type){
   snapshot(); const n=lists.filter(l=>l.type===type).length+1;
   const L = type==='cart' ? {id:newListId(), name:'Cart '+n, type:'cart', cols:4, rows:3, cues:[]} : {id:newListId(), name:'Cue List '+n, type:'list', cues:[]};
-  lists.push(L); setActive(L.id); toast(`${L.name} を追加しました`); }
+  lists.push(L); setActive(L.id); toast(`＋ ${L.name}`); }
 let delListArmed=0;
 $('tabs').addEventListener('click', e=>{
   const del=e.target.closest('[data-dellist]');
   if(del){ e.stopPropagation(); if(Date.now()-delListArmed>2000){ delListArmed=Date.now(); del.classList.add('armed'); del.textContent='削除'; setTimeout(()=>{ if(del.isConnected){ del.classList.remove('armed'); del.textContent='×'; } },2000); return; }
     delListArmed=0; const L=lists.find(l=>l.id===del.dataset.dellist); walk(L.cues,c=>runsOf(c).forEach(stopRun)); snapshot(); lists=lists.filter(l=>l!==L);
     if(goListId===L.id){ const g=lists.find(l=>l.type==='list'); goListId=g?g.id:null; playhead=g?g.cues[0]?.id||null:null; }
-    activeId=null; setActive(lists[0].id); toast(`${L.name} を削除しました（⌘Z で戻す）`); return; }
+    activeId=null; setActive(lists[0].id); toast(`🗑 ${L.name}`); return; }
   const t=e.target.closest('[data-list]'); if(t && t.dataset.list!==activeId && !e.target.closest('input')) setActive(t.dataset.list);
 });
 $('tabs').addEventListener('dblclick', e=>{ const t=e.target.closest('[data-list]'); if(!t || mode!=='edit') return; const L=lists.find(l=>l.id===t.dataset.list); const sp=t.querySelector('span');
@@ -1955,10 +2062,10 @@ $('tabs').addEventListener('dragover', e=>{ const t=e.target.closest('[data-list
 $('tabs').addEventListener('dragleave', ()=>document.querySelectorAll('.listtab').forEach(x=>x.classList.remove('dropto')));
 $('tabs').addEventListener('drop', e=>{ const t=e.target.closest('[data-list]'); document.querySelectorAll('.listtab').forEach(x=>x.classList.remove('dropto')); if(!t||!dragId) return; e.preventDefault();
   const c=find(dragId), L=lists.find(l=>l.id===t.dataset.list); dragId=null; if(!c||!L) return;
-  if(L.type==='cart'){ const sl=firstEmptySlot(L); if(sl==null){ toast(`${L.name} に空きがありません`, true); return; } snapshot(); const from=findParentList(c.id); from.splice(from.indexOf(c),1); c.slot=sl; L.cues.push(c); }
+  if(L.type==='cart'){ const sl=firstEmptySlot(L); if(sl==null){ toast(`✕ ${L.name}`, true); return; } snapshot(); const from=findParentList(c.id); from.splice(from.indexOf(c),1); c.slot=sl; L.cues.push(c); }
   else { snapshot(); const from=findParentList(c.id); from.splice(from.indexOf(c),1); c.slot=null; L.cues.push(c); }
   if(selected===c.id) selected=cues[0]?.id||null; if(playhead===c.id){ const g=lists.find(l=>l.id===goListId); playhead=g&&g.cues[0]?.id||null; }
-  log(`移動: ${cueLabel(c)} → ${L.name}`); toast(`${cueLabel(c)} を ${L.name} へ移動しました`); render(); });
+  log(`移動: ${cueLabel(c)} → ${L.name}`); toast(`${cueLabel(c)} → ${L.name}`); render(); });
 $('tabAdd').addEventListener('click', e=>{ e.currentTarget.blur(); const old=document.querySelector('.addmenu'); if(old){ old.remove(); return; }
   const r=e.currentTarget.getBoundingClientRect(), m=document.createElement('div'); m.className='addmenu'; m.style.left=r.left+'px'; m.style.top=(r.bottom+4)+'px';
   m.innerHTML='<div data-addlist="list">＋ Cue List を追加</div><div data-addlist="cart">＋ Cart を追加</div>'; $('win').appendChild(m);
@@ -1990,9 +2097,9 @@ async function connectDir(h, interactive){
     if(interactive || n) toast(miss?`素材フォルダから ${n}件つなぎました（見つからない素材 ${miss}件）`:`素材フォルダ「${h.name}」から ${n}件つなぎました`, !!miss); return true;
   }catch(e){ log('素材フォルダに接続できませんでした: '+e.message); return false; } }
 async function registerDir(){
-  if(!fsaOK()){ toast('この環境ではフォルダを覚えられません（Chrome のダウンロード版で使えます）。代わりに「素材フォルダを選んでつなぎ直す」を使ってください', true); return; }
+  if(!fsaOK()){ toast('✕', true); return; }
   try{ const h=await window.showDirectoryPicker({id:'alienlab-media', mode:'read'}); await idb.set('mediaDir', h); await connectDir(h, true); }catch(e){ if(e.name!=='AbortError') log('フォルダ登録エラー: '+e.message); } }
-function renderDirInfo(){ const el=document.getElementById('dirInfo'); if(el) el.textContent = dirHandle ? `「${dirHandle.name}」を使用中（次回から開くと自動でつながります）` : (fsaOK()?'一度登録すると、次回から1クリックでつながります':'Chrome のダウンロード版で使えます'); }
+function renderDirInfo(){ const el=document.getElementById('dirInfo'); if(el) el.textContent = dirHandle ? `📁 ${dirHandle.name}` : ''; }
 function showDirBanner(on){ let b=document.getElementById('dirBanner');
   if(on && !b){ b=document.createElement('div'); b.id='dirBanner'; b.style.cssText='position:absolute;left:50%;top:40px;transform:translateX(-50%);z-index:75;background:#3a2f12;border:1px solid #8a6d22;color:#f6e1a0;padding:8px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.5)';
     b.innerHTML='素材フォルダにつなぐには、ここを押してください <button class="btn" id="dirGo">素材フォルダにつなぐ</button>'; $('win').appendChild(b);
@@ -2010,7 +2117,7 @@ addEventListener('beforeunload', e=>{ if(running.size || dirty || anyOutWin()){ 
 /* ================= output settings ================= */
 function renderOutSettings(){ $('outCnt').value=String(outCount()); $('outNamesV').innerHTML=(settings.outputs||[]).map((o,i)=>`<input class="in" data-outv="${i}" value="${esc(o.name)}" style="width:110px" spellcheck="false">`).join(' '); }
 $('outCnt').addEventListener('change', e=>{ const n=+e.target.value; const arr=settings.outputs||(settings.outputs=[]); while(arr.length<n) arr.push({name:`Output ${arr.length+1}`}); arr.length=n;
-  walkAll(c=>{ if((c.output|0)>=n) c.output=0; }); ensureOutputs(); setDirty(true); save(); renderOutSettings(); render(); toast(`映像出力を ${n}系統にしました`); });
+  walkAll(c=>{ if((c.output|0)>=n) c.output=0; }); ensureOutputs(); setDirty(true); save(); renderOutSettings(); render(); toast(`▭ ×${n}`); });
 $('outNamesV').addEventListener('focusout', e=>{ const i=e.target.dataset.outv; if(i==null) return; const v=e.target.value.trim()||`Output ${+i+1}`; settings.outputs[+i].name=v; setDirty(true); save(); renderOutSel(); render(); });
 $('outNamesV').addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } });
 
@@ -2020,7 +2127,7 @@ function renderCams(){ const cams=settings.cameras||(settings.cameras=[]);
     <select class="sel2" data-camtype="${i}">${Object.entries(CAM_TYPES).map(([k,v])=>`<option value="${k}"${k===x.type?' selected':''}>${v}</option>`).join('')}</select>
     <select class="sel2" data-camres="${i}">${['1920x1080','1280x720','3840x2160'].map(r=>`<option${r===x.res?' selected':''}>${r}</option>`).join('')}</select>
     <label class="chk" title="切断のテスト"><input type="checkbox" data-camon="${i}"${x.online?' checked':''}> 接続</label>
-    <button class="btn danger" data-camdel="${i}" title="削除">×</button></div>`).join('') : '<span class="small">カメラはまだありません</span>'; }
+    <button class="btn danger" data-camdel="${i}" title="削除">×</button></div>`).join('') : ''; }
 $('btnCamScan').addEventListener('click', e=>{ e.currentTarget.blur(); scanCameras(); });
 $('btnCamAdd').addEventListener('click', e=>{ e.currentTarget.blur(); const cams=settings.cameras||(settings.cameras=[]); cams.push({id:'cam'+Date.now().toString(36), name:`Camera ${cams.length+1}`, type:'sim', online:true, res:'1920x1080'}); setDirty(true); save(); renderCams(); render(); });
 $('camList').addEventListener('change', e=>{ const el=e.target, cams=settings.cameras;
@@ -2030,7 +2137,7 @@ $('camList').addEventListener('focusout', e=>{ const el=e.target; if(!el.dataset
 $('camList').addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.key==='Enter' && e.target.dataset.camname){ e.preventDefault(); e.target.blur(); } });
 let camDelArmed=0;
 $('camList').addEventListener('click', e=>{ const b=e.target.closest('[data-camdel]'); if(!b) return; b.blur(); if(Date.now()-camDelArmed>2000){ camDelArmed=Date.now(); b.classList.add('armed'); b.textContent='削除'; return; }
-  camDelArmed=0; const x=settings.cameras.splice(+b.dataset.camdel,1)[0]; releaseCam(x); walkAll(c=>{ if(c.type==='camera' && c.camDevice===x.id) runsOf(c).forEach(stopRun); }); setDirty(true); save(); renderCams(); render(); toast(`${x.name} を削除しました`); });
+  camDelArmed=0; const x=settings.cameras.splice(+b.dataset.camdel,1)[0]; releaseCam(x); walkAll(c=>{ if(c.type==='camera' && c.camDevice===x.id) runsOf(c).forEach(stopRun); }); setDirty(true); save(); renderCams(); render(); toast(`🗑 ${x.name}`); });
 
 /* ================= audio output routing ================= */
 let outBus=null, outBusN=0;
@@ -2047,9 +2154,9 @@ function routeOut(p, gain, pair){
   const bus=ensureBus(); if(!bus){ gain.connect(master); return; }
   const sp=actx.createChannelSplitter(2); gain.connect(sp); sp.connect(bus,0,pair*2); sp.connect(bus,1,pair*2+1); p.split=sp;
 }
-function outPairOptions(cur){ const n=Math.max(2,audioChannels()); const pairs=Math.max(1,Math.floor(n/2)); let h=''; for(let i=0;i<Math.max(pairs,4);i++){ const ok=i<pairs; h+=`<option value="${i}"${i===(cur|0)?' selected':''}${ok?'':' disabled'}>${i*2+1}-${i*2+2}  ${esc(settings.outNames?.[i]||'')}${ok?'':'（この機器にはありません）'}</option>`; } return h; }
+function outPairOptions(cur){ const n=Math.max(2,audioChannels()); const pairs=Math.max(1,Math.floor(n/2)); let h=''; for(let i=0;i<Math.max(pairs,4);i++){ const ok=i<pairs; h+=`<option value="${i}"${i===(cur|0)?' selected':''}${ok?'':' disabled'}>${i*2+1}-${i*2+2}  ${esc(settings.outNames?.[i]||'')}${ok?'':' ✕'}</option>`; } return h; }
 async function listAudioOuts(){ try{ const ds=await navigator.mediaDevices.enumerateDevices(); return ds.filter(d=>d.kind==='audiooutput'); }catch(e){ return []; } }
-async function applySink(){ if(!settings.audioSink) return; ac(); if(actx && actx.setSinkId){ try{ await actx.setSinkId(settings.audioSink==='default'?'':settings.audioSink); outBus=null; log(`音声出力デバイスを切り替え`); toast(`音声出力: ${audioChannels()}ch`); renderInspector(); }catch(e){ log('音声出力の切り替えに失敗: '+e.name); toast('音声出力を切り替えられませんでした', true); } } }
+async function applySink(){ if(!settings.audioSink) return; ac(); if(actx && actx.setSinkId){ try{ await actx.setSinkId(settings.audioSink==='default'?'':settings.audioSink); outBus=null; log(`音声出力デバイスを切り替え`); toast(`🔊 ${audioChannels()}ch`); renderInspector(); }catch(e){ log('音声出力の切り替えに失敗: '+e.name); toast('✕ Audio', true); } } }
 
 /* ================= preload ================= */
 const preloaded=new Map(); // cueId -> element
@@ -2066,9 +2173,9 @@ function takePreloaded(c, m){ const el=preloaded.get(c.id); if(!el || el.src!==m
 let midiAcc=null, learnFor=null, midiLedT=0;
 const MIDI_MSG={note_on:'Note On',note_off:'Note Off',cc:'Control Change',pc:'Program Change',sysex:'SysEx',msc_go:'MSC GO',msc_stop:'MSC STOP'};
 async function initMIDI(fromUser){
-  if(!navigator.requestMIDIAccess){ if(fromUser) toast('この環境では MIDI を使えません（Chrome のダウンロード版で使えます）', true); return false; }
+  if(!navigator.requestMIDIAccess){ if(fromUser) toast('✕ MIDI', true); return false; }
   try{ midiAcc=await navigator.requestMIDIAccess({sysex:true}); }
-  catch(e){ try{ midiAcc=await navigator.requestMIDIAccess(); }catch(e2){ log('MIDI: 許可されませんでした'); if(fromUser) toast('MIDI の使用が許可されませんでした', true); return false; } }
+  catch(e){ try{ midiAcc=await navigator.requestMIDIAccess(); }catch(e2){ log('MIDI: 許可されませんでした'); if(fromUser) toast('✕ MIDI', true); return false; } }
   midiAcc.onstatechange=(ev)=>{ log(`MIDI ${ev.port.type==='input'?'入力':'出力'} ${ev.port.name}: ${ev.port.state==='connected'?'接続':'切断'}`); hookInputs(); renderMidiSettings(); };
   hookInputs(); settings.midiEnabled=true; save(); log(`MIDI 有効：入力 ${midiAcc.inputs.size}・出力 ${midiAcc.outputs.size}`); renderMidiSettings(); return true;
 }
@@ -2097,14 +2204,14 @@ function onMidi(ev){
 }
 function hexBytes(str){ return String(str).replace(/0x/gi,'').split(/[\s,]+/).filter(Boolean).map(h=>parseInt(h,16)&0xFF); }
 function sendMidiCue(c){
-  if(!midiAcc){ log(`MIDI: 未接続のため送信できません（${cueLabel(c)}）`); toast('MIDI が有効になっていません（Settings → MIDI を使う）', true); return; }
-  const o=midiOut(c.midiPort); if(!o){ log('MIDI: 出力先がありません'); toast('MIDI の出力先がありません', true); return; }
+  if(!midiAcc){ log(`MIDI: 未接続のため送信できません（${cueLabel(c)}）`); toast('✕ MIDI', true); return; }
+  const o=midiOut(c.midiPort); if(!o){ log('MIDI: 出力先がありません'); toast('✕ MIDI OUT', true); return; }
   const ch=clamp((c.midiCh|0)-1,0,15), n=clamp(c.midiNum|0,0,127), v=clamp(c.midiVal|0,0,127); let msg;
   switch(c.midiMsg){ case 'note_on': msg=[0x90|ch,n,v]; break; case 'note_off': msg=[0x80|ch,n,0]; break; case 'cc': msg=[0xB0|ch,n,v]; break; case 'pc': msg=[0xC0|ch,n]; break;
     case 'sysex': msg=hexBytes(c.midiSysex); break;
     case 'msc_go': case 'msc_stop': { const cmd=c.midiMsg==='msc_go'?0x01:0x02; msg=[0xF0,0x7F,clamp(c.mscDev|0,0,127),0x02,0x01,cmd,...[...String(c.mscCue||'')].map(ch=>ch.charCodeAt(0)&0x7F),0xF7]; break; } }
   try{ o.send(msg); midiLedT=performance.now(); log(`MIDI 送信 → ${o.name}: ${MIDI_MSG[c.midiMsg]} [${msg.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ')}]`); }
-  catch(e){ log('MIDI 送信エラー: '+e.message); toast('MIDI を送信できませんでした（SysEx が許可されていない可能性）', true); }
+  catch(e){ log('MIDI 送信エラー: '+e.message); toast('✕ MIDI SysEx', true); }
 }
 function midiTab(c){
   const outs = midiAcc ? [...midiAcc.outputs.values()] : [];
@@ -2118,17 +2225,17 @@ function midiTab(c){
     ${m==='cc' ? field('Control', inp('midiNum', c.midiNum, 'in num') + inp('midiVal', c.midiVal, 'in num') + '<span class="small">CC番号 / 値</span>') : ''}
     ${m==='pc' ? field('Program', inp('midiNum', c.midiNum, 'in num')) : ''}
     ${m==='sysex' ? field('SysEx', inp('midiSysex', c.midiSysex) ) : ''}
-    ${isMsc ? field('MSC', 'Device ' + inp('mscDev', c.mscDev, 'in num') + ' Cue ' + inp('mscCue', c.mscCue, 'in num') + '<span class="small">空欄で次へ GO</span>') : ''}
+    ${isMsc ? field('MSC', 'Device ' + inp('mscDev', c.mscDev, 'in num') + ' Cue ' + inp('mscCue', c.mscCue, 'in num') + '') : ''}
     ${field('', '<button class="btn" id="midiTest">テスト送信</button>')}
-  </div><div><div class="ph-note">照明卓・音響卓・別の QLab などに MIDI を送ります。<br>MIDI を使うには Settings で「MIDI を使う」を押してください（Chrome のダウンロード版）。<br>Mac の「Audio MIDI 設定」の IAC ドライバを使うと、同じ Mac の別アプリにも送れます。</div></div></div>`;
+  </div><div></div></div>`;
 }
 function renderMidiSettings(){ const box=document.getElementById('midiBox'); if(!box) return;
-  if(!midiAcc){ box.innerHTML=`<button class="btn" id="midiEnable">MIDI を使う</button><span class="small">${navigator.requestMIDIAccess?'押すと Chrome が MIDI の使用を確認します':'この環境では使えません（Chrome のダウンロード版で使えます）'}</span>`; return; }
+  if(!midiAcc){ box.innerHTML=`<button class="btn" id="midiEnable">MIDI を使う</button>`; return; }
   const ins=[...midiAcc.inputs.values()], outs=[...midiAcc.outputs.values()];
   box.innerHTML=`<span class="midiled" id="midiLed"></span>
     入力 <select class="sel2" id="midiInSel"><option value="all">すべて</option>${ins.map(i=>`<option value="${i.id}"${i.id===settings.midiIn?' selected':''}>${esc(i.name)}</option>`).join('')}</select>
     出力 <select class="sel2" id="midiOutSel"><option value="">${outs.length?'最初の機器':'（なし）'}</option>${outs.map(o=>`<option value="${o.id}"${o.id===settings.midiOut?' selected':''}>${esc(o.name)}</option>`).join('')}</select>
-    <br><span style="display:inline-block;margin-top:6px"></span>GO <button class="btn${learnFor==='go'?' learn':''}" id="midiGoLearn">${learnFor==='go'?'MIDI を待っています…':'MIDI Learn'}</button>
+    <br><span style="display:inline-block;margin-top:6px"></span>GO <button class="btn${learnFor==='go'?' learn':''}" id="midiGoLearn">${learnFor==='go'?'MIDI …':'MIDI Learn'}</button>
     <span class="small">${settings.midiGo?esc(midiTrigLabel(settings.midiGo)):'未設定'}</span>
     <label class="chk" style="display:inline-flex;margin-left:12px"><input type="checkbox" id="mscIn"${settings.mscIn?' checked':''}> MSC を受ける（Device ${settings.mscDev}）</label>
     <label class="chk" style="display:inline-flex;margin-left:12px"><input type="checkbox" id="tcInChk"${settings.tcIn?' checked':''}> タイムコード（MTC）を受ける</label>`; }
@@ -2152,8 +2259,8 @@ function tcSet(frames, fps, df, locate){
 }
 function updateTCDisplay(){ if(!tcActive()) return; const el=$('clock'), t='TC '+framesToTC(tcIn.frames, tcIn.fps)+(tcIn.df?' df':''); if(el.textContent!==t) el.textContent=t; }
 function startMTC(r){
-  const c=r.cue; if(!midiAcc){ log(`Timecode: MIDI が有効になっていないため送信できません（${cueLabel(c)}）`); toast('MIDI が有効になっていません（Settings → MIDI を使う）', true); return; }
-  const o=midiOut(c.tcPort); if(!o){ toast('MIDI の出力先がありません', true); return; }
+  const c=r.cue; if(!midiAcc){ log(`Timecode: MIDI が有効になっていないため送信できません（${cueLabel(c)}）`); toast('✕ MIDI', true); return; }
+  const o=midiOut(c.tcPort); if(!o){ toast('✕ MIDI OUT', true); return; }
   const fps=tcFps(c.tcRate), rateCode={24:0,25:1,29.97:2,30:3}[c.tcRate]??3, start=tcToFrames(normTC(c.tcStart), fps), t0=performance.now();
   const tf=(n)=>{ n=Math.max(0,n); return {h:Math.floor(n/fps/3600)%24, m:Math.floor(n/fps/60)%60, s:Math.floor(n/fps)%60, f:n%fps}; };
   const s0=tf(start); try{ o.send([0xF0,0x7F,0x7F,0x01,0x01,(rateCode<<5)|s0.h,s0.m,s0.s,s0.f,0xF7]); }catch(e){}
@@ -2171,9 +2278,9 @@ function tcTab(c){
     ${field('Port', `<select class="sel2" data-k="tcPort"><option value="">既定の出力${midiAcc?'':'（MIDI 未接続）'}</option>${outs.map(o=>`<option value="${o.id}"${o.id===c.tcPort?' selected':''}>${esc(o.name)}</option>`).join('')}</select>`)}
     ${field('Format', '<select class="sel2" disabled><option>MTC（MIDI タイムコード）</option></select>')}
     ${field('Rate', `<select class="sel2" data-k="tcRate">${Object.entries(TC_RATES).map(([v,l])=>`<option value="${v}"${+v===+c.tcRate?' selected':''}>${l}</option>`).join('')}</select>`)}
-    ${field('Start', inp('tcStart', c.tcStart, 'in time') + '<span class="small">ここから数え始める</span>')}
-    ${field('Duration', inp('duration', fmt(c.duration), 'in time') + '<span class="small">0 = Stop するまで送り続ける</span>')}
-  </div><div><div class="ph-note">MIDI でタイムコード（MTC）を送り、照明卓・音響卓・別の QLab などを Alien Lab に合わせて動かします。<br>受け取る側は Settings の「タイムコード」と、各 Cue の Triggers タブの Timecode で設定します。<br>LTC（音声のタイムコード）は Mac 版で対応します。</div></div></div>`;
+    ${field('Start', inp('tcStart', c.tcStart, 'in time') + '')}
+    ${field('Duration', inp('duration', fmt(c.duration), 'in time') + '<span class="small">0 = ∞</span>')}
+  </div><div></div></div>`;
 }
 
 /* ================= Network (HTTP / WebSocket) ================= */
@@ -2181,18 +2288,18 @@ const NET_PROTO={http_get:'HTTP GET',http_post:'HTTP POST',http_put:'HTTP PUT',w
 const wsPool=new Map();
 async function sendNetCue(c){
   const url=String(c.netUrl||'').trim(); if(!url){ log(`Network: URL が未設定（${cueLabel(c)}）`); return; }
-  if(c.netProto==='osc'||c.netProto==='udp'){ log(`Network: ${NET_PROTO[c.netProto]} はブラウザ版では送信できません（${cueLabel(c)}）`); toast('OSC / UDP は Mac 版で送信できます'); return; }
+  if(c.netProto==='osc'||c.netProto==='udp'){ log(`Network: ${NET_PROTO[c.netProto]} はブラウザ版では送信できません（${cueLabel(c)}）`); toast('✕ OSC / UDP', true); return; }
   if(c.netProto==='ws'){ try{ let ws=wsPool.get(url);
       const sendIt=()=>{ ws.send(c.netBody||''); log(`WebSocket 送信 → ${url}: ${String(c.netBody).slice(0,80)}`); };
       if(ws && ws.readyState===1){ sendIt(); return; }
-      ws=new WebSocket(url); wsPool.set(url, ws); ws.onopen=sendIt; ws.onerror=()=>{ log(`WebSocket 接続エラー: ${url}`); toast('WebSocket に接続できませんでした', true); wsPool.delete(url); }; ws.onclose=()=>wsPool.delete(url);
+      ws=new WebSocket(url); wsPool.set(url, ws); ws.onopen=sendIt; ws.onerror=()=>{ log(`WebSocket 接続エラー: ${url}`); toast('✕ WebSocket', true); wsPool.delete(url); }; ws.onclose=()=>wsPool.delete(url);
     }catch(e){ log('WebSocket エラー: '+e.message); } return; }
   const method=({http_get:'GET',http_post:'POST',http_put:'PUT'})[c.netProto]||'GET';
   const opt={method}; if(method!=='GET'){ opt.body=c.netBody||''; opt.headers={'Content-Type':c.netType||'text/plain'}; }
   const t0=performance.now();
   try{ const r=await fetch(url, opt); log(`HTTP ${method} → ${url}: ${r.status}（${Math.round(performance.now()-t0)}ms）`); }
   catch(e){ try{ await fetch(url, {...opt, mode:'no-cors', headers:undefined}); log(`HTTP ${method} → ${url}: 送信済み（応答は読めない設定の機器）`); }
-    catch(e2){ log(`HTTP ${method} → ${url}: 送信できません（${e2.message}）`); toast(`送信できませんでした：${url}`, true); } }
+    catch(e2){ log(`HTTP ${method} → ${url}: 送信できません（${e2.message}）`); toast(`✕ ${url}`, true); } }
 }
 function netTab(c){
   const sel=`<select class="sel2" data-k="netProto">${Object.entries(NET_PROTO).map(([v,l])=>`<option value="${v}"${v===c.netProto?' selected':''}>${l}</option>`).join('')}</select>`;
@@ -2203,7 +2310,7 @@ function netTab(c){
     ${body ? field('Body', inp('netBody', c.netBody, 'in grow', 'placeholder=\'{"scene":3}\'')) : ''}
     ${c.netProto.startsWith('http_') && body ? field('Content-Type', inp('netType', c.netType)) : ''}
     ${field('', '<button class="btn" id="netTest">テスト送信</button>')}
-  </div><div><div class="ph-note">プロジェクターや照明・映像機器の Web API、スイッチャー、配信ソフト（OBS の WebSocket など）を動かせます。<br>結果は右下の波形アイコンのログで確認できます。<br>OSC / UDP / TCP はブラウザの制限で送れないため、Mac 版で対応します。</div></div></div>`;
+  </div><div></div></div>`;
 }
 
 /* ================= status monitor ================= */
@@ -2218,7 +2325,7 @@ function updateMonitor(){ fpsN++; const t=performance.now(); if(t-fpsT<1000) { c
 async function renderAudioSettings(){
   const sel=$('sinkSel'); const outs=await listAudioOuts();
   sel.innerHTML='<option value="">既定の出力</option>'+outs.filter(o=>o.deviceId!=='default').map(o=>`<option value="${o.deviceId}"${o.deviceId===settings.audioSink?' selected':''}>${esc(o.label||'出力デバイス')}</option>`).join('');
-  $('sinkInfo').textContent = (actx && actx.setSinkId ? '' : '（切り替えは Chrome のダウンロード版で使えます）') + (outs.length && !outs[0].label ? ' 名前が出ないときは「つながっているカメラを探す」で許可すると表示されます' : '') + ` 現在 ${audioChannels()}ch`;
+  $('sinkInfo').textContent = `${audioChannels()}ch`;
   $('outNames').innerHTML = settings.outNames.slice(0,Math.max(1,Math.floor(Math.max(2,audioChannels())/2))).map((n,i)=>`${i*2+1}-${i*2+2} <input class="in" data-outname="${i}" value="${esc(n)}" style="width:90px">`).join(' ');
 }
 $('sinkSel').addEventListener('change', e=>{ settings.audioSink=e.target.value; save(); applySink().then(renderAudioSettings); });
@@ -2226,7 +2333,7 @@ $('outNames').addEventListener('focusout', e=>{ const i=e.target.dataset.outname
 $('outNames').addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } });
 $('mSettings').addEventListener('click', e=>{ const t=e.target;
   if(t.id==='midiEnable'){ t.blur(); initMIDI(true); }
-  if(t.id==='midiGoLearn'){ t.blur(); learnFor = learnFor==='go' ? null : 'go'; renderMidiSettings(); if(learnFor) toast('GO にしたい MIDI のキーを押してください'); } });
+  if(t.id==='midiGoLearn'){ t.blur(); learnFor = learnFor==='go' ? null : 'go'; renderMidiSettings(); if(learnFor) toast('MIDI → GO …'); } });
 $('mSettings').addEventListener('change', e=>{ const t=e.target;
   if(t.id==='midiInSel'){ settings.midiIn=t.value; hookInputs(); save(); } if(t.id==='midiOutSel'){ settings.midiOut=t.value; save(); } if(t.id==='mscIn'){ settings.mscIn=t.checked; save(); } if(t.id==='tcInChk'){ settings.tcIn=t.checked; save(); } });
 
@@ -2246,8 +2353,7 @@ function paintPgm(cv, W, H, dpr, ui){
     for(const r of vis){ const p=r.player, c=r.cue, op=parseFloat(p.layer.style.opacity)||0; if(op<=0.01) continue; const [a,b,,d]=p.quad; if(!p.w||!p.h) continue;
       g.save(); g.globalAlpha=clamp(op,0,1);
       g.setTransform(dpr*s*(b[0]-a[0])/p.w, dpr*s*(b[1]-a[1])/p.w, dpr*s*(d[0]-a[0])/p.h, dpr*s*(d[1]-a[1])/p.h, dpr*s*a[0], dpr*s*a[1]);
-      if(p.kind==='text'){ const lines=String(c.text||'').split('\n'), lh=c.fontSize*(c.lineHeight||1.25); g.font=`${c.fontWeight} ${c.fontSize}px ${FONTS[c.fontFamily]||FONTS.sans}`; g.fillStyle=c.textColor; g.textAlign='center'; g.textBaseline='middle';
-        lines.forEach((t,i)=>g.fillText(t, p.w/2, p.h/2+(i-(lines.length-1)/2)*lh)); }
+      if(p.kind==='text') drawTextCanvas(g, c, p.w, p.h, 1);
       else { const src=p.gl?p.gl.cv:p.el; try{ g.drawImage(src,0,0,p.w,p.h); }catch(e){} }
       g.restore(); drawn++; }
     box.className = drawn ? 'pgm live' : 'pgm'; lbl.textContent = ''; return; }
@@ -2257,7 +2363,7 @@ function paintPgm(cv, W, H, dpr, ui){
   const fit=(el,w,h)=>{ if(!w||!h) return; const k=Math.min(W/w,H/h); try{ g.drawImage(el,(W-w*k)/2,(H-h*k)/2,w*k,h*k); }catch(e){} };
   if(c.type==='video' && !isBroken(c)){ const m=mediaOf(c); if(m.kind==='image'){ if(!drawPgm.img || drawPgm.img.dataset.u!==m.url){ drawPgm.img=new Image(); drawPgm.img.dataset.u=m.url; drawPgm.img.src=m.url; } fit(drawPgm.img, drawPgm.img.naturalWidth, drawPgm.img.naturalHeight); }
     else { const el=preloaded.get(c.id); if(el && el.readyState>=2) fit(el, el.videoWidth, el.videoHeight); } }
-  else if(c.type==='text'){ g.fillStyle=c.textColor; g.font=`${c.fontWeight} ${Math.max(8,c.fontSize*s)}px ${FONTS[c.fontFamily]||FONTS.sans}`; g.textAlign='center'; g.textBaseline='middle'; g.fillText(String(c.text||'').split('\n')[0], W/2, H/2-(c.map?c.map.y:0)*s); }
+  else if(c.type==='text'){ g.save(); g.translate(0,-(c.map?c.map.y:0)*s); drawTextCanvas(g, c, W, H, s); g.restore(); }
   else if(c.type==='camera'){ g.fillStyle='#ff6b63'; g.font='600 11px -apple-system,sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('● LIVE  '+(camOf(c)?.name||''), W/2, H/2); }
   g.globalAlpha=1;
 }
@@ -2318,6 +2424,7 @@ function drawStrip(){
       else { const a=now()-r.actStart; if(isFinite(dur)&&dur>0){ pos=clamp(a/dur,0,1); txt=`残り ${fmt(Math.max(0,dur-a))}`; } else txt=r.phase==='hold'?'表示中':fmt(a); } }
     else { if(media && c.mediaDur>0 && !isImage(c)) pos=c.startOff/c.mediaDur; txt = isFinite(dur)&&dur>0 ? `長さ ${fmt(dur)}` : (dur===Infinity?'ループ':''); }
     if(pos!=null){ const x=Math.round(clamp(pos,0,1)*W)+.5; g.strokeStyle= r?'#3ec36b':'#e8c53a'; g.lineWidth=2; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+    if(stripHover!=null && scrubbable(c)){ const bx=$('stripBox').getBoundingClientRect(), x=Math.round(stripHover-bx.left)+.5; g.strokeStyle='rgba(255,255,255,.55)'; g.lineWidth=1; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); const T=stripTimeAt(c,stripHover); g.fillStyle='rgba(0,0,0,.7)'; g.fillRect(x+3,H-17,46,14); g.fillStyle='#fff'; g.font='10px ui-monospace,Menlo,monospace'; g.textBaseline='middle'; g.fillText(fmt(T),x+6,H-10); }
     const L = r && r.phase==='paused' ? '❚❚' : '';
     if(lbl.textContent!==L){ lbl.textContent=L; } lbl.classList.toggle('run', !!r && r.phase!=='paused');
     if(tm.textContent!==txt) tm.textContent=txt; tm.style.display=txt?'':'none';
@@ -2329,21 +2436,21 @@ function goSeq(){ const gl=lists.find(l=>l.id===goListId); return gl ? gl.cues :
 function topOf(id){ const seq=goSeq(); let t=null; for(const c of seq){ if(c.id===id || isDesc(c, find(id)||{})) { t=c; break; } } return t; }
 function stepPlayhead(dir){ const seq=goSeq(); if(!seq.length) return; const cur=topOf(playhead); let i = cur ? seq.indexOf(cur) : (dir>0?-1:seq.length);
   i=clamp(i+dir,0,seq.length-1); playhead=seq[i].id; if(curList().id===goListId) selected=playhead; render(); scrollToSel(); }
-function stopAll(){ if(!running.size) return; for(const r of [...running.values()]) stopRun(r); pending=[]; panicT0=null; $('btnPanic').classList.remove('on'); log('STOP（すべて停止）'); toast('すべて停止しました'); render(); }
+function stopAll(){ if(!running.size) return; for(const r of [...running.values()]) stopRun(r); pending=[]; panicT0=null; $('btnPanic').classList.remove('on'); log('STOP（すべて停止）'); toast('■'); render(); }
 $('pfPrev').addEventListener('click', e=>{ e.currentTarget.blur(); stepPlayhead(-1); });
 $('pfNext').addEventListener('click', e=>{ e.currentTarget.blur(); stepPlayhead(1); });
 $('pfPause').addEventListener('click', e=>{ e.currentTarget.blur(); pauseAll(); });
 $('pfStop').addEventListener('click', e=>{ e.currentTarget.blur(); stopAll(); });
 let pfLast='';
 function updatePerf(){ if(mode!=='show') return; const rs=[...running.values()].filter(r=>r.phase!=='hold'); const paused=rs.length && rs.every(r=>r.phase==='paused');
-  const html = rs.length ? `再生中 <b>${rs.length}</b>　${esc(rs.slice(-2).map(r=>cueLabel(r.cue)).join(' / '))}` : '再生中のCueはありません';
+  const html = rs.length ? `再生中 <b>${rs.length}</b>　${esc(rs.slice(-2).map(r=>cueLabel(r.cue)).join(' / '))}` : '—';
   if(html!==pfLast){ $('pfInfo').innerHTML=html; pfLast=html; } $('pfPause').classList.toggle('on', !!paused); }
 
 /* ================= project file (.alienlab) ================= */
 const PROJECT_FORMAT = 'alienlab', PROJECT_VERSION = 1;
 function projectData(){
   const cur=curList(); if(cur){ cur.selected=selected; if(cur.type==='list') cur.playhead=playhead; }
-  const used={}; walkAll(c=>{ for(const f of [c.file, c.phoneFile]) if(f && !used[f]){ const m=media.get(f); used[f]= m ? {kind:m.kind, duration:+(m.dur||c.mediaDur||0).toFixed(3), width:m.w||0, height:m.h||0} : {kind:null, duration:c.mediaDur||0}; } });
+  const used={}; walkAll(c=>{ for(const f of [c.file, c.phoneFile]) if(f && !used[f]){ const m=media.get(f); used[f]= m ? {kind:m.kind, duration:+(m.dur||c.mediaDur||0).toFixed(3), width:m.w||0, height:m.h||0, path:m.path||undefined} : {kind:null, duration:c.mediaDur||0}; } });
   return {format:PROJECT_FORMAT, formatVersion:PROJECT_VERSION, app:'Alien Lab', appVersion:VERSION, savedAt:new Date().toISOString(),
     name:settings.projectName, settings, lists, activeId, goListId, media:used};
 }
@@ -2351,14 +2458,14 @@ function projectFileName(){ return (settings.projectName||'Untitled').replace(/[
 async function saveProject(){
   const json = JSON.stringify(projectData(), null, 1);
   let dl=null; try{ dl = await claude.use('downloads'); }catch(e){ dl=null; }
-  if(dl){ try{ await dl.save({filename:projectFileName(), data:json}); setDirty(false); log(`保存: ${projectFileName()}`); toast('保存しました'); return; }
-    catch(e){ if(e && e.code==='declined'){ toast('保存をキャンセルしました'); return; } if(e && e.code==='rate_limited'){ toast('保存できませんでした。少し待ってから保存してください'); return; } log('保存エラー: '+(e&&e.code||e)); } }
+  if(dl){ try{ await dl.save({filename:projectFileName(), data:json}); setDirty(false); log(`保存: ${projectFileName()}`); toast('✓ 保存'); return; }
+    catch(e){ if(e && e.code==='declined'){ toast('✕ 保存'); return; } if(e && e.code==='rate_limited'){ toast('✕ 保存', true); return; } log('保存エラー: '+(e&&e.code||e)); } }
   $('exportText').value = json; openModal('mExport'); setDirty(false);
 }
 function openProjectText(text, fname){
-  let d; try{ d=JSON.parse(text); }catch(e){ toast('プロジェクトファイルを読めませんでした', true); log('読込エラー: JSONとして読めない '+fname); return; }
-  if(!d || d.format!==PROJECT_FORMAT || !Array.isArray(d.lists)){ toast('Alien Lab のプロジェクトファイルではありません', true); return; }
-  if((d.formatVersion||1) > PROJECT_VERSION) toast('新しい版で保存されたファイルです。一部が読めない可能性があります');
+  let d; try{ d=JSON.parse(text); }catch(e){ toast('✕ ファイル', true); log('読込エラー: JSONとして読めない '+fname); return; }
+  if(!d || d.format!==PROJECT_FORMAT || !Array.isArray(d.lists)){ toast('✕ ファイル', true); return; }
+  if((d.formatVersion||1) > PROJECT_VERSION) toast('⚠ 新しい版のファイル', true);
   hardStop(); removePreview(); snapshot();
   lists = d.lists.map(l=>({...l, cues:l.cues.map(mk)}));
   settings = Object.assign({projectName:'Untitled', showStart:'19:00:00', phoneCount:8, surfaces:{}}, d.settings||{});
@@ -2372,22 +2479,23 @@ function openProjectText(text, fname){
   buildPhones(); lastSec=-1; setDirty(false); render();
   let miss=0; walkAll(c=>{ if(problem(c) && (c.type==='audio'||c.type==='video') && c.file) miss++; });
   log(`開く: ${fname}（${lists.length}リスト・${allCount()}Cue・見つからない素材 ${miss}件）`);
-  toast(miss ? `開きました — 見つからない素材 ${miss}件：歯車 →「素材フォルダを選んでつなぎ直す」` : `${settings.projectName} を開きました`, !!miss);
+  toast(miss ? `✕ ${miss}` : `✓ ${settings.projectName}`, !!miss);
 }
 function isProjectFile(f){ return /\.(alienlab|json)$/i.test(f.name); }
 function openProjectFile(f){ const rd=new FileReader(); rd.onload=()=>openProjectText(rd.result, f.name); rd.readAsText(f); }
-function relinkFiles(files){ let n=0, used=0; for(const f of files){ const k=kindOf(f); if(!k) continue; let need=false; walkAll(c=>{ if((c.file===f.name||c.phoneFile===f.name)) need=true; }); if(!need) continue; registerMedia(f.name, URL.createObjectURL(f), k); used++; }
-  walkAll(c=>{ if((c.type==='audio'||c.type==='video') && c.file && !mediaOf(c)) n++; }); render(); log(`素材フォルダから ${used}件 つなぎ直し（残り ${n}件）`); toast(n?`${used}件つなぎました（まだ見つからない素材 ${n}件）`:`${used}件つなぎました。すべての素材が見つかりました`, !!n); }
-function newProject(){ hardStop(); removePreview(); snapshot(); lists=[{id:newListId(), name:'Main Cue List', type:'list', cues:[]}]; activeId=goListId=lists[0].id; cues=lists[0].cues; selected=playhead=null; settings.projectName='Untitled'; settings.surfaces={}; setDirty(false); render(); toast('新しいプロジェクト（⌘Z で元に戻せます）'); log('新規プロジェクト'); }
+function relinkFiles(files){ let n=0, used=0; for(const f of files){ const k=kindOf(f); if(!k) continue; let need=false; walkAll(c=>{ if((c.file===f.name||c.phoneFile===f.name)) need=true; }); if(!need) continue; const [u,pp]=fileURL(f); registerMedia(f.name, u, k, pp); used++; }
+  walkAll(c=>{ if((c.type==='audio'||c.type==='video') && c.file && !mediaOf(c)) n++; }); render(); log(`素材フォルダから ${used}件 つなぎ直し（残り ${n}件）`); toast(n?`✓ ${used}　✕ ${n}`:`✓ ${used}`, !!n); }
+function newProject(){ hardStop(); removePreview(); snapshot(); lists=[{id:newListId(), name:'Main Cue List', type:'list', cues:[]}]; activeId=goListId=lists[0].id; cues=lists[0].cues; selected=playhead=null; settings.projectName='Untitled'; settings.surfaces={}; setDirty(false); render(); toast('＋'); log('新規プロジェクト'); }
 let newArmed=0;
-function askNew(btn){ if(Date.now()-newArmed>2000){ newArmed=Date.now(); if(btn){ btn.classList.add('armed'); btn.textContent='新規にする？'; setTimeout(()=>{ btn.classList.remove('armed'); btn.textContent='新規'; },2000); } else toast('新規プロジェクトにする？', true); return; } newArmed=0; if(btn){ btn.classList.remove('armed'); btn.textContent='新規'; } newProject(); }
+function askNew(btn){ if(Date.now()-newArmed>2000){ newArmed=Date.now(); if(btn){ btn.classList.add('armed'); setTimeout(()=>btn.classList.remove('armed'),2000); } else armFlash(); return; } newArmed=0; if(btn) btn.classList.remove('armed'); newProject(); }
 $('btnSave').addEventListener('click', e=>{ e.currentTarget.blur(); saveProject(); });
-$('btnOpen').addEventListener('click', e=>{ e.currentTarget.blur(); $('projPick').value=''; $('projPick').click(); });
+function openDialog(){ $('projPick').value=''; $('projPick').click(); }
+$('btnOpen').addEventListener('click', e=>{ e.currentTarget.blur(); openDialog(); });
 $('btnNew').addEventListener('click', e=>{ const b=e.currentTarget; b.blur(); askNew(b); });
 $('projPick').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) openProjectFile(f); });
 $('btnFolder').addEventListener('click', e=>{ e.currentTarget.blur(); $('folderPick').value=''; $('folderPick').click(); });
 $('folderPick').addEventListener('change', e=>{ if(e.target.files.length){ closeModals(); relinkFiles(e.target.files); } });
-$('btnCopyProj').addEventListener('click', e=>{ e.currentTarget.blur(); try{ navigator.clipboard.writeText($('exportText').value).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした')); }catch(_){ toast('コピーできませんでした'); } });
+$('btnCopyProj').addEventListener('click', e=>{ e.currentTarget.blur(); try{ navigator.clipboard.writeText($('exportText').value).then(()=>toast('⧉'),()=>toast('✕')); }catch(_){ toast('✕'); } });
 $('setName').addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } });
 $('setName').addEventListener('blur', e=>{ const v=e.target.value.trim()||'Untitled'; if(v!==settings.projectName){ settings.projectName=v; setDirty(true); save(); renderTitle(); } });
 function renderTitle(){ $('wsTitle').textContent = `${settings.projectName}.alienlab — Alien Lab`; document.title = `${settings.projectName} — Alien Lab`; }
@@ -2397,7 +2505,28 @@ function render(){ renderTitle(); renderTabs(); renderStandby(); renderList(); r
 function scrollToSel(){ const el=document.querySelector('.row.sel'); el && el.scrollIntoView({block:'nearest'}); }
 function select(id){ hkCapture=null; if(isCart()){ if(selected!==id){ selected=id; updateSelection(); renderInspector(); } return; } if(selected===id && playhead===id) return; const changed = selected!==id; selected=id; playhead=id; updateSelection(); renderStandby(); if(changed) renderInspector(); }
 
-$('stripBox').addEventListener('click', ()=>{ const {c}=stripTarget(); if(c){ const L=listOf(c.id); if(L && L.id!==activeId) setActive(L.id); selected=c.id; updateSelection(); renderInspector(); scrollToSel(); } });
+$('stripBox').addEventListener('click', ()=>{ if(stripScrubbed){ stripScrubbed=false; return; } const {c}=stripTarget(); if(c){ const L=listOf(c.id); if(L && L.id!==activeId) setActive(L.id); selected=c.id; updateSelection(); renderInspector(); scrollToSel(); } });
+/* 波形をドラッグして好きな位置から再生（Edit モード） */
+let stripScrub=null, stripScrubbed=false, stripHover=null;
+function scrubbable(c){ return c && (c.type==='audio'||c.type==='video') && !isBroken(c) && !isImage(c) && (c.mediaDur||mediaOf(c)?.dur||0)>0; }
+function stripTimeAt(c, x){ const r=$('stripBox').getBoundingClientRect(), md=c.mediaDur||mediaOf(c)?.dur||0; return clamp((x-r.left)/r.width,0,1)*md; }
+function seekRun(r, c, T){ const el=r.player&&r.player.el; if(!el) return; const apply=()=>{ try{ el.currentTime=T; }catch(e){} r.actStart=now()-Math.max(0,T-(c.startOff||0))/(c.rate||1); };
+  if(el.readyState>=1) apply(); else el.addEventListener('loadedmetadata', apply, {once:true}); }
+function scrubTo(c, T){
+  let r=runsOf(c).find(x=>x.player&&x.player.el&&x.player.kind!=='image');
+  if(r){ if(r.phase==='paused') togglePause(r); seekRun(r,c,T); return; }
+  ac(); fire(c,false); r=runsOf(c)[0]; if(!r) return; if(r.phase==='pre') r.t0=now()-(c.preWait||0)-0.001;
+  let n=0; const wait=()=>{ const rr=runsOf(c).find(x=>x.player&&x.player.el); if(rr){ seekRun(rr,c,T); return; } if(++n<60) requestAnimationFrame(wait); }; wait();
+}
+$('stripBox').addEventListener('pointerdown', e=>{ if(mode!=='edit') return; const {c}=stripTarget(); if(!scrubbable(c)) return;
+  e.preventDefault(); $('stripBox').setPointerCapture(e.pointerId); stripScrub={c, x0:e.clientX, moved:false};
+  if(selected!==c.id){ const L=listOf(c.id); if(L && L.id!==activeId) setActive(L.id); selected=c.id; updateSelection(); renderInspector(); }
+  scrubTo(c, stripTimeAt(c, e.clientX)); log(`▶ ${cueLabel(c)} ${fmt(stripTimeAt(c, e.clientX))}`); });
+$('stripBox').addEventListener('pointermove', e=>{ const {c}=stripTarget(); stripHover = (mode==='edit' && scrubbable(c)) ? e.clientX : null;
+  if(!stripScrub) return; if(Math.abs(e.clientX-stripScrub.x0)>2) stripScrub.moved=true; const r=runsOf(stripScrub.c).find(x=>x.player&&x.player.el); if(r) seekRun(r, stripScrub.c, stripTimeAt(stripScrub.c, e.clientX)); });
+$('stripBox').addEventListener('pointerup', ()=>{ if(stripScrub){ stripScrubbed=true; stripScrub=null; } });
+$('stripBox').addEventListener('pointerleave', ()=>{ stripHover=null; });
+
 $('go').addEventListener('click', e=>{ e.currentTarget.blur(); go(); });
 $('btnPanic').addEventListener('click', e=>{ e.currentTarget.blur(); panic(); });
 $('btnBO').addEventListener('click', e=>{ e.currentTarget.blur(); setBlackout(!blackout); });
@@ -2408,7 +2537,13 @@ $('toolbar').addEventListener('click', e=>{
   if(type==='group' && !isCart() && (multi.size || (selected && find(selected)))){ groupSelection(); return; }
   snapshot();
   const c = mk({type, number: ['memo','wait'].includes(type)?'':nextNumber(), duration:DEFAULT_DUR[type]||0, children: type==='group'?[]:null, text: type==='text'?'テキスト':'', camDevice: type==='camera' ? ((settings.cameras||[])[0]?.id||'') : ''});
-  if(isCart()){ const sl=firstEmptySlot(curList()); if(sl==null){ undoStack.pop(); toast('カートに空きがありません', true); return; } c.slot=sl; cues.push(c); selected=c.id; inspTab='Basics'; render(); return; }
+  const sc = selected && find(selected);
+  if(HAS_TARGET_CUE.has(type) && sc && sc.id!==c.id && sc.type!=='group' || HAS_TARGET_CUE.has(type) && sc && sc.type==='group' && type!=='fade'){
+    if(!sc.number){ sc.number=nextNumber(); c.number=nextNumber(); }
+    c.targetId=sc.id; c.targetCue=sc.number; c.name=`${TYPE_NAME[type]}: ${sc.name||sc.file||TYPE_NAME[sc.type]}`;
+    if(type==='fade'){ const k=sc.type==='video'?(mediaOf(sc)?.kind||'video'):sc.type; c.fadeVolOn = k==='audio'||k==='video'||k==='mic'; c.fadeOpOn = k!=='audio'&&k!=='mic'; }
+  }
+  if(isCart()){ const sl=firstEmptySlot(curList()); if(sl==null){ undoStack.pop(); toast('✕ Cart', true); return; } c.slot=sl; cues.push(c); selected=c.id; inspTab='Basics'; render(); return; }
   const list = findParentList(selected) || cues; const i = list.findIndex(x=>x.id===selected);
   list.splice(i<0?list.length:i+1, 0, c);
   selected=c.id; playhead=c.id; inspTab=['midi','network'].includes(type)?'Settings':type==='camera'?'Camera':'Basics'; render(); scrollToSel();
@@ -2422,11 +2557,11 @@ $('toolbar').addEventListener('click', e=>{
   tb.addEventListener('mouseleave', ()=>tip.classList.remove('on'));
   tb.addEventListener('mousedown', ()=>tip.classList.remove('on')); })();
 const rowsEl=$('rows');
-function openContMenu(cell){ const c=find(cell.dataset.cont); if(!c) return; if(c.locked){ toast('ロック中です'); return; }
+function openContMenu(cell){ const c=find(cell.dataset.cont); if(!c) return; if(c.locked){ toast('🔒'); return; }
   document.querySelectorAll('.contmenu').forEach(m=>m.remove()); const r=cell.getBoundingClientRect(), m=document.createElement('div'); m.className='contmenu';
-  m.innerHTML=Object.entries(CONT_LABEL).map(([k,l])=>`<div data-setcont="${k}" class="${c.cont===k?'on':''}">${k==='auto-continue'?CONT_AC:k==='auto-follow'?CONT_AF:'<svg viewBox="0 0 12 14"><path d="M3 7h6" stroke="#888" stroke-width="1.4"/></svg>'}<span>${l[0]}<small>${l[1]}</small></span></div>`).join('');
+  m.innerHTML=Object.entries(CONT_LABEL).map(([k,l])=>`<div data-setcont="${k}" class="${c.cont===k?'on':''}">${k==='auto-continue'?CONT_AC:k==='auto-follow'?CONT_AF:'<svg viewBox="0 0 12 14"><path d="M3 7h6" stroke="#888" stroke-width="1.4"/></svg>'}<span>${l[0]}</span></div>`).join('');
   $('win').appendChild(m); m.style.left=Math.min(innerWidth-270, r.right-260)+'px'; m.style.top=Math.min(innerHeight-150, r.bottom+2)+'px';
-  m.addEventListener('mousedown', ev=>{ ev.stopPropagation(); const t=ev.target.closest('[data-setcont]'); if(!t) return; if(c.cont!==t.dataset.setcont){ snapshot(); c.cont=t.dataset.setcont; log(`続き: ${cueLabel(c)} → ${CONT_LABEL[c.cont][0]}`); render(); } m.remove(); });
+  m.addEventListener('mousedown', ev=>{ ev.stopPropagation(); const t=ev.target.closest('[data-setcont]'); if(!t) return; if(c.cont!==t.dataset.setcont){ snapshot(); c.cont=t.dataset.setcont; log(`Continue: ${cueLabel(c)} → ${CONT_LABEL[c.cont][0]}`); render(); } m.remove(); });
   setTimeout(()=>addEventListener('mousedown', function off(ev){ if(!m.contains(ev.target)){ m.remove(); removeEventListener('mousedown', off, true); } }, true),0); }
 rowsEl.addEventListener('mousedown', e=>{
   { const cc=e.target.closest('[data-cont]'); if(cc && mode==='edit'){ e.preventDefault(); select(cc.closest('.row').dataset.id); openContMenu(cc); return; } }
@@ -2446,10 +2581,10 @@ rowsEl.addEventListener('mousedown', e=>{
 });
 rowsEl.addEventListener('change', e=>{ if(e.target.id==='cartSize'){ const [c,r]=e.target.value.split('x').map(Number), L=curList(); snapshot();
   const n=c*r; let over=L.cues.filter(x=>x.slot>=n); over.forEach(x=>{ const used=new Set(L.cues.filter(y=>y.slot<n).map(y=>y.slot)); let s=0; while(used.has(s)&&s<n) s++; x.slot = s<n ? s : x.slot; });
-  if(L.cues.some(x=>x.slot>=n)){ undoStack.pop(); toast('Cueが入りきらないので小さくできません', true); renderList(); return; }
+  if(L.cues.some(x=>x.slot>=n)){ undoStack.pop(); toast('✕', true); renderList(); return; }
   L.cols=c; L.rows=r; save(); renderList(); } });
 rowsEl.addEventListener('dblclick', e=>{
-  { const rr=e.target.closest('.row'); if(rr && find(rr.dataset.id)?.locked){ toast('ロック中です'); return; } }
+  { const rr=e.target.closest('.row'); if(rr && find(rr.dataset.id)?.locked){ toast('🔒'); return; } }
   const ccell=e.target.closest('.cell[data-id]'); if(ccell && !e.target.closest('[data-cgo]')){ fireCart(find(ccell.dataset.id)); return; }
   if(mode!=='edit') return; const cell=e.target.closest('[data-edit]'); if(!cell) return;
   const row=cell.closest('.row'); row.draggable=false; const c=find(row.dataset.id); const k=cell.dataset.edit;
@@ -2490,9 +2625,9 @@ rowsEl.addEventListener('dragover', e=>{ if(isCart()){ cartDragOver(e); return; 
 rowsEl.addEventListener('dragleave', e=>{ if(!rowsEl.contains(e.relatedTarget)) clearDrop(); });
 rowsEl.addEventListener('drop', e=>{
   if(isCart()){ e.preventDefault(); e.stopPropagation(); document.querySelectorAll('.cell.dropto').forEach(x=>x.classList.remove('dropto')); const cell=e.target.closest('.cell'); if(!cell) return; const slot=+cell.dataset.slot;
-    if(!dragId && e.dataTransfer.files.length){ const tc=cues.find(x=>x.slot===slot); if(tc && (tc.type==='audio'||tc.type==='video')) return importFiles(e.dataTransfer.files,{replace:tc}); if(tc) return toast('空いているマスに落としてください'); return importFiles(e.dataTransfer.files,{list:cues, index:cues.length, slot}); }
+    if(!dragId && e.dataTransfer.files.length){ const tc=cues.find(x=>x.slot===slot); if(tc && (tc.type==='audio'||tc.type==='video')) return importFiles(e.dataTransfer.files,{replace:tc}); if(tc) return toast('✕', true); return importFiles(e.dataTransfer.files,{list:cues, index:cues.length, slot}); }
     const c=find(dragId); dragId=null; if(!c) return; snapshot();
-    if(!cues.includes(c)){ const from=findParentList(c.id); from.splice(from.indexOf(c),1); const other=cues.find(x=>x.slot===slot); if(other){ undoStack.pop(); from.push(c); toast('空いているマスに落としてください'); renderList(); return; } c.slot=slot; cues.push(c); }
+    if(!cues.includes(c)){ const from=findParentList(c.id); from.splice(from.indexOf(c),1); const other=cues.find(x=>x.slot===slot); if(other){ undoStack.pop(); from.push(c); toast('✕', true); renderList(); return; } c.slot=slot; cues.push(c); }
     else { const other=cues.find(x=>x.slot===slot && x!==c); if(other) other.slot=c.slot; c.slot=slot; }
     save(); render(); return; }
   e.preventDefault(); e.stopPropagation(); const p=dropPlan||planDrop(e); clearDrop(); if(!p) return;
@@ -2516,7 +2651,7 @@ window.addEventListener('drop', e=>{ if(e.dataTransfer?.files?.length){ e.preven
 
 /* ---- inspector ---- */
 $('itabs').addEventListener('click', e=>{ const b=e.target.closest('[data-tab]'); if(!b) return; b.blur(); inspTab=b.dataset.tab; if(inspTab!=='Geometry') ose=null; renderInspector(); });
-const NUMERIC = new Set(['output','fadeX','fadeY','fadeScale','fadeRot','animInDur','animOutDur','tcRate','outPair','midiCh','midiNum','midiVal','mscDev','camDelay','loop','rate','fadeIn','fadeOut','volume','posX','posY','scale','rotation','opacity','fontSize','fadeVol','fadeOp',
+const NUMERIC = new Set(['tracking','kerning','lineSpacing','baseline','slant','faceOpacity','faceBlur','outlineOpacity','outlineBlur','outlineWidth','glowOpacity','glowBlur','glowRadius','shadowOpacity','shadowBlur','shadowDistance','shadowAngle','bgOpacity','output','fadeX','fadeY','fadeScale','fadeRot','animInDur','animOutDur','tcRate','outPair','midiCh','midiNum','midiVal','mscDev','camDelay','loop','rate','fadeIn','fadeOut','volume','posX','posY','scale','rotation','opacity','fontSize','fadeVol','fadeOp',
   'pan','eqLow','eqMid','eqHigh','compThresh','compRatio','delayMix','delayTime','delayFb','revMix','revSize','fxBlur','fxBright','fxContrast','fxSat','fxHue','fxGray','fxInvert',
   'fontWeight','letterSpacing','lineHeight','strokeW','bgOpacity','phoneBright','blinkHz']);
 const TIMES = new Set(['preWait','duration','postWait','startOff','endOff']);
@@ -2530,8 +2665,8 @@ function commitField(el){
   if(el.type==='checkbox') v=el.checked;
   else if(el.type==='radio') v=el.value;
   else if(TIMES.has(k)) v=parseTime(el.value);
-  else if(NUMERIC.has(k)){ v=parseFloat(toHalf(el.value)); if(isNaN(v)) v=c[k]; if(k==='loop') v=Math.max(0,Math.round(v)); if(k==='rate') v=clamp(v,0.1,4); if(k==='opacity'||k==='fadeOp') v=clamp(v,0,100); if(k==='volume'||k==='fadeVol') v=clamp(v,-60,12); }
-  else if(k==='number' || k==='targetCue') v=toHalf(el.value).trim();
+  else if(NUMERIC.has(k)||k==='lvL'||k==='lvR'){ const raw=toHalf(el.value).trim(); v=/^-?(∞|inf)/i.test(raw)?-60:parseFloat(raw); if(k==='lvL'||k==='lvR') v=isNaN(v)?c[k]:clamp(v,-60,12); if(isNaN(v)) v=c[k]; if(k==='loop') v=Math.max(0,Math.round(v)); if(k==='rate') v=clamp(v,0.1,4); if(k==='opacity'||k==='fadeOp') v=clamp(v,0,100); if(k==='volume'||k==='fadeVol') v=clamp(v,-60,12); }
+  else if(k==='number' || k==='targetCue'){ v=toHalf(el.value).trim(); if(k==='targetCue') delete c.targetId; }
   else if(k==='tcTime'||k==='tcStart') v=normTC(el.value);
   else if(k==='hotkey') v=toHalf(el.value).trim().toUpperCase();
   else if(k==='wallTime'){ const s=parseTime(el.value); v=[Math.floor(s/3600)%24,Math.floor(s/60)%60,Math.floor(s%60)].map(x=>String(x).padStart(2,'0')).join(':'); }
@@ -2555,12 +2690,45 @@ window.addEventListener('keydown', e=>{ if(!hkCapture) return; e.preventDefault(
   const c=find(hkCapture); if(!c){ hkCapture=null; return; }
   if(e.code==='Escape'){ hkCapture=null; renderInspector(); return; }
   let k = (e.code==='Backspace'||e.code==='Delete') ? '' : codeKey(e); if(k===null) return;
-  snapshot(); c.hotkey=k; hkCapture=null; log(k?`Hotkey 割り当て: ${k} → ${cueLabel(c)}`:`Hotkey 解除: ${cueLabel(c)}`); save(); render(); toast(k?`${k} キー → ${cueLabel(c)}`:'Hotkey を解除しました'); }, true);
+  snapshot(); c.hotkey=k; hkCapture=null; log(k?`Hotkey 割り当て: ${k} → ${cueLabel(c)}`:`Hotkey 解除: ${cueLabel(c)}`); save(); render(); toast(k?`${k} → ${cueLabel(c)}`:'Hotkey —'); }, true);
 ibody.addEventListener('input', e=>{ const el=e.target; if(!el.matches('input[type=range][data-live]')) return; const c=find(ibody.dataset.cue); const k=el.dataset.live; const v=parseFloat(el.value); c[k]=v;
   const num=ibody.querySelector(`input.in[data-k="${k}"]`); if(num) num.value=v; if(k==='volume') runsOf(c).forEach(r=>{ if(r.player) r.player.level=v; }); save(); });
+
+/* ---------- 縦フェーダー（QLab の Audio Levels 風） ---------- */
+const F_MIN=-60, F_MAX=12;
+const fPos = d => clamp((Math.max(F_MIN,d)-F_MIN)/(F_MAX-F_MIN),0,1);
+function fader(k, label, v, dis, onK, on){
+  const ticks=[12,6,0,-6,-12,-20,-30,-40,-60].map(d=>`<i style="bottom:${fPos(d)*100}%"><b>${d===-60?'-∞':d>0?'+'+d:d}</b></i>`).join('');
+  return `<div class="fstrip${dis?' off':''}" data-fk="${k}">
+    <div class="fl">${onK?`<input type="checkbox" data-k="${onK}"${on?' checked':''}> `:''}${esc(label)}</div>
+    <div class="ftrack" data-fk="${k}"><div class="fticks">${ticks}</div><div class="frail"></div><div class="fmeter"><s data-m="0"></s><s data-m="1"></s></div><div class="fthumb" style="bottom:${fPos(v)*100}%"></div></div>
+    <input class="in num fdb" data-k="${k}" value="${v<=F_MIN?'-∞':Math.round(v*10)/10}" spellcheck="false"${dis?' disabled':''}></div>`;
+}
+let fDrag=null;
+let textSub='format', sysFonts=[];
+ibody.addEventListener('click', async e=>{
+  const ts=e.target.closest('[data-tsub]'); if(ts){ ts.blur(); textSub=ts.dataset.tsub; renderInspector(); return; }
+  const sk=e.target.closest('[data-setk]'); if(sk){ sk.blur(); const c=find(ibody.dataset.cue); if(!c||c.locked) return; const k=sk.dataset.setk; let v=sk.dataset.v; if(k==='vertical'||k==='allCaps') v=v==='1'; if(c[k]!==v){ snapshot(); c[k]=v; save(); } renderInspector(); return; }
+  if(e.target.id==='loadFonts'){ e.target.blur(); try{ const fs=await window.queryLocalFonts(); sysFonts=[...new Set(fs.map(f=>f.family))].sort((a,b)=>a.localeCompare(b,'ja')); renderInspector(); }catch(err){ toast('✕', true); } }
+});
+function fSet(st, c, k, v){ v=Math.round(clamp(v,F_MIN,F_MAX)*10)/10; c[k]=v; st.querySelector('.fthumb').style.bottom=fPos(v)*100+'%'; const n=st.querySelector('.fdb'); if(n) n.value=v<=F_MIN?'-∞':v; if(k==='volume') runsOf(c).forEach(r=>{ if(r.player) r.player.level=v; }); }
+ibody.addEventListener('pointerdown', e=>{ const tr=e.target.closest('.ftrack'); if(!tr) return; const st=tr.closest('.fstrip'); if(st.classList.contains('off')) return; const c=find(ibody.dataset.cue); if(!c||c.locked) return;
+  e.preventDefault(); snapshot(); const k=tr.dataset.fk, r=tr.getBoundingClientRect(), onThumb=e.target.classList.contains('fthumb');
+  const y2v = y => F_MIN + (1-clamp((y-r.top)/r.height,0,1))*(F_MAX-F_MIN);
+  fDrag={st,c,k,y0:e.clientY,v0:c[k]||0,fine:onThumb,y2v}; if(!onThumb) fSet(st,c,k,y2v(e.clientY)); tr.setPointerCapture(e.pointerId); });
+ibody.addEventListener('pointermove', e=>{ if(!fDrag) return; const {st,c,k,y0,v0,fine,y2v}=fDrag; const r=st.querySelector('.ftrack').getBoundingClientRect();
+  fSet(st,c,k, fine ? v0 + (y0-e.clientY)/r.height*(F_MAX-F_MIN)*(e.shiftKey?0.2:1) : y2v(e.clientY)); });
+ibody.addEventListener('pointerup', ()=>{ if(fDrag){ fDrag=null; save(); } });
+ibody.addEventListener('dblclick', e=>{ const tr=e.target.closest('.ftrack'); if(!tr) return; const st=tr.closest('.fstrip'); const c=find(ibody.dataset.cue); if(!c||st.classList.contains('off')) return; snapshot(); fSet(st,c,tr.dataset.fk,0); save(); });
+function drawFaderMeters(){ const fs=ibody.querySelector('.faders'); if(!fs) return; const c=find(ibody.dataset.cue); if(!c) return;
+  const r=runsOf(c).find(x=>x.player&&x.player.ax); const lv=[0,0];
+  if(r){ const ax=r.player.ax; [ax.anL,ax.anR].forEach((an,i)=>{ const b=an._b||(an._b=new Float32Array(an.fftSize)); an.getFloatTimeDomainData(b); let m=0; for(let j=0;j<b.length;j++){ const a=Math.abs(b[j]); if(a>m) m=a; } lv[i]=m; }); }
+  const pos=l=> l<=0?0:fPos(20*Math.log10(l));
+  fs.querySelectorAll('.fstrip').forEach(st=>{ const k=st.dataset.fk; st.querySelectorAll('.fmeter s').forEach((s,i)=>{ const v = k==='lvL'?pos(lv[0]) : k==='lvR'?pos(lv[1]) : pos(lv[i]); s.style.height=(v*100)+'%'; s.classList.toggle('hot', v>fPos(0)); }); });
+}
 function curFx(){ const c=find(ibody.dataset.cue); const w=ibody.querySelector('.fxwrap'); if(!c||!w) return {}; const kind=w.dataset.fxkind; const list=kind==='v'?c.vfx:c.afx; const f=list.find(x=>x.id===fxSel[c.id])||list[0]; return {c, kind, list, f, DEF:kind==='v'?VFX:AFX}; }
 function commitFx(el){ const {f,DEF}=curFx(); if(!f) return; const pd=DEF[f.type].ps.find(p=>p.k===el.dataset.fxn); let v=parseFloat(toHalf(el.value)); if(isNaN(v)){ renderInspector(); return; } v=clamp(v,pd.min,pd.max); if(f.p[pd.k]!==v){ snapshot(); f.p[pd.k]=v; save(); } setTimeout(renderInspector,0); }
-function renameSurface(name){ const c=find(ibody.dataset.cue); name=String(name).trim(); if(!c||!c.surface||!name||name===c.surface) return; if(settings.surfaces[name]){ toast('同じ名前のマッピングがあります'); renderInspector(); return; }
+function renameSurface(name){ const c=find(ibody.dataset.cue); name=String(name).trim(); if(!c||!c.surface||!name||name===c.surface) return; if(settings.surfaces[name]){ toast('✕', true); renderInspector(); return; }
   const old=c.surface; settings.surfaces[name]=settings.surfaces[old]; delete settings.surfaces[old]; walkAll(x=>{ if(x.surface===old) x.surface=name; }); save(); render(); }
 ibody.addEventListener('input', e=>{ const el=e.target; if(!el.matches('input[data-fxp]')) return; const {f,DEF}=curFx(); if(!f) return; const pd=DEF[f.type].ps.find(p=>p.k===el.dataset.fxp);
   const v=fxSliderVal(pd, el.value); f.p[pd.k]=v; const n=el.parentNode.querySelector('[data-fxn]'); if(n) n.value=v; save(); });
@@ -2571,7 +2739,7 @@ ibody.addEventListener('change', e=>{ const el=e.target;
   if(el.id==='meshGrid'){ const c=find(ibody.dataset.cue); snapshot(); const m=getMap(c).mesh, n=+el.value; m.cols=n; m.rows=n; m.pts=[]; ovlKey='x'; save(); renderInspector(); return; }
   if(el.id==='surfSel'){ const c=find(ibody.dataset.cue); snapshot();
     if(el.value==='__new'){ const used=new Set(Object.keys(settings.surfaces)); const name=['Wall','Floor','Window','Scrim'].find(n=>!used.has(n)) || ('Mapping '+(used.size+1));
-      settings.surfaces[name]=cloneMap(getMap(c)); c.surface=name; toast(`マッピング「${name}」を作りました`); }
+      settings.surfaces[name]=cloneMap(getMap(c)); c.surface=name; toast(`＋ ${name}`); }
     else c.surface=el.value; save(); render(); return; }
 });
 ibody.addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.key==='Enter' && (e.target.matches('input[data-fxn]')||e.target.id==='surfName')){ e.preventDefault(); e.target.blur(); } });
@@ -2591,19 +2759,19 @@ ibody.addEventListener('click', e=>{
   const it=t.closest('[data-fxsel]'); if(it && !t.matches('input')){ const c=find(ibody.dataset.cue); fxSel[c.id]=it.dataset.fxsel; renderInspector(); return; }
   const ob=t.closest('[data-ose]'); if(ob){ ob.blur(); ose = ose===ob.dataset.ose ? null : ob.dataset.ose; if(ose) showStage(); if(ose==='mesh'){ const c=find(ibody.dataset.cue); const M=getMap(c); if(!M.mesh.on){ snapshot(); M.mesh.on=true; save(); } } ovlKey='x'; renderInspector(); return; }
   if(t.id==='hkCap'){ t.blur(); const c=find(ibody.dataset.cue); hkCapture = hkCapture===c.id ? null : c.id; renderInspector(); return; }
-  if(t.id==='fadeGeoCopy'){ t.blur(); const c=find(ibody.dataset.cue), tc=findByNumber(c.targetCue); if(!tc){ toast('先に Target の Cue 番号を入れてください', true); return; } const M=getMap(tc); snapshot(); Object.assign(c,{fadeGeoOn:true, fadeX:M.x, fadeY:M.y, fadeScale:M.scale, fadeRot:M.rot}); render(); toast('対象Cueの今の位置を入れました'); return; }
+  if(t.id==='fadeGeoCopy'){ t.blur(); const c=find(ibody.dataset.cue), tc=tgt(c); if(!tc){ toast('✕ Target', true); return; } const M=getMap(tc); snapshot(); Object.assign(c,{fadeGeoOn:true, fadeX:M.x, fadeY:M.y, fadeScale:M.scale, fadeRot:M.rot}); render(); toast('✓'); return; }
   if(t.id==='unlockBtn'){ t.blur(); const c=find(ibody.dataset.cue); snapshot(); c.locked=false; render(); return; }
-  if(t.id==='midiLearnTrig'){ t.blur(); learnFor = learnFor==='cue:'+ibody.dataset.cue ? null : 'cue:'+ibody.dataset.cue; renderInspector(); if(learnFor) toast('MIDI 機器で発火させたいキー（ノート・CC など）を押してください'); return; }
+  if(t.id==='midiLearnTrig'){ t.blur(); learnFor = learnFor==='cue:'+ibody.dataset.cue ? null : 'cue:'+ibody.dataset.cue; renderInspector(); if(learnFor) toast('MIDI …'); return; }
   if(t.id==='midiTrigClear'){ t.blur(); const c=find(ibody.dataset.cue); snapshot(); c.midiTrig=null; render(); return; }
   if(t.id==='midiTest'){ t.blur(); const c=find(ibody.dataset.cue); ac(); sendMidiCue(c); return; }
   if(t.id==='netTest'){ t.blur(); const c=find(ibody.dataset.cue); sendNetCue(c); return; }
   if(t.id==='btnCamScanTab'){ t.blur(); scanCameras(); return; }
   if(t.id==='btnCamSettings'){ t.blur(); renderCams(); $('setGuard').value=settings.goGuard??300; $('setName').value=settings.projectName; $('setStart').value=settings.showStart; $('setPhones').value=settings.phoneCount; openModal('mSettings'); return; }
-  if(t.id==='hkTest'){ t.blur(); const c=find(ibody.dataset.cue); ac(); log(`Hotkey テスト: ${cueLabel(c)}`); fire(c,false); toast(c.hotkey?`${c.hotkey} キーで同じように発火します`:'先にキーを割り当ててください'); return; }
+  if(t.id==='hkTest'){ t.blur(); const c=find(ibody.dataset.cue); ac(); log(`Hotkey テスト: ${cueLabel(c)}`); fire(c,false); toast(c.hotkey?`${c.hotkey}`:'✕', !c.hotkey); return; }
   if(t.id==='meshReset'){ t.blur(); const c=find(ibody.dataset.cue); snapshot(); getMap(c).mesh.pts=[]; ovlKey='x'; save(); renderInspector(); return; }
   if(t.closest('[data-eqopen]')){ t.blur(); const c=find(ibody.dataset.cue); openEQ(c.id, t.closest('[data-eqopen]').dataset.eqopen); return; }
-  if(t.id==='mapReset'){ t.blur(); if(Date.now()-mapResetArmed>2000){ mapResetArmed=Date.now(); t.classList.add('danger','armed'); t.textContent='リセットする？'; setTimeout(()=>{ if(t.isConnected){ t.classList.remove('danger','armed'); t.textContent='リセット'; } },2000); return; }
-    mapResetArmed=0; const c=find(ibody.dataset.cue); snapshot(); Object.assign(getMap(c), defMap()); save(); render(); toast('マッピングをリセットしました'); return; }
+  if(t.id==='mapReset'){ t.blur(); if(Date.now()-mapResetArmed>2000){ mapResetArmed=Date.now(); t.classList.add('danger','armed'); setTimeout(()=>{ if(t.isConnected) t.classList.remove('danger','armed'); },2000); return; }
+    mapResetArmed=0; const c=find(ibody.dataset.cue); snapshot(); Object.assign(getMap(c), defMap()); save(); render(); toast('↺'); return; }
 });
 ibody.addEventListener('click', e=>{
   const sw=e.target.closest('.sw:not(.custom)'); if(sw){ const c=find(selected); snapshot(); c.color = sw.dataset.color || null; render(); return; }
@@ -2624,7 +2792,7 @@ $('btnPhoneClose').addEventListener('click', e=>{ e.currentTarget.blur(); $('pho
 $('btnPop').addEventListener('click', e=>{ e.currentTarget.blur(); openOutputWindow(shownOut); });
 $('btnPopAll').addEventListener('click', e=>{ e.currentTarget.blur(); openAllOutputs(); });
 $('outSel').addEventListener('change', e=>{ setShown(+e.target.value); e.target.blur(); });
-$('btnFull').addEventListener('click', e=>{ e.currentTarget.blur(); try{ const p=OUTS[shownOut].view.requestFullscreen(); if(p&&p.catch) p.catch(()=>toast('全画面にできませんでした')); }catch(_){ toast('全画面にできませんでした'); } });
+$('btnFull').addEventListener('click', e=>{ e.currentTarget.blur(); try{ const p=OUTS[shownOut].view.requestFullscreen(); if(p&&p.catch) p.catch(()=>toast('✕')); }catch(_){ toast('✕'); } });
 [['stagehd','stagewin'],['phonehd','phonewin']].forEach(([h,ww])=>{ const hd=$(h), w=$(ww); hd.addEventListener('mousedown', e=>{ if(e.target.closest('button')) return; const r=w.getBoundingClientRect(), x0=e.clientX-r.left, y0=e.clientY-r.top;
   const mv=ev=>{ w.style.left=clamp(ev.clientX-x0,0,innerWidth-80)+'px'; w.style.top=clamp(ev.clientY-y0,0,innerHeight-40)+'px'; w.style.right='auto'; w.style.bottom='auto'; };
   const up=()=>{ removeEventListener('mousemove',mv); removeEventListener('mouseup',up); }; addEventListener('mousemove',mv); addEventListener('mouseup',up); }); });
@@ -2642,17 +2810,17 @@ $('setStart').addEventListener('keydown', e=>{ if(e.isComposing) return; if(e.ke
 $('setStart').addEventListener('blur', commitStart);
 let resetArmed=0;
 $('btnReset').addEventListener('click', e=>{ const b=e.currentTarget; b.blur();
-  if(Date.now()-resetArmed>2000){ resetArmed=Date.now(); b.classList.add('armed'); b.textContent='戻す？'; setTimeout(()=>{ b.classList.remove('armed'); b.textContent='サンプルの状態に戻す'; },2000); return; }
-  resetArmed=0; hardStop(); snapshot(); lists=sampleLists(); activeId=lists[0].id; goListId=activeId; cues=lists[0].cues; selected=playhead=cues[0].id; closeModals(); render(); toast('サンプルの状態に戻しました（⌘Z で元に戻せます）'); });
+  if(Date.now()-resetArmed>2000){ resetArmed=Date.now(); b.classList.add('armed'); setTimeout(()=>b.classList.remove('armed'),2000); return; }
+  resetArmed=0; hardStop(); snapshot(); lists=sampleLists(); activeId=lists[0].id; goListId=activeId; cues=lists[0].cues; selected=playhead=cues[0].id; closeModals(); render(); toast('↺'); });
 function openStatus(){
   const w=[]; walkAll(c=>{ const p=problem(c); if(p) w.push(`✕ ${cueLabel(c)} — ${p}`); });
-  $('wlist').innerHTML = w.length ? w.map(x=>`<div>${esc(x)}</div>`).join('') : '<span class="small">問題はありません</span>';
-  $('logview').textContent = LOG.slice(-200).join('\n') || '（まだ記録はありません）'; openModal('mStatus'); const lv=$('logview'); lv.scrollTop=lv.scrollHeight;
+  $('wlist').innerHTML = w.length ? w.map(x=>`<div>${esc(x)}</div>`).join('') : '<span class="small" style="color:#3ec36b">✓</span>';
+  $('logview').textContent = LOG.slice(-200).join('\n') || '—'; openModal('mStatus'); const lv=$('logview'); lv.scrollTop=lv.scrollHeight;
 }
 $('btnStatus').addEventListener('click', e=>{ e.currentTarget.blur(); openStatus(); });
 $('warn').addEventListener('click', openStatus);
 $('mon').addEventListener('click', openStatus);
-$('btnCopyLog').addEventListener('click', e=>{ e.currentTarget.blur(); try{ navigator.clipboard.writeText(`Alien Lab v${VERSION}\n`+LOG.join('\n')).then(()=>toast('ログをコピーしました'),()=>toast('コピーできませんでした')); }catch(_){ toast('コピーできませんでした'); } });
+$('btnCopyLog').addEventListener('click', e=>{ e.currentTarget.blur(); try{ navigator.clipboard.writeText(`Alien Lab v${VERSION}\n`+LOG.join('\n')).then(()=>toast('⧉'),()=>toast('✕')); }catch(_){ toast('✕'); } });
 
 /* splitter */
 (()=>{ const sp=$('split'), insp=$('insp'); sp.addEventListener('mousedown', e=>{ const y0=e.clientY, h0=insp.offsetHeight;
@@ -2671,18 +2839,20 @@ let clip=null;
 function reid(c){ c.id='c'+(uid++); if(c.children) c.children.forEach(reid); return c; }
 function groupSelection(){
   const ids = multi.size ? [...multi] : (selected?[selected]:[]); if(!ids.length) return;
-  const list=findParentList(ids[0]); const items=list.filter(c=>ids.includes(c.id)); if(items.length!==ids.length){ toast('同じ階層のCueだけをまとめられます', true); return; }
+  const list=findParentList(ids[0]); const items=list.filter(c=>ids.includes(c.id)); if(items.length!==ids.length){ toast('✕', true); return; }
   snapshot(); const idx=list.indexOf(items[0]); items.forEach(c=>list.splice(list.indexOf(c),1));
   const g=mk({type:'group', number:nextNumber(), name:'Group', children:[]}); g.children=items; list.splice(idx,0,g); inspTab='Basics';
-  multi.clear(); selected=g.id; if(!isCart()) playhead=g.id; log(`グループ化: ${items.length}個 → ${cueLabel(g)}`); render(); toast(`${items.length}個のCueをグループにしました（⌘Z で戻す）`); }
+  multi.clear(); selected=g.id; if(!isCart()) playhead=g.id; log(`グループ化: ${items.length}個 → ${cueLabel(g)}`); render(); toast(`▣ ${items.length}`); }
 function insertCopy(json){
   const c=reid(mk(JSON.parse(json))); if(c.number){ c.number=nextNumber(); if(c.children) c.children.forEach((ch,i)=>{ if(ch.number) ch.number=c.number+'.'+(i+1); }); }
-  if(isCart()){ const sl=firstEmptySlot(curList()); if(sl==null){ toast('カートに空きがありません', true); return; } snapshot(); c.slot=sl; cues.push(c); selected=c.id; render(); return; }
+  if(isCart()){ const sl=firstEmptySlot(curList()); if(sl==null){ toast('✕ Cart', true); return; } snapshot(); c.slot=sl; cues.push(c); selected=c.id; render(); return; }
   delete c.slot; const list=findParentList(selected)||cues; const i=list.findIndex(x=>x.id===selected); snapshot(); list.splice(i<0?list.length:i+1,0,c);
   selected=playhead=c.id; log(`複製: ${cueLabel(c)}`); render(); scrollToSel(); }
 
 /* keyboard */
 let delArmed=0;
+function armRows(ids){ ids.forEach(id=>document.querySelectorAll(`[data-id="${id}"]`).forEach(el=>{ el.classList.add('delarm'); setTimeout(()=>el.classList.remove('delarm'),1500); })); }
+function armFlash(){ const el=$('rows')||document.body; el.classList.add('flasharm'); setTimeout(()=>el.classList.remove('flasharm'),2000); }
 document.addEventListener('keydown', e=>{
   const t=e.target, typing = !!(t.matches && (t.matches('textarea,[contenteditable=true]') || (t.matches('input') && !['checkbox','radio','range','color','button','submit'].includes(t.type))));
   const modalOpen = [...document.querySelectorAll('.modal')].some(m=>!m.classList.contains('hide'));
@@ -2695,7 +2865,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='ArrowDown' || e.key==='ArrowUp'){ e.preventDefault(); const v=visible(); let i=v.findIndex(x=>x.c.id===selected);
     i = clamp(i + (e.key==='ArrowDown'?1:-1), 0, v.length-1); if(v[i]){ select(v[i].c.id); scrollToSel(); } return; }
   if(mod && e.code==='KeyF'){ e.preventDefault(); openSearch(); return; }
-  if(mod && e.code==='KeyC' && selected){ e.preventDefault(); clip=JSON.stringify(find(selected)); toast('Cueをコピーしました'); return; }
+  if(mod && e.code==='KeyC' && selected){ e.preventDefault(); clip=JSON.stringify(find(selected)); toast('⧉'); return; }
   if(mod && e.code==='KeyV' && clip && mode==='edit'){ e.preventDefault(); insertCopy(clip); return; }
   if(mod && e.code==='KeyG' && mode==='edit' && !isCart()){ e.preventDefault(); groupSelection(); return; }
   if(mod && e.code==='KeyA' && mode==='edit' && !isCart()){ e.preventDefault(); multi=new Set(visible().map(x=>x.c.id)); renderList(); return; }
@@ -2703,11 +2873,11 @@ document.addEventListener('keydown', e=>{
   const hk = (!mod && !e.altKey) ? codeKey(e) : null;
   if(hk){ let tc=null; walkAll(c=>{ if(!tc && c.hotkey && normHK(c.hotkey)===hk) tc=c; });
     if(tc){ e.preventDefault(); if(e.repeat) return; ac(); log(`Hotkey ${hk}: ${cueLabel(tc)}`); fire(tc,false); toast(`Hotkey ${hk} → ${cueLabel(tc)}`); return; }
-    if(hk!=='B' && hk!=='P'){ log(`キー入力 ${hk}（割り当てなし）`); toast(`${hk} キーにはCueが割り当てられていません`); } }
+    if(hk!=='B' && hk!=='P'){ log(`キー入力 ${hk}（割り当てなし）`); toast(`${hk} —`); } }
   if(!mod && e.code==='KeyB'){ e.preventDefault(); setBlackout(!blackout); return; }
   if(!mod && e.code==='KeyP'){ e.preventDefault(); pauseAll(); return; }
-  if(mod && e.code==='KeyS'){ e.preventDefault(); saveProject(); return; }
-  if(mod && e.code==='KeyO'){ e.preventDefault(); $('projPick').value=''; $('projPick').click(); return; }
+  if(mod && e.code==='KeyS'){ e.preventDefault(); saveProject(e.shiftKey); return; }
+  if(mod && e.code==='KeyO'){ e.preventDefault(); openDialog(); return; }
   if(mod && e.code==='KeyN'){ e.preventDefault(); askNew(null); return; }
   if(mod && e.code==='KeyZ'){ e.preventDefault();
     const restore=(j)=>{ lists=JSON.parse(j).map(l=>({...l, cues:l.cues.map(mk)})); if(!lists.some(l=>l.id===activeId)) activeId=lists[0].id; if(!lists.some(l=>l.id===goListId)){ const g=lists.find(l=>l.type==='list'); goListId=g?g.id:null; } cues=curList().cues; };
@@ -2716,17 +2886,17 @@ document.addEventListener('keydown', e=>{
     for(const r of [...running.values()]) stopRun(r);
     if(!find(selected)) selected = cues[0]?.id || null; if(!find(playhead)){ const gl=lists.find(l=>l.id===goListId); playhead = gl ? gl.cues[0]?.id||null : null; } render(); return; }
   if((e.key==='Delete'||e.key==='Backspace') && mode==='edit' && multi.size>1){ e.preventDefault();
-    const ids=[...multi].filter(id=>{ const c=find(id); return c && !c.locked; }); if(!ids.length){ toast('ロック中のCueは削除できません', true); return; }
-    if(Date.now()-delArmed > 1500){ delArmed=Date.now(); toast(`${ids.length}個を削除する？`, true); return; }
+    const ids=[...multi].filter(id=>{ const c=find(id); return c && !c.locked; }); if(!ids.length){ toast('🔒', true); return; }
+    if(Date.now()-delArmed > 1500){ delArmed=Date.now(); armRows(ids); return; }
     delArmed=0; snapshot(); for(const id of ids){ const c=find(id); if(!c) continue; runsOf(c).forEach(stopRun); const l=findParentList(id); if(l) l.splice(l.indexOf(c),1); }
-    multi.clear(); if(!find(selected)) selected=cues[0]?.id||null; if(!find(playhead)) playhead=selected; log(`${ids.length}個削除`); render(); toast(`${ids.length}個削除しました（⌘Z で戻す）`); return; }
+    multi.clear(); if(!find(selected)) selected=cues[0]?.id||null; if(!find(playhead)) playhead=selected; log(`${ids.length}個削除`); render(); toast(`🗑 ${ids.length}`); return; }
   if((e.key==='Delete'||e.key==='Backspace') && mode==='edit' && selected){ e.preventDefault();
-    if(find(selected)?.locked){ toast('ロック中のCueは削除できません（Basics でロックを外す）', true); return; }
-    if(Date.now()-delArmed > 1500){ delArmed=Date.now(); toast('削除する？', true); return; }
+    if(find(selected)?.locked){ toast('🔒', true); return; }
+    if(Date.now()-delArmed > 1500){ delArmed=Date.now(); armRows([selected]); return; }
     delArmed=0; snapshot(); const c=find(selected); runsOf(c).forEach(stopRun);
     const v=visible(); const i=v.findIndex(x=>x.c.id===selected); const list=findParentList(selected); list.splice(list.findIndex(x=>x.id===selected),1);
     const nv=visible(); const nx=nv[Math.min(i,nv.length-1)]; selected=nx?nx.c.id:null; if(!find(playhead)) playhead=selected;
-    log(`削除: ${cueLabel(c)}`); render(); toast('削除しました（⌘Z で戻す）'); return; }
+    log(`削除: ${cueLabel(c)}`); render(); toast('🗑'); return; }
 });
 // どこかをクリックしたら音声を使える状態にする（ブラウザの制限対策）
 addEventListener('pointerdown', ()=>{ if(actx && actx.state==='suspended') actx.resume(); }, {capture:true});
@@ -2779,7 +2949,7 @@ function qrSVG(text, px){ const M=qrMatrix(text); if(!M) return ''; const n=M.le
 
 /* ================= スマホで見る・操作する（Light Operator のサーバー経由） ================= */
 /*__AL_SRV__*/
-const SRV = window.__AL_SRV || null;
+let SRV = window.__AL_SRV || null;
 const RM = { phones:0, since:-1, lastList:'', lastLiveKey:'', lastPost:0, lastFrame:0, posting:false, fcv:null, ok:false };
 function remoteURLs(){ if(!SRV) return []; const u=[]; if(SRV.url) u.push(SRV.url); (SRV.lan||[]).forEach(b=>u.push(b+'/alien')); if(SRV.tunnel) u.push(SRV.tunnel.replace(/\/$/,'')+'/alien'+(SRV.key?'?key='+encodeURIComponent(SRV.key):'')); return u; }
 function rmList(){
@@ -2799,7 +2969,7 @@ function rmLive(){
     return {id:c.id, ph:r.phase, a:Math.round(a*100)/100, pre:Math.round(pre*100)/100, dur:isFinite(dur)&&dur>0?dur:0}; });
   return {ph:playhead, bo:!!blackout, panic:panicT0!=null, run, ts:Date.now()};
 }
-async function rmPost(body){ const r=await fetch('/alien/api/state',{method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body)}); const j=await r.json(); return j; }
+async function rmPost(body){ if(APP) return APP.remote.state(body); const r=await fetch('/alien/api/state',{method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body)}); const j=await r.json(); return j; }
 async function rmPump(){
   if(!SRV || RM.posting) return; RM.posting=true;
   try{
@@ -2816,6 +2986,7 @@ async function rmFrame(){
   const W=384, H=216; if(!RM.fcv){ RM.fcv=document.createElement('canvas'); RM.fcv.width=W; RM.fcv.height=H; }
   try{ paintPgm(RM.fcv, W, H, 1, false); }catch(e){ return; }
   const blob=await new Promise(res=>{ try{ RM.fcv.toBlob(res,'image/jpeg',0.6); }catch(e){ res(null); } }); if(!blob) return;
+  if(APP){ try{ APP.remote.frame(await blob.arrayBuffer()); }catch(e){} return; }
   await fetch('/alien/api/frame',{method:'POST', body:blob}).catch(()=>{});
 }
 function setRmPhones(n){ if(RM.phones===n) return; const was=RM.phones; RM.phones=n; const b=$('btnRemote'); if(b){ b.classList.toggle('on', n>0); $('rmCount').textContent = n>0 ? n : ''; }
@@ -2847,22 +3018,54 @@ async function rmCmdLoop(){
 }
 function renderRemote(){
   const box=$('rmBody');
-  if(!SRV){ box.innerHTML=`<div class="small" style="line-height:1.7">Mac でもスマホでも、このアドレスを開きます：<br><b style="color:#ddd;user-select:all">http://localhost:8787/alien</b>（この Mac）</div>`; return; }
+  if(!SRV){ box.innerHTML=`<div class="small" style="line-height:1.7"><b style="color:#ddd;user-select:all">http://localhost:8787/alien</b></div>`; return; }
   const urls=remoteURLs(), main=urls[0]||'';
-  box.innerHTML = `<div class="rmstat"><span class="rmdot ${RM.ok?'ok':'ng'}"></span>${RM.ok?(RM.phones?`${RM.phones}台のスマホが接続中`:'スマホの接続を待っています'):'サーバーにつながりません'}</div>`+
-    (main?`<div class="rmurl"><div class="rmqr">${qrSVG(main,170)}</div><div><div class="small">Mac・スマホ・iPad 共通のアドレス（同じ Wi-Fi）</div><div class="rmtxt rmbig">${esc(main)}</div><button class="btn" data-copy="0">コピー</button></div></div>`:'<div class="small">Wi-Fi につながっていません</div>')+
-    (urls.length>1?`<div class="small" style="margin-top:10px;line-height:1.8">つながらないとき：${urls.slice(1).map((u,i)=>`<br><span class="rmtxt" style="margin:0">${esc(u)}</span> <button class="btn" data-copy="${i+1}" style="height:18px;font-size:10px">コピー</button>`).join('')}</div>`:'');
-  box.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{ navigator.clipboard?.writeText(urls[+b.dataset.copy]).then(()=>toast('コピーしました')).catch(()=>{}); b.blur(); });
+  box.innerHTML = `<div class="rmstat"><span class="rmdot ${RM.ok?'ok':'ng'}"></span>${RM.ok?`📱 ${RM.phones}`:'✕'}</div>`+
+    (main?`<div class="rmurl"><div class="rmqr">${qrSVG(main,170)}</div><div><div class="small">Mac · iPhone · iPad · Wi-Fi</div><div class="rmtxt rmbig">${esc(main)}</div><button class="btn" data-copy="0">コピー</button></div></div>`:'<div class="small">✕ Wi-Fi</div>')+
+    (urls.length>1?`<div class="small" style="margin-top:10px;line-height:1.8">${urls.slice(1).map((u,i)=>`<br><span class="rmtxt" style="margin:0">${esc(u)}</span> <button class="btn" data-copy="${i+1}" style="height:18px;font-size:10px">コピー</button>`).join('')}</div>`:'');
+  box.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{ navigator.clipboard?.writeText(urls[+b.dataset.copy]).then(()=>toast('⧉')).catch(()=>{}); b.blur(); });
 }
 $('btnRemote').addEventListener('click', e=>{ e.currentTarget.blur(); renderRemote(); openModal('mRemote'); });
 if(SRV){ setInterval(rmPump, 250); rmCmdLoop(); }
+else if(APP){ const tryInfo=()=>APP.remote.info().then(sv=>{ if(!sv){ setTimeout(tryInfo,10000); return; } SRV=sv; setInterval(rmPump, 250); APP.remote.onCmd(m=>{ try{ rmExec(m); }catch(e){ log('スマホ操作エラー: '+e.message); } }); }).catch(()=>setTimeout(tryInfo,10000)); tryInfo(); }
 
+document.querySelector('#mSettings .qside').addEventListener('click', e=>{ const b=e.target.closest('[data-spage]'); if(!b) return; b.blur();
+  document.querySelectorAll('#mSettings .sside').forEach(x=>x.classList.toggle('on', x===b)); document.querySelectorAll('#mSettings .spage').forEach(x=>x.classList.toggle('hide', x.dataset.page!==b.dataset.spage)); });
+/* ================= Mac アプリ版 ================= */
+async function doBackup(){ if(!APP) return; const r=await APP.backup(JSON.stringify(projectData(),null,1), settings.projectName); if(r&&r.ok){ if(r.name){ settings.projectName=r.name; renderTitle(); } setDirty(false); toast('✓ Backup'); log(`バックアップ: ${r.path}`); } else if(r&&r.error){ toast('✕ Backup', true); log('バックアップ失敗: '+r.error); } }
+$('btnBackup').addEventListener('click', e=>{ e.currentTarget.blur(); doBackup(); });
+function kindOfName(n){ const e=String(n).toLowerCase().split('.').pop(); if(['mp3','wav','aif','aiff','m4a','aac','flac','ogg','opus','caf'].includes(e)) return 'audio'; if(['mp4','mov','m4v','webm','mkv','avi','mpg','mpeg','hevc'].includes(e)) return 'video'; if(['png','jpg','jpeg','gif','webp','bmp','heic','tif','tiff','svg'].includes(e)) return 'image'; return null; }
+if(APP){
+  save = function(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ APP.recovery(dirty ? JSON.stringify(projectData()) : ''); }catch(e){} }, 1500); };
+  const _setDirty=setDirty; setDirty = v => { _setDirty(v); try{ APP.setDirty(!!v); }catch(e){} };
+  saveProject = async function(saveAs){ const r=await APP.save(JSON.stringify(projectData(),null,1), !!saveAs, settings.projectName);
+    if(r&&r.ok){ if(r.name){ settings.projectName=r.name; renderTitle(); } setDirty(false); log(`保存: ${r.path}`); toast('✓ 保存'); return true; }
+    if(r&&r.error){ toast('✕ 保存', true); log('保存エラー: '+r.error); } return false; };
+  askNew = () => APP.newWindow();
+  openDialog = () => APP.openDialog();
+  $('btnFolder').addEventListener('click', async e=>{ e.stopImmediatePropagation(); e.currentTarget.blur(); const map=await APP.chooseFolder(); if(!map) return; closeModals(); let used=0, n=0;
+    for(const [name,pth] of Object.entries(map)){ let need=false; walkAll(c=>{ if(c.file===name||c.phoneFile===name) need=true; }); if(!need) continue; const k=kindOfName(name); if(!k) continue; registerMedia(name, APP.mediaURL(pth), k, pth); used++; }
+    walkAll(c=>{ if((c.type==='audio'||c.type==='video') && c.file && !mediaOf(c)) n++; }); render(); log(`素材フォルダから ${used}件 つなぎ直し（残り ${n}件）`); toast(n?`✓ ${used}　✕ ${n}`:`✓ ${used}`, !!n); }, true);
+  APP.onMenu(async cmd=>{ switch(cmd){
+    case 'save': saveProject(false); break; case 'saveAs': saveProject(true); break; case 'backup': doBackup(); break;
+    case 'saveThenClose': if(await saveProject(false)) APP.closeWindow(); break;
+    case 'settings': openModal('mSettings'); break;
+  } });
+}
+function appBoot(){
+  const init=APP.initial||{};
+  if(init.text){ for(const [name,pth] of Object.entries(init.media||{})){ const k=kindOfName(name); if(k && pth) registerMedia(name, APP.mediaURL(pth), k, pth); }
+    openProjectText(init.text, init.name||''); if(init.name) settings.projectName=init.name; setDirty(!!init.dirty); renderTitle(); }
+  else if(!init.sample){ newProject(); }
+  else setDirty(false);
+}
 /* ================= boot ================= */
 load();
 makeTestTone(); makeTestPattern(); buildPhones();
 renderToolbar(); render(); updateRuntime();
 ensureOutputs(); setShown(0);
 log(`Alien Lab v${VERSION} 起動`);
+if(APP) appBoot();
 if(settings.midiEnabled) initMIDI(false);
 if(settings.audioSink) addEventListener('pointerdown', function once(){ removeEventListener('pointerdown', once, true); applySink(); }, true);
 requestAnimationFrame(tick);

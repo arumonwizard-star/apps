@@ -1,0 +1,51 @@
+name: Alien Lab（Mac アプリ）を作成
+on:
+  push:
+    branches: [main]
+    paths: ['alien-lab/app/**', '.github/workflows/alien-lab.yml']
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 実行する Mac の種類（混んでいるときに変える）
+        default: macos-15
+permissions:
+  contents: write
+concurrency: alien-lab-build
+jobs:
+  build:
+    runs-on: ${{ inputs.runner || 'macos-15' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: 画面を入れる
+        run: |
+          mkdir -p alien-lab/app/ui
+          cp light-operator/public/alien/{index.html,remote.html,icon-180.png,icon-192.png,icon-512.png} alien-lab/app/ui/
+      - name: 作成
+        working-directory: alien-lab/app
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+        run: |
+          npm install --no-audit --no-fund
+          npm pkg set version=1.0.${{ github.run_number }}
+          npx electron-builder --mac --universal --publish never
+          APP="dist/mac-universal/Alien Lab.app"
+          codesign --force --deep --sign - "$APP"
+          codesign -dv "$APP"
+          plutil -p "$APP/Contents/Info.plist" | grep -E "CFBundleShortVersionString|alienlab|NSCamera"
+      - name: 動作確認
+        working-directory: alien-lab/app
+        run: |
+          "dist/mac-universal/Alien Lab.app/Contents/MacOS/Alien Lab" --smoke --autoplay-policy=no-user-gesture-required > smoke.log 2>&1 &
+          P=$!; for i in $(seq 1 60); do grep -q "SMOKE result" smoke.log && break; sleep 1; done
+          kill $P 2>/dev/null || true
+          grep SMOKE smoke.log || cat smoke.log | tail -40
+          grep -q "SMOKE result: OK" smoke.log
+      - name: 配布用に置く
+        working-directory: alien-lab/app
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          ditto -c -k --keepParent "dist/mac-universal/Alien Lab.app" Alien-Lab.zip
+          echo "{\"version\":\"1.0.${{ github.run_number }}\",\"file\":\"Alien-Lab.zip\"}" > latest.json
+          gh release view alien-lab >/dev/null 2>&1 || gh release create alien-lab --title "Alien Lab" --notes "Mac 用 Alien Lab。Alien-Lab.zip をダウンロードして開く。"
+          gh release upload alien-lab Alien-Lab.zip latest.json --clobber
