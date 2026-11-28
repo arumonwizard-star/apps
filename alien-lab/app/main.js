@@ -6,7 +6,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const { Readable } = require('stream');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const Remote = require('./remote');
 
 const SMOKE = process.argv.includes('--smoke'); // 動作確認用（CI）
@@ -140,7 +140,16 @@ async function openPath(file) {
   let text; try { text = await fsp.readFile(file, 'utf8'); } catch (e) { log('開けない', file, e.message); return; }
   let data = null; try { data = JSON.parse(text); } catch {}
   const media = await resolveMedia(file, data);
+  stampIcon(file);
   createWindow({ path: file, text, media, name: nameOf(file) });
+}
+// プロジェクトファイルにだけ「書類」アイコンを直接つける（Finder がアプリのアイコンのままにしないため）
+function stampIcon(file) {
+  if (process.platform !== 'darwin' || SMOKE) return;
+  const icns = app.isPackaged ? path.join(process.resourcesPath, 'alienlab.icns') : path.join(__dirname, 'build', 'alienlab.icns');
+  if (!fs.existsSync(icns)) return;
+  const js = 'function run(a){ ObjC.import("AppKit"); var i=$.NSImage.alloc.initWithContentsOfFile(a[0]); return $.NSWorkspace.sharedWorkspace.setIconForFileOptions(i,a[1],0); }';
+  try { execFile('osascript', ['-l', 'JavaScript', '-e', js, icns, file], { timeout: 8000 }, () => {}); } catch {}
 }
 function createWindow(initial) {
   const id = ++docSeq;
@@ -153,8 +162,9 @@ function createWindow(initial) {
   const wcId = win.webContents.id;
   docs.set(wcId, d); lastActive = d;
   if (d.path) { win.setRepresentedFilename(d.path); app.addRecentDocument(d.path); writeState({ last: d.path }); }
+  win.webContents.on('will-prevent-unload', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'allow', overrideBrowserWindowOptions: { backgroundColor: '#000000', autoHideMenuBar: true } }));
-  win.webContents.on('did-create-window', (child) => { d.kids.add(child); child.on('closed', () => d.kids.delete(child)); });
+  win.webContents.on('did-create-window', (child) => { child.webContents.on('will-prevent-unload', (e) => e.preventDefault()); d.kids.add(child); child.on('closed', () => d.kids.delete(child)); });
   win.on('focus', () => { lastActive = d; });
   win.once('ready-to-show', () => { if (!SMOKE) win.show(); });
   win.on('close', (e) => {
@@ -163,7 +173,7 @@ function createWindow(initial) {
       const r = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['保存', '保存しない', 'キャンセル'], defaultId: 0, cancelId: 2, message: d.path ? nameOf(d.path) : 'Untitled' });
       if (r === 0) win.webContents.send('al:menu', 'saveThenClose');
       else if (r === 1) { d.force = true; win.close(); }
-      else quitting = false;
+      else { quitting = false; clearTimeout(quitTimer); }
     }
   });
   win.on('closed', () => { for (const k of d.kids) { try { k.close(); } catch {} } docs.delete(wcId); clearRecovery(d); if (lastActive === d) lastActive = [...docs.values()].filter((x) => !x.win.isDestroyed()).pop() || null; });
@@ -190,6 +200,7 @@ async function doSave(d, json, saveAs, name) {
   }
   const data = withRelative(json, file); data.name = nameOf(file);
   await writeAtomic(file, JSON.stringify(data, null, 1));
+  stampIcon(file);
   d.path = file; d.dirty = false; d.win.setDocumentEdited(false); d.win.setRepresentedFilename(file); app.addRecentDocument(file); writeState({ last: file }); clearRecovery(d);
   log('保存', file);
   return { ok: true, path: file, name: nameOf(file) };
@@ -235,7 +246,7 @@ ipcMain.on('al:recovery', (e, json) => {
   const d = docOf(e); if (!d) return; const f = path.join(RECOVER(), d.id + '.json');
   try { if (!json) { fs.rmSync(f, { force: true }); return; } fs.mkdirSync(RECOVER(), { recursive: true }); fs.writeFileSync(f, JSON.stringify({ path: d.path, json })); } catch {}
 });
-ipcMain.on('al:close', (e) => { const d = docOf(e); if (d) { d.force = true; d.win.close(); } });
+ipcMain.on('al:close', (e) => { const d = docOf(e); if (d) { d.force = true; d.win.close(); if (quitting) setTimeout(() => app.quit(), 50); } });
 
 // ---------- スマホ連携 ----------
 const remote = new Remote({ uiDir: () => uiDir, log, onCmd: (m) => { const d = lastActive; if (d && !d.win.isDestroyed()) d.win.webContents.send('al:rcmd', m); } });
@@ -266,10 +277,14 @@ function buildMenu() {
 
 // ---------- 起動 ----------
 const pendingOpen = [];
-let ready = false, quitting = false;
+let ready = false, quitting = false, quitTimer = null;
 app.on('open-file', (e, file) => { e.preventDefault(); if (ready) openPath(file); else pendingOpen.push(file); });
 app.on('activate', () => { if (!docs.size && ready) startDocs(); });
-app.on('before-quit', () => { quitting = true; });
+app.on('before-quit', () => {
+  quitting = true; clearTimeout(quitTimer);
+  // 何かが閉じるのを邪魔しても、確認待ち（未保存）がなければ数秒で必ず終了する
+  quitTimer = setTimeout(() => { if (quitting && ![...docs.values()].some((x) => x.dirty && !x.force)) { log('強制終了（閉じ待ち）'); try { applyShellUpdate(); remote.close(); } catch {} app.exit(0); } }, 4000);
+});
 app.on('window-all-closed', () => { if (SMOKE) app.quit(); });
 app.on('will-quit', () => { applyShellUpdate(); remote.close(); });
 
