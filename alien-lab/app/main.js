@@ -170,7 +170,7 @@ function createWindow(initial) {
   win.on('close', (e) => {
     if (d.dirty && !d.force) {
       e.preventDefault();
-      const r = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['保存', '保存しない', 'キャンセル'], defaultId: 0, cancelId: 2, message: d.path ? nameOf(d.path) : 'Untitled' });
+      const r = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['Save', "Don't Save", 'Cancel'], defaultId: 0, cancelId: 2, message: d.path ? nameOf(d.path) : 'Untitled' });
       if (r === 0) win.webContents.send('al:menu', 'saveThenClose');
       else if (r === 1) { d.force = true; win.close(); }
       else { quitting = false; clearTimeout(quitTimer); }
@@ -258,20 +258,20 @@ ipcMain.on('al:rframe', (e, buf) => { const d = docOf(e); if (d === lastActive) 
 const send = (cmd) => { const w = BrowserWindow.getFocusedWindow(); const d = (w && !w.isDestroyed() && docs.get(w.webContents.id)) || lastActive; if (d && !d.win.isDestroyed()) d.win.webContents.send('al:menu', cmd); };
 function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'Alien Lab', submenu: [{ role: 'about', label: 'Alien Lab について' }, { type: 'separator' }, { label: '設定…', accelerator: 'Cmd+,', click: () => send('settings') }, { type: 'separator' }, { role: 'hide', label: 'Alien Lab を隠す' }, { role: 'hideOthers', label: 'ほかを隠す' }, { role: 'unhide', label: 'すべてを表示' }, { type: 'separator' }, { role: 'quit', label: 'Alien Lab を終了' }] },
-    { label: 'ファイル', submenu: [
-      { label: '新規', accelerator: 'Cmd+N', click: () => createWindow({}) },
-      { label: '開く…', accelerator: 'Cmd+O', click: async () => { const r = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: 'Alien Lab', extensions: [EXT, 'json'] }] }); if (!r.canceled) for (const f of r.filePaths) await openPath(f); } },
-      { role: 'recentDocuments', label: '最近使った項目', submenu: [{ role: 'clearRecentDocuments', label: 'メニューを消去' }] },
+    { label: 'Alien Lab', submenu: [{ role: 'about', label: 'About Alien Lab' }, { type: 'separator' }, { label: 'Settings…', accelerator: 'Cmd+,', click: () => send('settings') }, { type: 'separator' }, { role: 'hide', label: 'Hide Alien Lab' }, { role: 'hideOthers', label: 'Hide Others' }, { role: 'unhide', label: 'Show All' }, { type: 'separator' }, { role: 'quit', label: 'Quit Alien Lab' }] },
+    { label: 'File', submenu: [
+      { label: 'New', accelerator: 'Cmd+N', click: () => createWindow({}) },
+      { label: 'Open…', accelerator: 'Cmd+O', click: async () => { const r = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: 'Alien Lab', extensions: [EXT, 'json'] }] }); if (!r.canceled) for (const f of r.filePaths) await openPath(f); } },
+      { role: 'recentDocuments', label: 'Open Recent', submenu: [{ role: 'clearRecentDocuments', label: 'Clear Menu' }] },
       { type: 'separator' },
-      { role: 'close', label: '閉じる' },
-      { label: '保存', accelerator: 'Cmd+S', click: () => send('save') },
-      { label: '別名で保存…', accelerator: 'Shift+Cmd+S', click: () => send('saveAs') },
-      { label: 'バックアップを作成', accelerator: 'Alt+Cmd+B', click: () => send('backup') },
+      { role: 'close', label: 'Close' },
+      { label: 'Save', accelerator: 'Cmd+S', click: () => send('save') },
+      { label: 'Save As…', accelerator: 'Shift+Cmd+S', click: () => send('saveAs') },
+      { label: 'Backup', accelerator: 'Alt+Cmd+B', click: () => send('backup') },
     ] },
-    { label: '編集', submenu: [{ role: 'undo', label: '取り消す' }, { role: 'redo', label: 'やり直す' }, { type: 'separator' }, { role: 'cut', label: 'カット' }, { role: 'copy', label: 'コピー' }, { role: 'paste', label: 'ペースト' }, { role: 'selectAll', label: 'すべてを選択' }] },
-    { label: '表示', submenu: [{ role: 'togglefullscreen', label: 'フルスクリーン' }, { type: 'separator' }, { role: 'toggleDevTools', label: '開発者ツール' }] },
-    { role: 'windowMenu', label: 'ウインドウ' },
+    { label: 'Edit', submenu: [{ role: 'undo', label: 'Undo' }, { role: 'redo', label: 'Redo' }, { type: 'separator' }, { role: 'cut', label: 'Cut' }, { role: 'copy', label: 'Copy' }, { role: 'paste', label: 'Paste' }, { role: 'selectAll', label: 'Select All' }] },
+    { label: 'View', submenu: [{ role: 'togglefullscreen', label: 'Enter Full Screen' }, { type: 'separator' }, { role: 'toggleDevTools', label: 'Developer Tools' }] },
+    { role: 'windowMenu', label: 'Window' },
   ]));
 }
 
