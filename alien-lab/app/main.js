@@ -76,7 +76,8 @@ function applyShellUpdate() {
   const sh = `while kill -0 ${pid} 2>/dev/null; do sleep 0.5; done
 B=${JSON.stringify(bp)}; N=${JSON.stringify(nb)}
 rm -rf "$B.old" && mv "$B" "$B.old" && mv "$N" "$B" && rm -rf "$B.old" || { [ -d "$B" ] || mv "$B.old" "$B"; }
-xattr -dr com.apple.quarantine "$B" 2>/dev/null; true`;
+xattr -dr com.apple.quarantine "$B" 2>/dev/null
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$B" 2>/dev/null; true`;
   spawn('/bin/bash', ['-c', sh], { detached: true, stdio: 'ignore' }).unref();
   log('終了後にアプリを入れ替え', pendingApp.version);
 }
@@ -149,7 +150,8 @@ function createWindow(initial) {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false, spellcheck: false },
   });
   const d = { win, id, path: initial.path || null, dirty: false, initial, kids: new Set() };
-  docs.set(win.webContents.id, d); lastActive = d;
+  const wcId = win.webContents.id;
+  docs.set(wcId, d); lastActive = d;
   if (d.path) { win.setRepresentedFilename(d.path); app.addRecentDocument(d.path); writeState({ last: d.path }); }
   win.webContents.setWindowOpenHandler(() => ({ action: 'allow', overrideBrowserWindowOptions: { backgroundColor: '#000000', autoHideMenuBar: true } }));
   win.webContents.on('did-create-window', (child) => { d.kids.add(child); child.on('closed', () => d.kids.delete(child)); });
@@ -164,7 +166,7 @@ function createWindow(initial) {
       else quitting = false;
     }
   });
-  win.on('closed', () => { for (const k of d.kids) { try { k.close(); } catch {} } docs.delete(win.webContents.id); clearRecovery(d); if (lastActive === d) lastActive = [...docs.values()].pop() || null; });
+  win.on('closed', () => { for (const k of d.kids) { try { k.close(); } catch {} } docs.delete(wcId); clearRecovery(d); if (lastActive === d) lastActive = [...docs.values()].filter((x) => !x.win.isDestroyed()).pop() || null; });
   win.webContents.on('render-process-gone', (e, det) => log('画面が落ちた', det.reason));
   win.webContents.on('console-message', (e) => { const m = e.message || ''; if (SMOKE || /error/i.test(m)) log('console', m); });
   win.loadURL('alien://app/index.html');
@@ -242,7 +244,7 @@ ipcMain.handle('al:rstate', async (e, body) => { const d = docOf(e); if (d !== l
 ipcMain.on('al:rframe', (e, buf) => { const d = docOf(e); if (d === lastActive) remote.frame(Buffer.from(buf)); });
 
 // ---------- メニュー ----------
-const send = (cmd) => { const w = BrowserWindow.getFocusedWindow(); const d = w && docs.get(w.webContents.id); (d || lastActive) && (d || lastActive).win.webContents.send('al:menu', cmd); };
+const send = (cmd) => { const w = BrowserWindow.getFocusedWindow(); const d = (w && !w.isDestroyed() && docs.get(w.webContents.id)) || lastActive; if (d && !d.win.isDestroyed()) d.win.webContents.send('al:menu', cmd); };
 function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'Alien Lab', submenu: [{ role: 'about', label: 'Alien Lab について' }, { type: 'separator' }, { label: '設定…', accelerator: 'Cmd+,', click: () => send('settings') }, { type: 'separator' }, { role: 'hide', label: 'Alien Lab を隠す' }, { role: 'hideOthers', label: 'ほかを隠す' }, { role: 'unhide', label: 'すべてを表示' }, { type: 'separator' }, { role: 'quit', label: 'Alien Lab を終了' }] },

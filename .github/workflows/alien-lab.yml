@@ -32,7 +32,7 @@ jobs:
           APP="dist/mac-universal/Alien Lab.app"
           codesign --force --deep --sign - "$APP"
           codesign -dv "$APP"
-          plutil -p "$APP/Contents/Info.plist" | grep -E "CFBundleShortVersionString|alienlab|NSCamera"
+          plutil -p "$APP/Contents/Info.plist" | grep -E "CFBundleShortVersionString|alienlab|NSCamera"; ls -la "$APP/Contents/Resources/alienlab.icns"
       - name: 動作確認
         working-directory: alien-lab/app
         run: |

@@ -14,10 +14,25 @@
     "appId": "jp.yuito.alienlab",
     "productName": "Alien Lab",
     "copyright": "Yuito Nomura",
-    "files": ["main.js", "preload.js", "remote.js", "ui/**"],
-    "directories": { "output": "dist", "buildResources": "build" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "remote.js",
+      "ui/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "mac": {
-      "target": [{ "target": "dir", "arch": ["universal"] }],
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
       "icon": "build/icon.png",
       "category": "public.app-category.entertainment",
       "identity": null,
@@ -26,11 +41,44 @@
       "extendInfo": {
         "NSCameraUsageDescription": "Live Camera",
         "NSMicrophoneUsageDescription": "Mic",
-        "LSMinimumSystemVersion": "12.0"
-      }
-    },
-    "fileAssociations": [
-      { "ext": "alienlab", "name": "Alien Lab Project", "role": "Editor", "rank": "Owner" }
-    ]
+        "LSMinimumSystemVersion": "12.0",
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Alien Lab Project",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "CFBundleTypeIconFile": "alienlab.icns",
+            "LSItemContentTypes": [
+              "jp.yuito.alienlab.project"
+            ]
+          }
+        ],
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "jp.yuito.alienlab.project",
+            "UTTypeDescription": "Alien Lab Project",
+            "UTTypeConformsTo": [
+              "public.json",
+              "public.data"
+            ],
+            "UTTypeIconFile": "alienlab.icns",
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "alienlab"
+              ],
+              "public.mime-type": [
+                "application/x-alienlab"
+              ]
+            }
+          }
+        ]
+      },
+      "extraResources": [
+        {
+          "from": "build/alienlab.icns",
+          "to": "alienlab.icns"
+        }
+      ]
+    }
   }
 }
