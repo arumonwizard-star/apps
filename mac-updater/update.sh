@@ -12,11 +12,21 @@ trap 'rm -rf "$D/lock" "$D/tmp"' EXIT
 
 # Alien Lab（Mac アプリ）がまだ無ければ入れる。入ったあとはアプリが自分で新しい版に入れ替わる
 AL="$A/Alien Lab.app"
-if [ ! -d "$AL" ]; then
+ALNEED=0
+if [ ! -d "$AL" ]; then ALNEED=1
+elif ! pgrep -f "Alien Lab.app/Contents/MacOS" >/dev/null 2>&1; then
+  # 閉じているときに新しい版があれば入れ替える
+  ALV=$(defaults read "$AL/Contents/Info" CFBundleShortVersionString 2>/dev/null)
+  ALL=$(curl -fsSL -m 15 https://github.com/arumonwizard-star/apps/releases/download/alien-lab/latest.json 2>/dev/null | sed -n 's/.*"version":"\([0-9.]*\)".*/\1/p')
+  [ -n "$ALL" ] && [ -n "$ALV" ] && [ "$ALL" != "$ALV" ] && [ "$(printf '%s\n%s\n' "$ALV" "$ALL" | sort -V | tail -1)" = "$ALL" ] && ALNEED=1
+fi
+if [ "$ALNEED" = 1 ]; then
   if curl -fsSL -m 600 -o "$D/alienlab.zip" https://github.com/arumonwizard-star/apps/releases/download/alien-lab/Alien-Lab.zip; then
     rm -rf "$D/alienlab-new" && mkdir -p "$D/alienlab-new" && ditto -x -k "$D/alienlab.zip" "$D/alienlab-new" \
-      && [ -d "$D/alienlab-new/Alien Lab.app" ] && mv "$D/alienlab-new/Alien Lab.app" "$AL" && xattr -dr com.apple.quarantine "$AL" 2>/dev/null
-    [ -d "$AL" ] && log "Alien Lab を入れました" && /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$AL" 2>/dev/null
+      && [ -d "$D/alienlab-new/Alien Lab.app" ] && ! pgrep -f "Alien Lab.app/Contents/MacOS" >/dev/null 2>&1 \
+      && rm -rf "$AL.old" && { [ ! -d "$AL" ] || mv "$AL" "$AL.old"; } && mv "$D/alienlab-new/Alien Lab.app" "$AL" && rm -rf "$AL.old" && xattr -dr com.apple.quarantine "$AL" 2>/dev/null
+    [ -d "$AL.old" ] && [ ! -d "$AL" ] && mv "$AL.old" "$AL"
+    [ -d "$AL" ] && log "Alien Lab を入れました（$(defaults read "$AL/Contents/Info" CFBundleShortVersionString 2>/dev/null)）" && /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$AL" 2>/dev/null
     rm -rf "$D/alienlab-new" "$D/alienlab.zip"
   fi
 fi

@@ -302,7 +302,7 @@ app.whenReady().then(async () => {
   await startDocs();
   if (SMOKE) return smokeTest();
   setTimeout(updateUI, 8000); setInterval(updateUI, 30 * 60 * 1000);
-  setTimeout(updateShell, 60000); setInterval(updateShell, 6 * 3600 * 1000);
+  setTimeout(updateShell, 20000); setInterval(updateShell, 30 * 60 * 1000);
 });
 
 // ---------- CI の動作確認 ----------

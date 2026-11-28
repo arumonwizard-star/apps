@@ -12,7 +12,7 @@
   --text:#e6e6e6; --dim:#9a9a9a; --dimmer:#6d6d6d;
   --sel:#2c5d9b; --go:#3ec36b; --run:#3ec36b; --warn:#e8b13a; --err:#e5484d;
   --row:26px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Helvetica Neue", sans-serif;
+  font-family: Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif; font-variant-numeric: tabular-nums;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#000;color:var(--text);font-size:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
@@ -273,7 +273,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 .mhd{padding:12px 16px;font-weight:600;font-size:13px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center}
 .mbd{padding:14px 16px;overflow:auto}
 .mft{padding:10px 16px;border-top:1px solid #1a1a1a;display:flex;justify-content:flex-end;gap:8px}
-.log{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#bbb;line-height:1.6;background:#1a1a1a;border-radius:6px;padding:8px 10px;max-height:260px;overflow:auto;user-select:text;-webkit-user-select:text}
+.log{white-space:pre-wrap;font-family:Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:#bbb;line-height:1.6;background:#1a1a1a;border-radius:6px;padding:8px 10px;max-height:260px;overflow:auto;user-select:text;-webkit-user-select:text}
 .wlist div{padding:3px 0;color:#eaa}
 
 .tip{position:fixed;z-index:80;background:#3d3d3d;border:1px solid #5a5a5a;color:#fff;border-radius:6px;padding:5px 9px;font-size:11.5px;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.5);opacity:0;transition:opacity .08s}
@@ -380,7 +380,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 .rmstat{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px}.rmdot{width:9px;height:9px;border-radius:50%;background:#e5484d}.rmdot.ok{background:#4a9eff}
 .rmurl{display:flex;gap:14px;align-items:center;margin:10px 0;padding:10px;background:#1c1d20;border-radius:8px}.rmqr svg{display:block;border-radius:4px}
 .rmbig{font-size:15px!important;font-weight:700;color:#fff!important}
-.rmtxt{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#ddd;word-break:break-all;margin:6px 0 8px;user-select:all}
+.rmtxt{font-family:Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:#ddd;word-break:break-all;margin:6px 0 8px;user-select:all}
 .faders{display:flex;align-items:stretch;gap:14px;padding:6px 4px}
 .fstrip{display:flex;flex-direction:column;align-items:center;gap:6px;width:62px}
 .fstrip.off{opacity:.45}
@@ -388,7 +388,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 .ftrack{position:relative;width:62px;height:150px;cursor:ns-resize;touch-action:none}
 .frail{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#0b0b0c;border-radius:2px;box-shadow:inset 0 0 0 1px #333}
 .fticks i{position:absolute;left:0;right:0;height:0;border-top:1px solid #333}
-.fticks b{position:absolute;left:0;top:-6px;font:9px ui-monospace,Menlo,monospace;color:#666;font-weight:400}
+.fticks b{position:absolute;left:0;top:-6px;font:9px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif;font-variant-numeric:tabular-nums;color:#666;font-weight:400}
 .fmeter{position:absolute;right:2px;top:0;bottom:0;width:8px;display:flex;gap:1px;align-items:flex-end}
 .fmeter s{flex:1;background:linear-gradient(to top,#2fa75a,#3ec36b 70%,#e0c040 85%,#e5484d);height:0;transition:height .06s linear;text-decoration:none;border-radius:1px}
 .fthumb{position:absolute;left:50%;width:30px;height:16px;margin:0 0 -8px -15px;border-radius:3px;background:linear-gradient(#d9d9db,#9a9a9e 48%,#6d6d72 52%,#b7b7ba);box-shadow:0 1px 3px rgba(0,0,0,.6);cursor:grab}
@@ -493,7 +493,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
     <span class="mon" id="mon" title="動作状況"></span>
     <span class="warn" id="warn"></span>
     <span class="spacer"></span>
-    <span class="ver">v0.19.0</span>
+    <span class="ver">v0.19.1</span>
     <button class="fbtn rmbtn" id="btnRemote" title="スマホ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="2.5" width="6" height="11" rx="1.4"/><path d="M2.6 5.5a6 6 0 0 0 0 5M13.4 5.5a6 6 0 0 1 0 5"/></svg><span id="rmCount"></span></button>
     <button class="fbtn" id="btnPhones" title="スマホ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/><path d="M7 12.5h2"/></svg></button>
     <button class="fbtn" id="btnStage" title="映像出力ウィンドウ"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="9" rx="1.2"/><path d="M5.5 14h5M8 11.5V14"/></svg></button>
@@ -552,7 +552,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
   <div class="modal hide" id="mExport"><div class="mbox">
     <div class="mhd">プロジェクトを書き出す</div>
     <div class="mbd">
-      <textarea class="in" id="exportText" rows="12" readonly style="font-family:ui-monospace,Menlo,monospace;font-size:11px"></textarea></div>
+      <textarea class="in" id="exportText" rows="12" readonly style="font-family:Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif;font-variant-numeric:tabular-nums;font-size:11px"></textarea></div>
     <div class="mft"><button class="btn" id="btnCopyProj">コピー</button><button class="btn" data-close>閉じる</button></div>
   </div></div>
   <input type="file" id="filePick" accept="audio/*,video/*,image/*,.mov,.mp4,.m4v,.wav,.aif,.aiff,.mp3,.m4a,.flac,.aac,.png,.jpg,.jpeg,.gif,.tif,.tiff,.svg,.webp" style="display:none">
@@ -578,7 +578,7 @@ input[type=color]{width:34px;height:22px;border:1px solid #3c3c3c;background:#1a
 const APP = window.alienApp || null; if(APP) document.documentElement.classList.add('app');
 
 "use strict";
-const VERSION = '0.19.0';
+const VERSION = '0.19.1';
 const PANIC_SEC = 3;
 /* ================= icons ================= */
 const S = (p) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -839,8 +839,8 @@ function makeTestPattern(){
   g.fillStyle='#111'; g.fillRect(0,720,1920,360);
   g.strokeStyle='#fff'; g.lineWidth=4; g.beginPath(); g.arc(960,540,420,0,Math.PI*2); g.stroke();
   g.beginPath(); g.moveTo(960,80); g.lineTo(960,1000); g.moveTo(80,540); g.lineTo(1840,540); g.stroke();
-  g.fillStyle='#fff'; g.font='bold 96px -apple-system, Helvetica, sans-serif'; g.textAlign='center'; g.fillText('ALIEN LAB  TEST PATTERN',960,900);
-  g.font='48px -apple-system, Helvetica, sans-serif'; g.fillText('1920 × 1080  Output 1',960,980);
+  g.fillStyle='#fff'; g.font='bold 96px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; g.textAlign='center'; g.fillText('ALIEN LAB  TEST PATTERN',960,900);
+  g.font='48px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; g.fillText('1920 × 1080  Output 1',960,980);
   try{ const t=document.createElement('canvas'); t.width=240; t.height=135; t.getContext('2d').drawImage(cv,0,0,240,135); testThumb=t.toDataURL('image/jpeg',0.8); }catch(e){}
   cv.toBlob(b=>{ registerMedia('test-pattern.png', URL.createObjectURL(b), 'image'); render(); });
 }
@@ -921,7 +921,7 @@ function openOutputWindow(i=shownOut){
   if(!w){ toast('✕ 出力', true); log('出力ウィンドウ: 開けない環境'); return; }
   o.win=w; const d=w.document;
   d.open(); d.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Alien Lab — ${esc(outName(i))}</title>${[...document.querySelectorAll('style')].map(x=>x.outerHTML).join('')}
-    <style>html,body{margin:0;height:100%;background:#000;overflow:hidden} #hint{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:20;background:rgba(30,30,30,.85);color:#fff;font:13px -apple-system,sans-serif;padding:8px 14px;border-radius:8px;transition:opacity .4s}
+    <style>html,body{margin:0;height:100%;background:#000;overflow:hidden} #hint{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:20;background:rgba(30,30,30,.85);color:#fff;font:13px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif;padding:8px 14px;border-radius:8px;transition:opacity .4s}
     body.idle{cursor:none} body.idle #hint{opacity:0}</style></head><body><div id="hint">${esc(outName(i))}</div></body></html>`); d.close();
   if(o.view.parentNode) o.view.remove(); const sv=d.adoptNode(o.view); sv.style.position='fixed'; sv.style.inset='0'; d.body.appendChild(sv);
   sv.querySelectorAll('video').forEach(v=>v.play().catch(()=>{}));
@@ -1255,13 +1255,13 @@ function drawCam(p, c){
   for(let i=0;i<5;i++){ const x=W*(0.15+i*0.18)+Math.sin(t*0.7+i)*W*0.02; const sp=g.createRadialGradient(x,0,10,x,H*0.6,H*0.7); sp.addColorStop(0,'rgba(255,240,200,.18)'); sp.addColorStop(1,'rgba(255,240,200,0)'); g.fillStyle=sp; g.beginPath(); g.moveTo(x-W*0.01,0); g.lineTo(x+W*0.01,0); g.lineTo(x+W*0.12,H*0.63); g.lineTo(x-W*0.12,H*0.63); g.fill(); }
   const px=W*0.5+Math.sin(t*0.6)*W*0.28, py=H*0.6; g.fillStyle='#d9c3a8'; g.beginPath(); g.arc(px,py-H*0.33,H*0.05,0,Math.PI*2); g.fill(); g.fillStyle='#283a5a'; g.beginPath(); g.ellipse(px,py-H*0.15,H*0.07,H*0.14,0,0,Math.PI*2); g.fill();
   g.restore();
-  const fs=Math.round(H/24); g.font=`600 ${fs}px -apple-system,Helvetica,sans-serif`; g.textBaseline='top';
+  const fs=Math.round(H/24); g.font=`600 ${fs}px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif`; g.textBaseline='top';
   g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(fs*0.6,fs*0.6,fs*14,fs*1.8);
   g.fillStyle= (t%1<0.5)?'#ff3b30':'#7a1a16'; g.beginPath(); g.arc(fs*1.3,fs*1.5,fs*0.35,0,Math.PI*2); g.fill();
   g.fillStyle='#fff'; g.fillText(`LIVE  ${cam?cam.name:'—'}`, fs*2, fs*0.95);
   const d=new Date(); const tc=d.toTimeString().slice(0,8)+':'+String(Math.floor(d.getMilliseconds()/1000*30)).padStart(2,'0');
-  g.font=`${Math.round(fs*0.9)}px ui-monospace,Menlo,monospace`; g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(W-fs*8.6,H-fs*2,fs*8,fs*1.4); g.fillStyle='#fff'; g.fillText(tc, W-fs*8.2, H-fs*1.8);
-  g.font=`${Math.round(fs*0.7)}px -apple-system,Helvetica,sans-serif`; g.fillStyle='rgba(255,255,255,.5)'; g.fillText('SIM', fs*0.7, H-fs*1.6);
+  g.font=`${Math.round(fs*0.9)}px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif`; g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(W-fs*8.6,H-fs*2,fs*8,fs*1.4); g.fillStyle='#fff'; g.fillText(tc, W-fs*8.2, H-fs*1.8);
+  g.font=`${Math.round(fs*0.7)}px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif`; g.fillStyle='rgba(255,255,255,.5)'; g.fillText('SIM', fs*0.7, H-fs*1.6);
 }
 function renderVisual(p, c, op){
   const L=p.layer; L.style.opacity=clamp(op,0,1);
@@ -1583,7 +1583,7 @@ function drawEQ(cv, c, f, big){
   if(cv.width!==W*dpr||cv.height!==H*dpr){ cv.width=W*dpr; cv.height=H*dpr; }
   const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
   const bg=g.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#16294a'); bg.addColorStop(1,'#0d1a2e'); g.fillStyle=bg; g.fillRect(0,0,W,H);
-  g.font=`${big?11:9}px -apple-system, Helvetica, sans-serif`; g.textBaseline='top';
+  g.font=`${big?11:9}px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif`; g.textBaseline='top';
   for(const fr of [20,30,40,50,60,80,100,200,300,400,500,800,1000,2000,3000,4000,6000,8000,10000,20000]){ const x=Math.round(fx2x(fr,W))+.5; g.strokeStyle= [100,1000,10000].includes(fr)?'rgba(150,180,230,.22)':'rgba(150,180,230,.09)'; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke();
     if(big || [100,1000,10000].includes(fr)){ g.fillStyle='rgba(200,215,240,.75)'; g.fillText(fr>=1000?(fr/1000)+'k':String(fr), x+3, H/2+4); } }
   for(let db=-EQ_DB; db<=EQ_DB; db+=6){ const y=Math.round(g2y(db,H))+.5; g.strokeStyle= db===0?'rgba(200,215,240,.45)':'rgba(150,180,230,.09)'; g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); if(big && db!==0){ g.fillStyle='rgba(200,215,240,.5)'; g.fillText((db>0?'+':'')+db, 4, y+2); } }
@@ -2364,7 +2364,7 @@ function paintPgm(cv, W, H, dpr, ui){
   if(c.type==='video' && !isBroken(c)){ const m=mediaOf(c); if(m.kind==='image'){ if(!drawPgm.img || drawPgm.img.dataset.u!==m.url){ drawPgm.img=new Image(); drawPgm.img.dataset.u=m.url; drawPgm.img.src=m.url; } fit(drawPgm.img, drawPgm.img.naturalWidth, drawPgm.img.naturalHeight); }
     else { const el=preloaded.get(c.id); if(el && el.readyState>=2) fit(el, el.videoWidth, el.videoHeight); } }
   else if(c.type==='text'){ g.save(); g.translate(0,-(c.map?c.map.y:0)*s); drawTextCanvas(g, c, W, H, s); g.restore(); }
-  else if(c.type==='camera'){ g.fillStyle='#ff6b63'; g.font='600 11px -apple-system,sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('● LIVE  '+(camOf(c)?.name||''), W/2, H/2); }
+  else if(c.type==='camera'){ g.fillStyle='#ff6b63'; g.font='600 11px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('● LIVE  '+(camOf(c)?.name||''), W/2, H/2); }
   g.globalAlpha=1;
 }
 $('pgmBox').addEventListener('click', ()=>{ if(outOpen(shownOut)){ OUTS[shownOut].win.focus(); return; } const w=$('stagewin'); if(w.classList.contains('hide')){ w.classList.remove('hide'); $('btnStage').classList.add('on'); fitStage(); } });
@@ -2402,18 +2402,18 @@ function drawStrip(){
   const key=(c?c.id+c.file+c.startOff+c.endOff+c.type+(c.text||''):'none')+'|'+W+'|'+(d&&d.thumb?1:0)+(d&&d.peaks?1:0)+'|'+(c&&problem(c)?1:0);
   if(key!==stripKey){ stripKey=key; stripBase=document.createElement('canvas'); stripBase.width=W*dpr; stripBase.height=H*dpr; const b=stripBase.getContext('2d'); b.setTransform(dpr,0,0,dpr,0,0);
     b.fillStyle='#121212'; b.fillRect(0,0,W,H);
-    if(!c){ b.fillStyle='#555'; b.font='12px -apple-system,sans-serif'; b.fillText('—',10,H/2+4); }
+    if(!c){ b.fillStyle='#555'; b.font='12px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; b.fillText('—',10,H/2+4); }
     else if(media){ const md=c.mediaDur||mediaOf(c)?.dur||0; const img=isImage(c);
       if(d && d.thumb) b.drawImage(d.thumb,0,0,W,H); else if(c.type==='video'){ b.fillStyle='#1d2633'; b.fillRect(0,0,W,H); }
       if(d && d.peaks){ const top = c.type==='video' ? H*0.55 : 0, hh=H-top; b.fillStyle = c.type==='video' ? 'rgba(10,10,10,.55)' : '#101a12'; b.fillRect(0,top,W,hh);
         b.fillStyle = c.type==='video' ? 'rgba(120,200,140,.85)' : '#5ec27a'; const mid=top+hh/2; for(let x=0;x<W;x++){ const p=d.peaks[Math.floor(x/W*d.peaks.length)]||0; const a=Math.max(0.5,p*hh*0.48); b.fillRect(x,mid-a,1,a*2); } }
       if(md>0 && !img){ const sx=c.startOff/md*W, ex=(c.endOff>0?c.endOff/md:1)*W; b.fillStyle='rgba(0,0,0,.6)'; b.fillRect(0,0,sx,H); b.fillRect(ex,0,W-ex,H);
-        b.fillStyle='rgba(255,255,255,.18)'; b.font='9px -apple-system,sans-serif'; for(let s=0;s<md;s+=md>120?30:md>30?10:5){ const x=s/md*W; b.fillRect(x,H-6,1,6); } } }
+        b.fillStyle='rgba(255,255,255,.18)'; b.font='9px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; for(let s=0;s<md;s+=md>120?30:md>30?10:5){ const x=s/md*W; b.fillRect(x,H-6,1,6); } } }
     else { const label = c.type==='text' ? (c.text||'').split('\n')[0] : c.type==='camera' ? `● LIVE  ${camOf(c)?.name||''}` : `${TYPE_NAME[c.type]} Cue`;
       b.fillStyle = c.type==='camera' ? '#2a1414' : '#1a1d24'; b.fillRect(0,0,W,H); b.fillStyle = c.type==='camera' ? '#ff6b63' : '#cfd6e6';
-      b.font=`600 ${Math.min(22,H*0.4)}px -apple-system,"Hiragino Sans",sans-serif`; b.textBaseline='middle'; b.fillText(label.slice(0,80), 90, H/2);
+      b.font=`600 ${Math.min(22,H*0.4)}px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif`; b.textBaseline='middle'; b.fillText(label.slice(0,80), 90, H/2);
       const dur=actDur(c); if(isFinite(dur)&&dur>0){ b.fillStyle='rgba(107,155,224,.35)'; b.fillRect(0,H-5,W,5); } }
-    if(c && problem(c)){ b.fillStyle='rgba(120,20,20,.55)'; b.fillRect(0,0,W,H); b.fillStyle='#ff8a8d'; b.font='600 13px -apple-system,"Hiragino Sans",sans-serif'; b.textBaseline='middle'; b.fillText('✕ '+problem(c), 90, H/2); }
+    if(c && problem(c)){ b.fillStyle='rgba(120,20,20,.55)'; b.fillRect(0,0,W,H); b.fillStyle='#ff8a8d'; b.font='600 13px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; b.textBaseline='middle'; b.fillText('✕ '+problem(c), 90, H/2); }
   }
   g.clearRect(0,0,W,H); if(stripBase) g.drawImage(stripBase,0,0,W,H);
   // playhead
@@ -2424,7 +2424,7 @@ function drawStrip(){
       else { const a=now()-r.actStart; if(isFinite(dur)&&dur>0){ pos=clamp(a/dur,0,1); txt=`残り ${fmt(Math.max(0,dur-a))}`; } else txt=r.phase==='hold'?'表示中':fmt(a); } }
     else { if(media && c.mediaDur>0 && !isImage(c)) pos=c.startOff/c.mediaDur; txt = isFinite(dur)&&dur>0 ? `長さ ${fmt(dur)}` : (dur===Infinity?'ループ':''); }
     if(pos!=null){ const x=Math.round(clamp(pos,0,1)*W)+.5; g.strokeStyle= r?'#3ec36b':'#e8c53a'; g.lineWidth=2; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
-    if(stripHover!=null && scrubbable(c)){ const bx=$('stripBox').getBoundingClientRect(), x=Math.round(stripHover-bx.left)+.5; g.strokeStyle='rgba(255,255,255,.55)'; g.lineWidth=1; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); const T=stripTimeAt(c,stripHover); g.fillStyle='rgba(0,0,0,.7)'; g.fillRect(x+3,H-17,46,14); g.fillStyle='#fff'; g.font='10px ui-monospace,Menlo,monospace'; g.textBaseline='middle'; g.fillText(fmt(T),x+6,H-10); }
+    if(stripHover!=null && scrubbable(c)){ const bx=$('stripBox').getBoundingClientRect(), x=Math.round(stripHover-bx.left)+.5; g.strokeStyle='rgba(255,255,255,.55)'; g.lineWidth=1; g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); const T=stripTimeAt(c,stripHover); g.fillStyle='rgba(0,0,0,.7)'; g.fillRect(x+3,H-17,46,14); g.fillStyle='#fff'; g.font='10px Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Meiryo, sans-serif'; g.textBaseline='middle'; g.fillText(fmt(T),x+6,H-10); }
     const L = r && r.phase==='paused' ? '❚❚' : '';
     if(lbl.textContent!==L){ lbl.textContent=L; } lbl.classList.toggle('run', !!r && r.phase!=='paused');
     if(tm.textContent!==txt) tm.textContent=txt; tm.style.display=txt?'':'none';
